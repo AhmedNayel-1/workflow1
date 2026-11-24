@@ -536,12 +536,14 @@
     const fileName=memoForm.querySelector("[data-memo-file-name]");
     const updateBody=()=>{if(bodyCount)bodyCount.textContent=(body?.value.length||0).toLocaleString("ar")+" حرف";};
     const updateFile=()=>{if(fileName)fileName.textContent=file?.files?.[0]?.name||"لم يتم اختيار مرفق";};
-    title?.addEventListener("input",()=>{const preview=memoForm.querySelector("[data-memo-title-preview]");if(preview)preview.textContent=title.value.trim()||"مذكرة جديدة";});
-    target?.addEventListener("change",()=>{if(customTarget&&!customTarget.value.trim())customTarget.placeholder=target.value?"يمكنك اختيار جهة أخرى بدلاً من "+target.value:"اكتب الجهة يدوياً";});
-    customTarget?.addEventListener("input",()=>{const preview=memoForm.querySelector("[data-memo-target-preview]");if(preview)preview.textContent=customTarget.value.trim()||target?.value||"لم تُحدد جهة بعد";});
+    const updateTitle=()=>{const preview=memoForm.querySelector("[data-memo-title-preview]");if(preview)preview.textContent=title?.value.trim()||"مذكرة جديدة";};
+    const updateTarget=()=>{const preview=memoForm.querySelector("[data-memo-target-preview]");if(preview)preview.textContent=customTarget?.value.trim()||target?.value||"لم تُحدد جهة بعد";};
+    title?.addEventListener("input",updateTitle);
+    target?.addEventListener("change",()=>{if(customTarget&&!customTarget.value.trim())customTarget.placeholder=target.value?"يمكنك اختيار جهة أخرى بدلاً من "+target.value:"اكتب الجهة يدوياً";updateTarget();});
+    customTarget?.addEventListener("input",updateTarget);
     body?.addEventListener("input",updateBody);
     file?.addEventListener("change",updateFile);
-    updateBody();updateFile();
+    updateTitle();updateTarget();updateBody();updateFile();
   }
 
   document.documentElement.classList.add("ux-ready");
