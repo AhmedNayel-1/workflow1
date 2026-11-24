@@ -96,5 +96,18 @@
       if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
     }
   });
+  // Contextual shortcuts open the existing server-rendered forms; no new workflow is introduced.
+  document.addEventListener("click", event => {
+    const shortcut = event.target.closest("[data-open-details]");
+    if (!shortcut) return;
+    const target = document.querySelector(shortcut.getAttribute("href"));
+    if (!target || target.tagName !== "DETAILS") return;
+    event.preventDefault();
+    target.open = true;
+    target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    const firstField = target.querySelector("input:not([type=hidden]),select,textarea,button");
+    if (firstField) window.setTimeout(() => firstField.focus({ preventScroll: true }), reduced ? 0 : 180);
+    if (history.replaceState) history.replaceState(null, "", "#" + target.id);
+  });
   document.documentElement.classList.add("ux-ready");
 })();
