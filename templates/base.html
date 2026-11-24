@@ -18,7 +18,7 @@
     {% include "partials/rail.html" %}
     <div class="main">
       <header class="top">
-        <button type="button" class="iconbtn" data-rail-toggle aria-label="القائمة">{% icon 'panel' %}</button>
+        <button type="button" class="iconbtn" data-rail-toggle aria-label="القائمة" aria-controls="main-rail" aria-expanded="true">{% icon 'panel' %}</button>
         <h1 class="trunc">{% block heading %}{% endblock %}</h1>
         <button type="button" class="search-trigger" data-cmdk aria-label="بحث سريع (Ctrl+K)">{% icon 'search' 'sm' %}<span>ابحث أو اكتب أمراً…</span><kbd class="kbd">Ctrl K</kbd></button>
         <button type="button" class="btn primary" data-compose="document" style="flex:none">{% icon 'plus' %}<span class="hide-sm">جديد</span></button>
