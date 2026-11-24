@@ -410,3 +410,27 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
 .memo-draft-preview small,.memo-draft-preview span{color:var(--muted);font-size:11px}
 .memo-draft-preview b{font-size:13px;overflow-wrap:anywhere}
 .memo-draft-preview strong{color:var(--ink);font-weight:700}
+
+
+/* Phase 16 — account, permission, delegation and organization workspaces. */
+.account-users-panel [data-account-user-row][hidden],
+[data-delegation-row][hidden],
+[data-permission-row][hidden],
+[data-permission-category][hidden],
+.org-branch[hidden]{display:none!important}
+.permission-search{flex:0 1 290px;min-width:220px}
+.permission-search .in,.delegation-tools .search-in .in,.org-tools .search-in .in{width:100%;min-width:0}
+.permission-result-count{padding:0 16px 10px}
+.delegation-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--ux-border)}
+.delegation-tools .search-in{flex:1 1 280px;min-width:220px}
+.org-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.org-tools .search-in{flex:1 1 280px;min-width:220px}
+.login-card{width:min(100%,460px)}
+.login-form .in{min-height:44px}
+.login-form .btn{min-height:46px}
+@media(max-width:680px){
+ .permission-search,.delegation-tools .search-in,.org-tools .search-in{flex:1 1 100%;min-width:0;width:100%}
+ .delegation-tools,.org-tools{align-items:stretch}
+ .permission-result-count{padding-inline:12px}
+}
+@media(prefers-reduced-motion:reduce){.login-form .btn{transition:none}}
