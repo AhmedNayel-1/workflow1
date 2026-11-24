@@ -54,6 +54,35 @@
     referralRoot.querySelectorAll("[data-tab]").forEach(tab => tab.addEventListener("click", () => requestAnimationFrame(apply)));
     apply();
   }
+  // Notification center: local search and unread-only filter.
+  const notificationRoot = document.querySelector("[data-notification-search]")?.closest(".page");
+  if (notificationRoot) {
+    const search = notificationRoot.querySelector("[data-notification-search]");
+    const unread = notificationRoot.querySelector("[data-notification-unread]");
+    const count = notificationRoot.querySelector("[data-notification-count]");
+    const clear = notificationRoot.querySelector("[data-notification-clear]");
+    const items = Array.from(notificationRoot.querySelectorAll("[data-notification-item]"));
+    const apply = () => {
+      const q = (search?.value || "").trim().toLocaleLowerCase("ar");
+      let shown = 0;
+      items.forEach(item => {
+        const matchesText = !q || item.textContent.toLocaleLowerCase("ar").includes(q);
+        const matchesUnread = !unread?.checked || item.dataset.unread === "1";
+        item.hidden = !(matchesText && matchesUnread);
+        if (!item.hidden) shown++;
+      });
+      if (count) count.textContent = shown + " من " + items.length + " إشعار";
+    };
+    search?.addEventListener("input", apply);
+    unread?.addEventListener("change", apply);
+    clear?.addEventListener("click", () => {
+      if (search) search.value = "";
+      if (unread) unread.checked = false;
+      apply();
+      search?.focus();
+    });
+    apply();
+  }
   // Make document preview cards usable from the keyboard as well as pointer input.
   document.addEventListener("keydown", event => {
     const card = event.target.closest(".dcard[data-pv]");
