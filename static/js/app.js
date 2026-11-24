@@ -235,23 +235,65 @@
   };
 
   /* ---------------- معاينة المرفقات ---------------- */
-  function previewAtt(d) {
-    const body = $("#pv-body"); body.textContent = "";
+  let subjectPreviewItems = [];
+  let subjectPreviewIndex = -1;
+  function previewAtt(d, sourceEl = null) {
+    const body = $("#pv-body"); if (!body) return;
+    body.textContent = "";
     $("#pv-name").textContent = d.name || "مرفق";
     $("#pv-dl").href = d.dl || "#"; $("#pv-page").href = d.page || "#";
+    const meta = $("#pv-meta");
+    const details = [
+      d.version ? "الإصدار " + d.version : "",
+      d.size ? "الحجم " + d.size : "",
+      d.uploaded ? "تاريخ الإضافة " + d.uploaded : "",
+      d.uploader ? "أضيف بواسطة " + d.uploader : "",
+      d.approved ? "حالة الإصدار: " + d.approved : ""
+    ].filter(Boolean);
+    if (meta) { meta.textContent = details.join(" · "); meta.hidden = details.length === 0; }
+    const subjectSection = sourceEl && sourceEl.closest("#sec-documents");
+    subjectPreviewItems = subjectSection ? Array.from(subjectSection.querySelectorAll("[data-pv]")) : [];
+    subjectPreviewIndex = subjectPreviewItems.indexOf(sourceEl);
+    const prev = $("#pv-prev"), next = $("#pv-next");
+    if (prev) prev.hidden = subjectPreviewIndex <= 0;
+    if (next) next.hidden = subjectPreviewIndex < 0 || subjectPreviewIndex >= subjectPreviewItems.length - 1;
     const kind = (d.kind || "").toLowerCase();
-    if (/image|img/.test(kind)) body.append(h("img", { src: d.url, alt: d.name }));
-    else if (/pdf|text|txt/.test(kind)) body.append(h("iframe", { src: d.url, title: d.name }));
+    if (/image|img/.test(kind)) body.append(h("img", { class: "pv-media-image", src: d.url, alt: d.name || "صورة مرفقة" }));
+    else if (/pdf|text|txt/.test(kind)) body.append(h("iframe", { class: "pv-media-frame", src: d.url, title: d.name || "معاينة المرفق" }));
     else body.append(h("div", { class: "empty" }, h("div", { class: "ico", text: "📄" }), h("h4", { text: "لا تتوفر معاينة مباشرة لهذا النوع" }), h("p", { text: "يمكنك فتح صفحة المعاينة الكاملة أو تنزيل الملف." })));
     openOv("pv");
   }
   on(document, "click", (e) => {
+    const step = e.target.closest("[data-pv-step]");
+    if (step) {
+      const target = subjectPreviewItems[subjectPreviewIndex + Number(step.dataset.pvStep)];
+      if (target) target.click();
+      return;
+    }
+    const previewButton = e.target.closest("[data-pv-btn]");
+    if (previewButton) {
+      const row = previewButton.closest("[data-pv]");
+      if (row) { e.preventDefault(); previewAtt({
+        name: row.dataset.pvName, url: row.dataset.pvUrl, dl: row.dataset.pvDl, page: row.dataset.pvPage, kind: row.dataset.pvKind,
+        version: row.dataset.pvVersion, size: row.dataset.pvSize, uploaded: row.dataset.pvUploaded, uploader: row.dataset.pvUploader, approved: row.dataset.pvApproved
+      }, row); }
+      return;
+    }
     const el = e.target.closest("[data-pv]"); if (!el) return;
     const inner = e.target.closest("a[href],button,form,input,select,textarea");
     if (inner && el.contains(inner) && inner !== el) return;
     e.preventDefault(); const d = el.dataset;
     if (el.closest("[data-docs]") && (el.classList.contains("dcard") || el.hasAttribute("data-split"))) { splitPreview(el); return; }
-    previewAtt({ name: d.pvName, url: d.pvUrl, dl: d.pvDl, page: d.pvPage, kind: d.pvKind });
+    previewAtt({ name: d.pvName, url: d.pvUrl, dl: d.pvDl, page: d.pvPage, kind: d.pvKind,
+      version: d.pvVersion, size: d.pvSize, uploaded: d.pvUploaded, uploader: d.pvUploader, approved: d.pvApproved }, el);
+  });
+  on(document, "keydown", (e) => {
+    if (!$("#pv")?.classList.contains("open") || !subjectPreviewItems.length) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const direction = e.key === "ArrowLeft" ? 1 : -1;
+      const target = subjectPreviewItems[subjectPreviewIndex + direction];
+      if (target) { e.preventDefault(); target.click(); }
+    }
   });
   function splitPreview(card) {
     const root = card.closest("[data-docs]"), pv = $(".pv-b", root), d = card.dataset;
