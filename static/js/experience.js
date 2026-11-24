@@ -224,7 +224,7 @@
     const clear = decisionRoot.querySelector("[data-decision-clear]");
     const rows = Array.from(decisionRoot.querySelectorAll("[data-decision-item]"));
     const normalizeDecisionText = value => String(value || "").toLocaleLowerCase("ar")
-      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .normalize("NFD").replace(/[\u064B-\u065F\u0670\u0640]/g, "")
       .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
     const populate = (filter, valueKey, labelKey) => {
       const values = new Map();
@@ -243,7 +243,7 @@
     populate(typeFilter, "decisionType", "decisionTypeLabel");
     populate(statusFilter, "decisionStatus", "decisionStatusLabel");
     const applyDecisionFilters = () => {
-      const tokens = normalizeDecisionText(search?.value).split(/\\s+/).filter(Boolean);
+      const tokens = normalizeDecisionText(search?.value).split(/\s+/).filter(Boolean);
       const type = typeFilter?.value || "";
       const status = statusFilter?.value || "";
       let shown = 0;
