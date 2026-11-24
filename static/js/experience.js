@@ -106,6 +106,17 @@
     const clear = activityRoot.querySelector("[data-activity-clear]");
     const noResults = activityRoot.querySelector("[data-activity-no-results]");
     const items = Array.from(activityRoot.querySelectorAll("[data-activity-item]"));
+    const timestampOf = item => {
+      const raw = (item.dataset.logTimestamp || "").trim();
+      const numeric = Number(raw);
+      if (raw && Number.isFinite(numeric) && numeric > 1000000000) return numeric * 1000;
+      const parsed = Date.parse(raw.replace(" ", "T"));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    // Combine workflow milestones and operational log entries in one chronological stream.
+    items.sort((a,b) => timestampOf(b) - timestampOf(a));
+    const chronology = activityRoot.querySelector("[data-activity-list]");
+    if (chronology) items.forEach(item => chronology.appendChild(item));
     const types = [...new Set(items.map(item => item.dataset.actionType).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ar"));
     types.forEach(type => {
       const option = document.createElement("option");
@@ -122,12 +133,12 @@
       items.forEach(item => {
         const matchesText = !query || item.textContent.toLocaleLowerCase("ar").includes(query);
         const matchesType = !selectedType || item.dataset.actionType === selectedType;
-        const timestamp = Number(item.dataset.logTimestamp) * 1000;
+        const timestamp = timestampOf(item);
         const matchesPeriod = cutoff === null || (Number.isFinite(timestamp) && timestamp >= cutoff && timestamp <= Date.now());
         item.hidden = !(matchesText && matchesType && matchesPeriod);
         if (!item.hidden) shown++;
       });
-      if (count) count.textContent = shown + " من " + items.length + " حدث";
+      if (count) count.textContent = shown + " من " + items.length + " عنصر زمني";
       if (noResults) noResults.hidden = shown !== 0 || items.length === 0;
     };
     search?.addEventListener("input", apply);
