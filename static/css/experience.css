@@ -94,3 +94,14 @@ input,select,textarea{accent-color:var(--brand)}
  .referral-tools .search-in{flex-basis:100%;width:100%}
  .referral-tools [data-referral-count]{margin-inline-end:auto}
 }
+
+/* Notification center filters */
+.notification-tools{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px}
+.notification-tools .search-in{min-width:220px}
+.notification-tools .search-in .in{border:0;background:transparent;min-width:0}
+[data-notification-item][hidden]{display:none!important}
+@media(max-width:680px){
+ .notification-tools{flex-wrap:wrap}
+ .notification-tools .search-in{flex-basis:100%;width:100%}
+ .notification-tools [data-notification-count]{margin-inline-end:auto}
+}
