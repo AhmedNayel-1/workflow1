@@ -149,35 +149,94 @@
     $$("form[data-auto]").forEach((f) => on(f, "change", (e) => { if (e.target.matches("select,input[type=date],input[type=checkbox]")) f.requestSubmit ? f.requestSubmit() : f.submit(); }));
   }
 
-  /* ---------------- لوحة الأوامر Ctrl+K ---------------- */
-  let cmd = { items: [], shown: [], sel: 0 };
+  /* ---------------- البحث الذكي والتنقل Ctrl+K ---------------- */
+  const cmd = { items: [], shown: [], sel: 0, recent: store.get("cmdk_recent_searches", []) };
+  const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("ar")
+    .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
   function toggleCmdk(force) {
     const o = $("#cmdk"); if (!o) return;
     if (o.classList.contains("open") && force !== true) { closeOv(o); return; }
-    cmd.items = [{ g: "إجراءات", t: "إنشاء موضوع جديد", k: "N", run: () => wz.open("document") }, { g: "إجراءات", t: "إرسال مراسلة سريعة", run: () => wz.open("message") },
-      { g: "إجراءات", t: "التنبيهات", run: () => openDr("dr-notif") }, { g: "إجراءات", t: "المحادثات", run: () => openDr("dr-chat") }, { g: "إجراءات", t: "تبديل المظهر (فاتح/داكن)", run: () => $("[data-theme-toggle]").click() }]
-      .concat($$(".rail .nav").map((a) => ({ g: (a.closest("[data-cap]") || {}).dataset ? a.closest("[data-cap]").dataset.cap : "التنقل", t: a.dataset.label || a.textContent.trim(), href: a.getAttribute("href") })));
-    openOv("cmdk"); const i = $("#cmdk-in"); i.value = ""; renderCmd(""); i.focus();
-  }
-  function renderCmd(q) {
-    const L = $("#cmdk-l"); q = q.trim();
-    cmd.shown = cmd.items.filter((x) => !q || x.t.includes(q));
-    if (q) cmd.shown.push({ g: "بحث", t: "ابحث في الأرشيف عن «" + q + "»", href: $("#cmdk").dataset.search + "?q=" + encodeURIComponent(q) });
-    cmd.sel = 0; L.textContent = "";
-    if (!cmd.shown.length) { L.append(h("div", { class: "empty", text: "لا نتائج" })); return; }
-    let last = null;
-    cmd.shown.forEach((x, i) => { if (x.g !== last) { L.append(h("div", { class: "cmdk-g", text: x.g })); last = x.g; } L.append(h("div", { class: "cmdk-i" + (i === 0 ? " sel" : ""), role: "option", onclick: () => runCmd(x) }, h("span", { text: x.t }), x.k ? h("span", { class: "kbd", text: x.k }) : null)); });
-  }
-  function runCmd(x) { closeOv($("#cmdk")); x.run ? x.run() : (location.href = x.href); }
-  function initCmdk() {
-    const i = $("#cmdk-in"); if (!i) return;
-    on(i, "input", () => renderCmd(i.value));
-    on(i, "keydown", (e) => {
-      const rows = $$(".cmdk-i"); if (!rows.length) return;
-      const mv = (d) => { rows[cmd.sel].classList.remove("sel"); cmd.sel = (cmd.sel + d + rows.length) % rows.length; rows[cmd.sel].classList.add("sel"); rows[cmd.sel].scrollIntoView({ block: "nearest" }); };
-      if (e.key === "ArrowDown") { e.preventDefault(); mv(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mv(-1); } else if (e.key === "Enter") { e.preventDefault(); runCmd(cmd.shown[cmd.sel]); }
+    const navItems = $$(".rail .nav").map((a) => {
+      const group = a.closest("[data-cap]");
+      return { g: group ? group.dataset.cap : "التنقل", t: a.dataset.label || a.textContent.trim(),
+        aliases: a.dataset.searchAliases || "", href: a.getAttribute("href"), type: "navigation" };
     });
-    $$("[data-cmdk]").forEach((b) => on(b, "click", () => toggleCmdk(true)));
+    cmd.items = [
+      { g: "إجراءات سريعة", t: "إنشاء موضوع جديد", aliases: "موضوع معاملة جديد اضافة", k: "N", run: () => wz.open("document") },
+      { g: "إجراءات سريعة", t: "إرسال مراسلة سريعة", aliases: "رسالة مراسله", run: () => wz.open("message") },
+      { g: "إجراءات سريعة", t: "فتح التنبيهات", aliases: "اشعارات", run: () => openDr("dr-notif") },
+      { g: "إجراءات سريعة", t: "فتح المحادثات", aliases: "دردشة شات", run: () => openDr("dr-chat") },
+      { g: "إجراءات سريعة", t: "تبديل المظهر فاتح / داكن", aliases: "الوضع الليلي", run: () => $("[data-theme-toggle]")?.click() },
+      { g: "بحث", t: "البحث في الموضوعات والمستندات", aliases: "رقم معاملة عنوان مستند ارشيف", href: $("#cmdk").dataset.search, type: "search" },
+      { g: "بحث", t: "البحث المتقدم في الموضوعات", aliases: "مرشحات حالة قطاع سرية تاريخ", href: $("#cmdk").dataset.advancedSearch, type: "search" }
+    ].concat(navItems);
+    openOv("cmdk");
+    const input = $("#cmdk-in"); input.value = ""; renderCmd("");
+    input.focus();
+  }
+  function rememberCmdSearch(query) {
+    const value = String(query || "").trim(); if (!value) return;
+    cmd.recent = [value, ...cmd.recent.filter((x) => normalizeSearch(x) !== normalizeSearch(value))].slice(0, 6);
+    store.set("cmdk_recent_searches", cmd.recent);
+  }
+  function runCmd(item) {
+    if (!item) return;
+    if (item.searchQuery) rememberCmdSearch(item.searchQuery);
+    closeOv($("#cmdk"));
+    if (item.run) item.run(); else if (item.href) location.href = item.href;
+  }
+  function renderCmd(query) {
+    const list = $("#cmdk-l"); if (!list) return;
+    const raw = String(query || "").trim(), normalized = normalizeSearch(raw);
+    list.textContent = ""; cmd.shown = [];
+    const matches = cmd.items.map((item) => {
+      const haystack = normalizeSearch([item.t, item.g, item.aliases].join(" "));
+      const tokens = normalized.split(/\\s+/).filter(Boolean);
+      const ok = !tokens.length || tokens.every((token) => haystack.includes(token));
+      const exact = normalized && normalizeSearch(item.t).startsWith(normalized) ? 0 : 1;
+      return { item, ok, exact };
+    }).filter((x) => x.ok).sort((a,b) => a.exact-b.exact);
+    matches.forEach((x) => cmd.shown.push(x.item));
+    if (raw) {
+      const quickUrl = $("#cmdk").dataset.search + "?q=" + encodeURIComponent(raw);
+      const advancedUrl = $("#cmdk").dataset.advancedSearch + "?q=" + encodeURIComponent(raw);
+      cmd.shown.push({ g: "نتائج البحث", t: "ابحث عن «" + raw + "» في الموضوعات والمستندات", href: quickUrl, type: "search", searchQuery: raw });
+      cmd.shown.push({ g: "نتائج البحث", t: "استخدم البحث المتقدم لنفس العبارة", href: advancedUrl, type: "search", searchQuery: raw });
+    } else if (cmd.recent.length) {
+      cmd.recent.forEach((term) => cmd.shown.push({ g: "عمليات البحث الأخيرة", t: term, href: $("#cmdk").dataset.search + "?q=" + encodeURIComponent(term), type: "search", searchQuery: term }));
+    }
+    cmd.sel = 0;
+    if (!cmd.shown.length) {
+      list.append(h("div", { class: "empty cmdk-empty", text: "مفيش نتائج مطابقة. جرّب كلمة مختلفة أو افتح البحث في الأرشيف." }));
+      return;
+    }
+    let last = null;
+    cmd.shown.forEach((item, index) => {
+      if (item.g !== last) { list.append(h("div", { class: "cmdk-g", text: item.g })); last = item.g; }
+      const button = h("button", { type: "button", class: "cmdk-i" + (index === 0 ? " sel" : ""),
+        role: "option", "aria-selected": index === 0 ? "true" : "false", onclick: () => runCmd(item) },
+        h("span", { class: "cmdk-result-title", text: item.t }),
+        h("span", { class: "cmdk-result-kind", text: item.type === "search" ? "بحث" : item.type === "navigation" ? "فتح" : "إجراء" }));
+      button.dataset.cmdIndex = String(index); list.append(button);
+    });
+  }
+  function initCmdk() {
+    const input = $("#cmdk-in"); if (!input) return;
+    on(input, "input", () => renderCmd(input.value));
+    on(input, "keydown", (e) => {
+      const rows = $$(".cmdk-i", $("#cmdk-l")); if (!rows.length) return;
+      const move = (direction) => {
+        rows[cmd.sel]?.classList.remove("sel"); rows[cmd.sel]?.setAttribute("aria-selected", "false");
+        cmd.sel = (cmd.sel + direction + rows.length) % rows.length;
+        rows[cmd.sel].classList.add("sel"); rows[cmd.sel].setAttribute("aria-selected", "true");
+        rows[cmd.sel].scrollIntoView({ block: "nearest" });
+      };
+      if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+      else if (e.key === "Enter") { e.preventDefault(); runCmd(cmd.shown[cmd.sel]); }
+    });
+    $$("[data-cmdk]").forEach((button) => on(button, "click", () => toggleCmdk(true)));
   }
 
   /* ---------------- معالج الإنشاء ---------------- */
