@@ -606,16 +606,25 @@
   const orgRoot = document.querySelector("#org-root");
   if (orgSearch && orgRoot) {
     const count = document.querySelector("[data-org-count]");
+    const normalizeOrg = value => String(value || "").toLocaleLowerCase("ar").normalize("NFD")
+      .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه");
     const update = () => {
-      const q = orgSearch.value.trim().toLocaleLowerCase("ar");
-      const branches = [...orgRoot.querySelectorAll(".org-branch")];
-      let shown = 0;
-      branches.forEach(branch => {
-        const match = !q || branch.textContent.toLocaleLowerCase("ar").includes(q);
-        branch.hidden = !match;
-        if (match) shown++;
-      });
-      if (count) count.textContent = q ? shown.toLocaleString("ar") + " وحدة مطابقة ضمن الهيكل المعروض" : "عرض " + branches.length.toLocaleString("ar") + " وحدة";
+      const q = normalizeOrg(orgSearch.value.trim());
+      let matched = 0, total = 0;
+      const filterBranch = branch => {
+        total++;
+        const ownText = normalizeOrg(branch.dataset.orgSearchText);
+        const ownMatch = !q || ownText.includes(q);
+        const children = [...branch.children].filter(child => child.classList.contains("org-branch"));
+        const childMatch = children.map(filterBranch).some(Boolean);
+        const visible = ownMatch || childMatch;
+        branch.hidden = !visible;
+        if (q && ownMatch) matched++;
+        return visible;
+      };
+      [...orgRoot.children].filter(child => child.classList.contains("org-branch")).forEach(filterBranch);
+      if (count) count.textContent = q ? matched.toLocaleString("ar") + " وحدة مطابقة ضمن " + total.toLocaleString("ar") + " وحدة" : "عرض " + total.toLocaleString("ar") + " وحدة";
     };
     orgSearch.addEventListener("input", update);
     const observer = new MutationObserver(update);
