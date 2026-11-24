@@ -152,7 +152,7 @@
   /* ---------------- البحث الذكي والتنقل Ctrl+K ---------------- */
   const cmd = { items: [], shown: [], sel: 0, recent: store.get("cmdk_recent_searches", []) };
   const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("ar")
-    .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+    .normalize("NFD").replace(/[\u064B-\u065F\u0670\u0640]/g, "")
     .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
   function toggleCmdk(force) {
     const o = $("#cmdk"); if (!o) return;
@@ -192,7 +192,7 @@
     list.textContent = ""; cmd.shown = [];
     const matches = cmd.items.map((item) => {
       const haystack = normalizeSearch([item.t, item.g, item.aliases].join(" "));
-      const tokens = normalized.split(/\\s+/).filter(Boolean);
+      const tokens = normalized.split(/\s+/).filter(Boolean);
       const ok = !tokens.length || tokens.every((token) => haystack.includes(token));
       const exact = normalized && normalizeSearch(item.t).startsWith(normalized) ? 0 : 1;
       return { item, ok, exact };
