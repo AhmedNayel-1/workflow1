@@ -166,5 +166,50 @@
     if (firstField) window.setTimeout(() => firstField.focus({ preventScroll: true }), reduced ? 0 : 180);
     if (history.replaceState) history.replaceState(null, "", "#" + target.id);
   });
+  // Task workbench: filters only the tasks already rendered on the current page.
+  const taskRoot = document.querySelector("[data-task-item]")?.closest("[data-table]");
+  if (taskRoot) {
+    const search = taskRoot.querySelector("[data-task-filter]");
+    const statusFilter = taskRoot.querySelector("[data-task-status-filter]");
+    const dueFilter = taskRoot.querySelector("[data-task-due-filter]");
+    const count = taskRoot.querySelector("[data-task-count]");
+    const rows = Array.from(taskRoot.querySelectorAll("[data-task-item]"));
+    const normalizeTaskText = value => String(value || "").toLocaleLowerCase("ar")
+      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
+    const statusMap = new Map();
+    rows.forEach(row => {
+      const value = row.dataset.taskStatus || "";
+      const label = row.dataset.taskStatusLabel || value;
+      if (value && !statusMap.has(value)) statusMap.set(value, label);
+    });
+    [...statusMap.entries()].sort((a,b) => a[1].localeCompare(b[1],"ar")).forEach(([value,label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      statusFilter?.appendChild(option);
+    });
+    const applyTaskFilters = () => {
+      const tokens = normalizeTaskText(search?.value).split(/\\s+/).filter(Boolean);
+      const status = statusFilter?.value || "";
+      const due = dueFilter?.value || "";
+      let visible = 0;
+      rows.forEach(row => {
+        const haystack = normalizeTaskText(row.textContent);
+        const matchesText = tokens.every(token => haystack.includes(token));
+        const matchesStatus = !status || row.dataset.taskStatus === status;
+        const isOverdue = row.dataset.taskOverdue === "1";
+        const hasDue = row.dataset.taskHasDue === "1";
+        const matchesDue = !due || (due === "overdue" ? isOverdue : due === "dated" ? hasDue : !hasDue);
+        row.hidden = !(matchesText && matchesStatus && matchesDue);
+        if (!row.hidden) visible++;
+      });
+      if (count) count.textContent = visible + " من " + rows.length + " مهمة في الصفحة";
+    };
+    search?.addEventListener("input", applyTaskFilters);
+    statusFilter?.addEventListener("change", applyTaskFilters);
+    dueFilter?.addEventListener("change", applyTaskFilters);
+    applyTaskFilters();
+  }
   document.documentElement.classList.add("ux-ready");
 })();
