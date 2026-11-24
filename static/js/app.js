@@ -575,25 +575,42 @@
     if (!root) return;
     const query = String(root.dataset.searchQuery || "").trim();
     if (!query) return;
-    const tokens = query.split(/\\s+/).filter((token) => token.length > 1);
-    if (!tokens.length) return;
-    const normalize = (value) => String(value || "").toLocaleLowerCase("ar")
-      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
-      .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
-    const terms = tokens.map(normalize).filter(Boolean);
+    const normalizeWithMap = (value) => {
+      let normalized = "";
+      const starts = [], ends = [];
+      for (let i = 0; i < value.length;) {
+        const char = String.fromCodePoint(value.codePointAt(i));
+        const next = i + char.length;
+        const folded = char.toLocaleLowerCase("ar").normalize("NFD")
+          .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+          .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
+        for (let j = 0; j < folded.length; j++) {
+          normalized += folded[j]; starts.push(i); ends.push(next);
+        }
+        i = next;
+      }
+      return { normalized, starts, ends };
+    };
+    const terms = query.split(/\s+/).filter((token) => token.length > 1)
+      .map((token) => normalizeWithMap(token).normalized).filter(Boolean);
     if (!terms.length) return;
-    $("[data-search-highlight]", document).forEach((node) => {
+    $$("[data-search-highlight]").forEach((node) => {
       if (node.dataset.highlighted === "1") return;
       const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
       const textNodes = [];
       while (walker.nextNode()) if (walker.currentNode.nodeValue.trim()) textNodes.push(walker.currentNode);
       textNodes.forEach((textNode) => {
         const value = textNode.nodeValue;
-        const normalized = normalize(value);
+        const mapped = normalizeWithMap(value);
         const ranges = [];
         terms.forEach((term) => {
-          let at = normalized.indexOf(term);
-          while (at >= 0) { ranges.push([at, at + term.length]); at = normalized.indexOf(term, at + term.length); }
+          let at = mapped.normalized.indexOf(term);
+          while (at >= 0) {
+            const last = at + term.length - 1;
+            if (mapped.starts[at] !== undefined && mapped.ends[last] !== undefined)
+              ranges.push([mapped.starts[at], mapped.ends[last]]);
+            at = mapped.normalized.indexOf(term, at + term.length);
+          }
         });
         if (!ranges.length) return;
         ranges.sort((a,b) => a[0]-b[0]);
@@ -605,13 +622,13 @@
         });
         const fragment = document.createDocumentFragment();
         let cursor = 0;
-        merged.forEach(([start,end]) => {
-          if (start > cursor) fragment.append(document.createTextNode(value.slice(cursor,start)));
+        merged.forEach(([matchStart,matchEnd]) => {
+          if (matchStart > cursor) fragment.append(document.createTextNode(value.slice(cursor,matchStart)));
           const mark = document.createElement("mark");
           mark.className = "search-match";
-          mark.textContent = value.slice(start,end);
+          mark.textContent = value.slice(matchStart,matchEnd);
           fragment.append(mark);
-          cursor = end;
+          cursor = matchEnd;
         });
         if (cursor < value.length) fragment.append(document.createTextNode(value.slice(cursor)));
         textNode.parentNode.replaceChild(fragment,textNode);
