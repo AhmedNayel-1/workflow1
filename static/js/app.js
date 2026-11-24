@@ -288,6 +288,10 @@
       version: d.pvVersion, size: d.pvSize, uploaded: d.pvUploaded, uploader: d.pvUploader, approved: d.pvApproved }, el);
   });
   on(document, "keydown", (e) => {
+    const row = e.target.closest("#sec-documents [data-pv][role=button]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); row.click(); return; }
+  });
+  on(document, "keydown", (e) => {
     if (!$("#pv")?.classList.contains("open") || !subjectPreviewItems.length) return;
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
       const direction = e.key === "ArrowLeft" ? 1 : -1;
