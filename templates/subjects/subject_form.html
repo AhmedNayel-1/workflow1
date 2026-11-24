@@ -2,10 +2,12 @@
 {% block title %}موضوع جديد{% endblock %}
 {% block heading %}موضوع جديد{% endblock %}
 {% block content %}
-<div class="page-h"><div><h2>تسجيل موضوع جديد</h2><p>النموذج الكامل بجميع الحقول. للتسجيل السريع استخدم زر «جديد» في أعلى الصفحة.</p></div><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a></div>
-<form method="post" enctype="multipart/form-data" class="col" style="gap:16px">{% csrf_token %}<input type="hidden" name="compose_mode" value="document">
-  <section class="panel"><div class="panel-h"><h3>1 · البيانات الأساسية</h3></div><div class="panel-b form">
-    <label class="fld full"><span>عنوان الموضوع</span><input class="in" name="title" required></label>
+<div class="page-h"><div><h2>تسجيل موضوع جديد</h2><p>أدخل البيانات على مراحل؛ تقدر تراجع كل قسم قبل الحفظ.</p></div><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a></div>
+<nav class="subject-form-nav" aria-label="أقسام تسجيل الموضوع"><a href="#subject-step-basic">البيانات الأساسية</a><a href="#subject-step-routing">التوجيه والسرية</a><a href="#subject-step-files">المرفقات الأولية</a></nav>
+<div class="subject-form-preview" aria-live="polite"><span class="subject-form-preview-mark">م</span><div><small>معاينة عنوان الموضوع</small><b data-subject-title-preview>موضوع جديد بدون عنوان</b><span data-subject-form-progress>0 من 3 أقسام تمت مراجعتها</span></div></div>
+<form method="post" enctype="multipart/form-data" class="col subject-form" style="gap:16px" data-subject-form>{% csrf_token %}<input type="hidden" name="compose_mode" value="document">
+  <section class="panel" id="subject-step-basic" data-subject-step><div class="panel-h"><h3>1 · البيانات الأساسية</h3></div><div class="panel-b form">
+    <label class="fld full"><span>عنوان الموضوع</span><input class="in" name="title" required data-subject-title><small class="subject-field-hint" data-subject-title-count>0 حرف</small></label>
     <label class="fld"><span>نوع المعاملة</span><select class="in" name="transaction_type_id" required>{% for t in transaction_types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
     <label class="fld"><span>الأولوية</span><select class="in" name="priority_id" required>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
     <label class="fld full"><span>الوصف</span><textarea class="in" name="description" rows="4"></textarea></label>
@@ -14,7 +16,7 @@
     <label class="fld"><span>تاريخ الاستحقاق</span><input class="in" type="date" name="due_date"></label>
     <label class="fld"><span>كلمات مفتاحية</span><input class="in" name="keywords"></label>
   </div></section>
-  <section class="panel"><div class="panel-h"><h3>2 · التوجيه والسرية</h3></div><div class="panel-b form">
+  <section class="panel" id="subject-step-routing" data-subject-step><div class="panel-h"><h3>2 · التوجيه والسرية</h3></div><div class="panel-b form">
     <label class="fld"><span>القطاع</span><select class="in" name="sector_id" id="f-sector" required>{% for s in sectors %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
     <label class="fld"><span>الإدارة / الوحدة</span><select class="in" name="org_unit_id" id="f-unit" required>{% for u in org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }}</option>{% endfor %}</select></label>
     <label class="fld"><span>درجة السرية</span><select class="in" name="confidentiality_id" required>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
@@ -22,8 +24,8 @@
     <label class="fld full"><span>توجيه القطاع <small>(اختياري)</small></span><textarea class="in" name="sector_directive" rows="2"></textarea></label>
     {% if template_versions %}<label class="fld full"><span>قالب مسار العمل <small>(اختياري)</small></span><select class="in" name="workflow_template_version_id"><option value="">— بدون قالب —</option>{% for tv in template_versions %}<option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }})</option>{% endfor %}</select></label>{% endif %}
   </div></section>
-  <section class="panel"><div class="panel-h"><h3>3 · المرفق الأولي</h3></div><div class="panel-b form">
-    <label class="fld"><span>الملف</span><input class="in" type="file" name="initial_attachment" multiple></label>
+  <section class="panel" id="subject-step-files" data-subject-step><div class="panel-h"><h3>3 · المرفقات الأولية</h3></div><div class="panel-b form">
+    <label class="fld"><span>الملف</span><input class="in" type="file" name="initial_attachment" multiple data-subject-files><small class="subject-field-hint" data-subject-file-count>لم يتم اختيار ملفات</small></label>
     <label class="fld"><span>تصنيف المستند</span><select class="in" name="initial_doc_type_id">{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
     <label class="fld full"><span>عنوان المستند <small>(اختياري)</small></span><input class="in" name="initial_doc_title"></label>
   </div></section>
