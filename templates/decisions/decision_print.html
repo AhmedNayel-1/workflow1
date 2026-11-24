@@ -1,10 +1,21 @@
 {% extends "base_print.html" %}
 {% block title %}طباعة القرار {{ decision.decision_number }}{% endblock %}
+{% block extra_head %}<style>
+.decision-print-head{text-align:center;margin-bottom:22px}
+.decision-print-head .company{font-size:14px;color:#444}
+.decision-print-head h1{margin:10px 0 5px}
+.decision-print-head .decision-number{font-weight:700;letter-spacing:.04em}
+.decision-print-meta{break-inside:avoid}
+.decision-print-body{white-space:pre-wrap;line-height:2.05;font-size:15px;text-align:justify;overflow-wrap:anywhere}
+.decision-print-title{margin:22px 0 10px;padding-bottom:8px;border-bottom:1px solid #888}
+.decision-print-sign{break-inside:avoid;margin-top:54px}
+@media print{.decision-print-body{font-size:14px}.decision-print-title{margin-top:16px}}
+</style>{% endblock %}
 {% block content %}
-<p style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
-<h1>{{ decision.get_decision_type_display }} رقم {{ decision.decision_number }}</h1>
-<table><tr><th>الموضوع</th><td>{{ decision.subject.internal_number }} — {{ decision.subject.title }}</td></tr><tr><th>جهة الإصدار</th><td>{{ decision.issuing_authority }}</td></tr><tr><th>جهة الاعتماد</th><td>{{ decision.approving_authority }}</td></tr><tr><th>تاريخ الإصدار</th><td>{{ decision.issued_date|date:"Y-m-d"|default:"—" }}</td></tr></table>
-<h3 style="margin:18px 0 6px">{{ decision.title }}</h3>
-<div style="white-space:pre-wrap;line-height:2;font-size:15px">{{ decision.body }}</div>
-<div class="sign"><div>مُعِدّ القرار</div><div>{{ decision.approved_by.get_full_name|default:decision.approved_by.username|default:"المعتمِد" }}<br>المعتمِد</div></div>
+<header class="decision-print-head"><p class="company">شركة غرب الدلتا لإنتاج الكهرباء</p>
+<h1>{{ decision.get_decision_type_display }}</h1><p class="decision-number">رقم {{ decision.decision_number }}</p></header>
+<table class="decision-print-meta"><tr><th>الموضوع</th><td>{{ decision.subject.internal_number }} — {{ decision.subject.title }}</td></tr><tr><th>جهة الإصدار</th><td>{{ decision.issuing_authority }}</td></tr><tr><th>جهة الاعتماد</th><td>{{ decision.approving_authority }}</td></tr><tr><th>تاريخ الإصدار</th><td>{{ decision.issued_date|date:"Y-m-d"|default:"—" }}</td></tr></table>
+<h3 class="decision-print-title">{{ decision.title }}</h3>
+<div class="decision-print-body">{{ decision.body }}</div>
+<div class="sign decision-print-sign"><div>مُعِدّ القرار</div><div>{{ decision.approved_by.get_full_name|default:decision.approved_by.username|default:"المعتمِد" }}<br>المعتمِد</div></div>
 {% endblock %}
