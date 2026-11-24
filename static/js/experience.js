@@ -356,5 +356,93 @@
     updateProgress();
   }
 
+
+  // Document archive: local filters apply only to document cards on the current page.
+  const documentRoot = document.querySelector("[data-docs]");
+  if (documentRoot) {
+    const cards = [...documentRoot.querySelectorAll("[data-document-card]")];
+    const typeFilter = documentRoot.querySelector("[data-document-type-filter]");
+    const confidentialityFilter = documentRoot.querySelector("[data-document-conf-filter]");
+    const count = documentRoot.querySelector("[data-document-count]");
+    const clear = documentRoot.querySelector("[data-document-clear]");
+    const normalizeDocumentText = value => String(value || "").normalize("NFD")
+      .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه").toLocaleLowerCase("ar");
+    const fillFilter = (filter, key) => {
+      const values = [...new Set(cards.map(card => card.dataset[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ar"));
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        filter?.appendChild(option);
+      });
+    };
+    fillFilter(typeFilter,"docType");
+    fillFilter(confidentialityFilter,"docConf");
+    const applyDocumentFilters = () => {
+      const type = typeFilter?.value || "";
+      const confidentiality = confidentialityFilter?.value || "";
+      let shown = 0;
+      cards.forEach(card => {
+        const matchesType = !type || card.dataset.docType === type;
+        const matchesConfidentiality = !confidentiality || card.dataset.docConf === confidentiality;
+        card.hidden = !(matchesType && matchesConfidentiality);
+        if (!card.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + cards.length.toLocaleString("ar") + " مستند في الصفحة";
+    };
+    typeFilter?.addEventListener("change",applyDocumentFilters);
+    confidentialityFilter?.addEventListener("change",applyDocumentFilters);
+    clear?.addEventListener("click",()=>{
+      if(typeFilter) typeFilter.value="";
+      if(confidentialityFilter) confidentialityFilter.value="";
+      applyDocumentFilters();
+    });
+    applyDocumentFilters();
+  }
+
+  // Document registration: title/file preview and section progress are informational only.
+  const documentForm = document.querySelector("[data-document-form]");
+  if (documentForm) {
+    const title = documentForm.querySelector("[data-document-title]");
+    const titlePreview = document.querySelector("[data-document-title-preview]");
+    const titleCount = documentForm.querySelector("[data-document-title-count]");
+    const file = documentForm.querySelector("[data-document-file]");
+    const status = document.querySelector("[data-document-form-status]");
+    const fileName = documentForm.querySelector("[data-document-file-name]");
+    const steps = [...documentForm.querySelectorAll("[data-document-step]")];
+    const navLinks = [...document.querySelectorAll(".document-form-nav a")];
+    const updateTitle = () => {
+      const value = title?.value.trim() || "";
+      if(titlePreview) titlePreview.textContent = value || "مستند جديد بدون عنوان";
+      if(titleCount) titleCount.textContent = (title?.value.length || 0).toLocaleString("ar") + " حرف";
+    };
+    const updateFile = () => {
+      const selected = file?.files?.[0];
+      if(fileName) fileName.textContent = selected ? selected.name : "لم يتم اختيار ملف";
+      if(status) status.textContent = selected ? "تم اختيار المرفق الأولي: " + selected.name : "لم يتم اختيار المرفق بعد";
+    };
+    const updateProgress = () => {
+      const completed = steps.filter(section => [...section.querySelectorAll("input:not([type=hidden]):not([type=file]),select,textarea")].some(field => String(field.value || "").trim())).length;
+      if(status && !file?.files?.length) status.textContent = completed.toLocaleString("ar") + " من " + steps.length.toLocaleString("ar") + " أقسام بها بيانات";
+    };
+    title?.addEventListener("input",updateTitle);
+    file?.addEventListener("change",updateFile);
+    documentForm.addEventListener("input",updateProgress);
+    documentForm.addEventListener("change",updateProgress);
+    navLinks.forEach(link=>link.addEventListener("click",()=>{
+      document.querySelector(link.getAttribute("href"))?.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"});
+    }));
+    updateTitle(); updateFile(); updateProgress();
+  }
+
+  // Attachment rows are keyboard reachable; don't intercept clicks on nested download links.
+  document.addEventListener("keydown", event => {
+    const row = event.target.closest("[data-doc-attachment][data-pv]");
+    if (!row || event.target !== row || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    row.click();
+  });
+
   document.documentElement.classList.add("ux-ready");
 })();
