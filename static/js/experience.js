@@ -750,5 +750,54 @@
     update();
   }
 
+
+  // Phase 19 — settings and workflow-template browsing; local to rendered records.
+  const normalizePhase19 = value => String(value || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه")
+    .toLocaleLowerCase("ar");
+
+  const settingsWorkspace = document.querySelector("[data-settings-workspace]");
+  if (settingsWorkspace) {
+    const search = settingsWorkspace.querySelector("[data-settings-search]");
+    const count = settingsWorkspace.querySelector("[data-settings-count]");
+    const rows = [...settingsWorkspace.querySelectorAll("[data-settings-row]")];
+    const empty = settingsWorkspace.querySelector("[data-settings-empty]");
+    const update = () => {
+      const tokens = normalizePhase19(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      rows.forEach(row => {
+        const haystack = normalizePhase19(row.textContent);
+        row.hidden = !tokens.every(token => haystack.includes(token));
+        if (!row.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " عنصر";
+      if (empty) empty.hidden = shown !== 0 || rows.length === 0;
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const templateWorkspace = document.querySelector("[data-workflow-template-workspace]");
+  if (templateWorkspace) {
+    const search = document.querySelector("[data-workflow-template-search]");
+    const count = document.querySelector("[data-workflow-template-count]");
+    const cards = [...templateWorkspace.querySelectorAll("[data-workflow-template-card]")];
+    const empty = document.querySelector("[data-workflow-template-empty]");
+    const update = () => {
+      const tokens = normalizePhase19(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      cards.forEach(card => {
+        const haystack = normalizePhase19(card.textContent);
+        card.hidden = !tokens.every(token => haystack.includes(token));
+        if (!card.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + cards.length.toLocaleString("ar") + " قالب";
+      if (empty) empty.hidden = shown !== 0 || cards.length === 0;
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
   document.documentElement.classList.add("ux-ready");
 })();
