@@ -299,3 +299,25 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .decision-subnav{top:8px}
 }
 @media(max-width:420px){.decision-form-context>div{grid-template-columns:1fr}.decision-form-context p{grid-column:auto}}
+
+
+/* Subject management batch — list workbench and guided registration. */
+[data-subject-list] [data-subject-row][hidden]{display:none!important}
+[data-subject-list] [data-subject-search]{min-width:240px}
+[data-subject-count]{font-variant-numeric:tabular-nums;white-space:nowrap}
+.subject-form-nav{position:sticky;top:calc(var(--top,64px) + 8px);z-index:10;display:flex;gap:6px;overflow-x:auto;padding:6px;border:1px solid var(--ux-border);border-radius:12px;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(12px)}
+.subject-form-nav a{flex:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:700;text-decoration:none}
+.subject-form-nav a:hover,.subject-form-nav a:focus-visible{background:var(--brand-soft);color:var(--brand)}
+.subject-form-preview{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--ux-border);border-radius:13px;background:var(--ux-surface)}
+.subject-form-preview-mark{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:11px;background:var(--brand-soft);color:var(--brand);font-weight:800}
+.subject-form-preview>div{display:grid;gap:2px;min-width:0}
+.subject-form-preview small,.subject-field-hint{color:var(--muted);font-size:11px}
+.subject-form-preview b{overflow-wrap:anywhere;font-size:14px}
+.subject-form-preview span:last-child{color:var(--muted);font-size:11px}
+.subject-field-hint{display:block;margin-top:5px}
+.subject-form [data-subject-step]{scroll-margin-top:calc(var(--top,64px) + 86px)}
+@media(max-width:680px){
+ [data-subject-list] [data-subject-search]{width:100%;min-width:0}
+ .subject-form-nav{top:8px}
+ .subject-form-preview{align-items:flex-start}
+}
