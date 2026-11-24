@@ -275,3 +275,27 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .task-search,.task-filter{flex:1 1 100%;min-width:0;width:100%}
  [data-task-count]{margin-inline-start:0}
 }
+
+/* Decision workspace — list, detail, and drafting surfaces. */
+.decision-tools{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:12px 14px;border-bottom:1px solid var(--ux-border)}
+.decision-search{flex:1 1 290px;min-width:220px}
+.decision-search .in{width:100%;min-width:0;border:0;background:transparent}
+.decision-search .in:focus{box-shadow:none}
+.decision-filter{flex:0 1 175px;min-width:145px;background:var(--panel)}
+[data-decision-item][hidden]{display:none!important}
+.decision-no-results{padding:18px;text-align:center}
+.decision-subnav{display:flex;gap:5px;overflow-x:auto;margin:14px 0;white-space:nowrap}
+.decision-subnav a{padding:8px 12px;color:var(--muted);font-size:12px;text-decoration:none}
+#decision-content,#decision-execution,#decision-distribution,#decision-notes,#decision-text{scroll-margin-top:calc(var(--top,64px) + 86px)}
+.decision-form-context{display:flex;align-items:flex-start;gap:13px;margin-bottom:14px;padding:15px 17px;border:1px solid var(--ux-border);border-radius:13px;background:var(--ux-surface)}
+.decision-form-mark{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:11px;background:var(--brand-soft);color:var(--brand);font-weight:800}
+.decision-form-context>div{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 12px;min-width:0}
+.decision-form-context p{grid-column:1/-1;margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.decision-form-context .num{font-weight:800;color:var(--brand)}
+.decision-form [data-decision-body-count]{display:block;margin-top:5px;text-align:end;font-variant-numeric:tabular-nums}
+@media(max-width:760px){
+ .decision-tools{align-items:stretch}
+ .decision-search,.decision-filter{flex:1 1 100%;min-width:0;width:100%}
+ .decision-subnav{top:8px}
+}
+@media(max-width:420px){.decision-form-context>div{grid-template-columns:1fr}.decision-form-context p{grid-column:auto}}
