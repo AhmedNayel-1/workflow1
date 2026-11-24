@@ -31,7 +31,7 @@
 </section>
 
 <div class="mt">{% include "partials/guide.html" with guide=guide %}</div>
-<nav class="subnav" aria-label="أقسام الموضوع" data-subject-nav><a href="#sec-documents" data-jump="sec-documents">المستندات <span class="cnt">{{ doc_links|length }}</span></a><a href="#sec-memos" data-jump="sec-memos">المذكرات <span class="cnt">{{ memos|length }}</span></a><a href="#sec-referrals" data-jump="sec-referrals">الإحالات <span class="cnt">{{ referrals|length }}</span></a><a href="#sec-tasks" data-jump="sec-tasks">المهام والقرارات</a><a href="#sec-closure" data-jump="sec-closure">التأشيرات والتعليق والإغلاق</a><a href="#sec-timeline" data-jump="sec-timeline">السجل الزمني</a></nav>
+<nav class="subnav" aria-label="أقسام الموضوع" data-subject-nav><a href="#sec-documents" data-jump="sec-documents">المستندات <span class="cnt">{{ doc_links|length }}</span></a><a href="#sec-memos" data-jump="sec-memos">المذكرات <span class="cnt">{{ memos|length }}</span></a><a href="#sec-referrals" data-jump="sec-referrals">الإحالات <span class="cnt">{{ referrals|length }}</span></a><a href="#sec-tasks" data-jump="sec-tasks">المهام والقرارات</a><a href="#sec-closure" data-jump="sec-closure">التأشيرات والتعليق والإغلاق</a><a href="#sec-timeline" data-jump="sec-timeline">مراحل السير</a><a href="#sec-activity" data-jump="sec-activity">سجل النشاط</a></nav>
 
 <div class="layout-3">
 <div class="col" style="gap:16px;min-width:0">
@@ -135,7 +135,32 @@
   <section class="panel" id="sec-timeline"><div class="panel-h"><h3>{% icon 'clock' %} مراحل السير</h3><span class="muted xs">{{ completed_stages_count }} مرحلة منجزة</span></div><div class="panel-b">
     <div class="tl" id="timeline-box">{% for st in workflow_stages %}<div class="tl-i {% if st.status == 'completed' %}ok{% elif st.status == 'pending' %}mute{% endif %}"><b>{{ st.from_label }} ← {{ st.to_label }}</b><small>{{ st.date }}</small><p>{{ st.what_happened }}</p>{% if st.pending_text %}<small style="color:var(--warn)">{{ st.pending_text }}</small>{% endif %}</div>{% endfor %}</div>
     <div class="note brand xs">{{ active_stage_pending_text }}</div></div></section>
-  <section class="panel"><div class="panel-h"><h3>{% icon 'list' %} سجل النشاط</h3></div><div class="panel-b"><div class="feed">{% for log in activity_logs|slice:":25" %}<div class="fi"><span class="avatar sm">{{ log.actor_user|default:"؟"|initials }}</span><div class="fi-b"><p>{{ log.description|short:140 }}</p><small>{{ log.actor_user.get_full_name|default:log.actor_user.username }}{% if log.acting_on_behalf_of %} (نيابةً عن {{ log.acting_on_behalf_of }}){% endif %} · <span class="num">{{ log.created_at|date:"Y-m-d H:i" }}</span></small></div></div>{% empty %}<p class="muted sm">لا يوجد نشاط.</p>{% endfor %}</div></div></section>
+  <section class="panel" id="sec-activity" data-activity-root>
+    <div class="panel-h"><h3>{% icon 'list' %} سجل النشاط</h3><span class="muted xs">أحدث 25 حدثًا</span></div>
+    <div class="panel-b">
+      <div class="activity-tools" role="search" aria-label="البحث في سجل النشاط">
+        <label class="search-in activity-search"><span class="sr-only">ابحث في سجل النشاط</span><input class="in" type="search" placeholder="ابحث في الوصف أو المستخدم..." data-activity-search autocomplete="off"></label>
+        <label class="activity-filter"><span class="sr-only">نوع الإجراء</span><select class="in" data-activity-type><option value="">كل الإجراءات</option></select></label>
+        <label class="activity-filter"><span class="sr-only">الفترة الزمنية</span><select class="in" data-activity-period><option value="all">كل الفترات</option><option value="1">آخر 24 ساعة</option><option value="7">آخر 7 أيام</option><option value="30">آخر 30 يومًا</option></select></label>
+        <button class="btn sm" type="button" data-activity-clear>مسح الفلاتر</button>
+        <span class="activity-count muted xs" data-activity-count aria-live="polite">—</span>
+      </div>
+      <div class="feed activity-feed" data-activity-list>
+        {% for log in activity_logs|slice:":25" %}
+        <article class="fi activity-item" data-activity-item data-action-type="{{ log.action_type }}" data-log-timestamp="{{ log.created_at|date:'U' }}">
+          <span class="avatar sm">{{ log.actor_user|default:"؟"|initials }}</span>
+          <div class="fi-b">
+            <div class="activity-heading"><span class="activity-type">{{ log.action_type }}</span><time class="num" datetime="{{ log.created_at|date:'c' }}">{{ log.created_at|date:"Y-m-d H:i" }}</time></div>
+            <p>{{ log.description|short:140 }}</p>
+            <small>{{ log.actor_user.get_full_name|default:log.actor_user.username }}{% if log.acting_on_behalf_of %} (نيابةً عن {{ log.acting_on_behalf_of }}){% endif %}</small>
+          </div>
+        </article>
+        {% empty %}<p class="muted sm" data-activity-empty>لا يوجد نشاط مسجل لهذا الموضوع.</p>{% endfor %}
+      </div>
+      <p class="activity-no-results muted sm" data-activity-no-results hidden>لا توجد أحداث تطابق معايير البحث الحالية.</p>
+      <p class="muted xs mt-s">الفلاتر تعمل على أحدث 25 حدثًا المعروضة هنا، ولا تغيّر السجل المحفوظ.</p>
+    </div>
+  </section>
 </aside>
 </div>
 {% endwith %}
