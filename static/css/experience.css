@@ -434,3 +434,31 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .permission-result-count{padding-inline:12px}
 }
 @media(prefers-reduced-motion:reduce){.login-form .btn{transition:none}}
+
+
+/* Phase 17 — audit and committee reading workspaces. */
+.audit-tools,.committee-tools,.committee-agenda-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border:1px solid var(--ux-border);border-radius:12px;background:var(--ux-surface)}
+.audit-search{flex:1 1 260px;min-width:220px}
+.audit-search .in,.committee-search .in,.committee-agenda-tools .in{width:100%;min-width:0}
+.committee-search{flex:1 1 300px;min-width:220px}
+.committee-tools>span,.audit-tools>span,.committee-agenda-tools>span{font-variant-numeric:tabular-nums}
+.ux-local-hidden{display:none!important}
+.committee-agenda-tools{padding:8px 10px;margin:0 0 8px;background:var(--panel-2)}
+.committee-agenda-tools .search-in{flex:1 1 220px;min-width:180px}
+.minutes-print-header{font-weight:800;font-size:16px;margin-bottom:8px!important}
+.minutes-print-summary,.minutes-print-items{width:100%;border-collapse:collapse}
+.minutes-print-summary{margin:14px 0 20px}
+.minutes-print-items{margin-top:16px}
+.minutes-print-summary th,.minutes-print-summary td,.minutes-print-items th,.minutes-print-items td{padding:9px 10px;vertical-align:top}
+.minutes-print-items tbody tr{break-inside:avoid;page-break-inside:avoid}
+.minutes-print-sign{margin-top:44px;break-inside:avoid;page-break-inside:avoid}
+@media(max-width:680px){
+ .audit-tools,.committee-tools,.committee-agenda-tools{align-items:stretch}
+ .audit-search,.committee-search,.committee-agenda-tools .search-in{flex:1 1 100%;min-width:0;width:100%}
+}
+@media print{
+ .minutes-print-summary,.minutes-print-items{font-size:12px}
+ .minutes-print-items thead{display:table-header-group}
+ .minutes-print-summary tr,.minutes-print-items tr{break-inside:avoid;page-break-inside:avoid}
+ .minutes-print-header{font-size:18px!important}
+}
