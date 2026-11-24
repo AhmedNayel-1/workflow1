@@ -632,5 +632,78 @@
     update();
   }
 
+
+  // Phase 17 — local reading tools for audit and committee screens.
+  const normalizePhase17 = value => String(value || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه")
+    .toLocaleLowerCase("ar");
+
+  const auditWorkspace = document.querySelector("[data-audit-workspace]");
+  if (auditWorkspace) {
+    const search = auditWorkspace.querySelector("[data-audit-search]");
+    const count = auditWorkspace.querySelector("[data-audit-count]");
+    const rows = [...auditWorkspace.querySelectorAll("[data-audit-table] tbody tr")]
+      .filter(row => row.hasAttribute("data-audit-row"));
+    const update = () => {
+      const tokens = normalizePhase17(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      rows.forEach(row => {
+        const haystack = normalizePhase17(row.textContent);
+        row.hidden = !tokens.every(token => haystack.includes(token));
+        if (!row.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " سجل معروض";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const committeeWorkspace = document.querySelector("[data-committee-workspace]");
+  if (committeeWorkspace) {
+    const search = committeeWorkspace.querySelector("[data-committee-search]");
+    const count = committeeWorkspace.querySelector("[data-committee-count]");
+    const meetings = [...committeeWorkspace.querySelectorAll("[data-committee-meeting]")];
+    const committees = [...committeeWorkspace.querySelectorAll("[data-committee-search-item]")];
+    const update = () => {
+      const tokens = normalizePhase17(search?.value).split(/\\s+/).filter(Boolean);
+      let shownMeetings = 0, shownCommittees = 0;
+      meetings.forEach(item => {
+        const haystack = normalizePhase17(item.textContent);
+        const match = tokens.every(token => haystack.includes(token));
+        item.classList.toggle("ux-local-hidden", !match);
+        if (match) shownMeetings++;
+      });
+      committees.forEach(item => {
+        const haystack = normalizePhase17(item.textContent);
+        const match = tokens.every(token => haystack.includes(token));
+        item.classList.toggle("ux-local-hidden", !match);
+        if (match) shownCommittees++;
+      });
+      if (count) count.textContent = shownMeetings.toLocaleString("ar") + " اجتماع · " + shownCommittees.toLocaleString("ar") + " لجنة";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const agendaRoot = document.querySelector("[data-committee-agenda]");
+  if (agendaRoot) {
+    const search = document.querySelector("[data-agenda-search]");
+    const count = document.querySelector("[data-agenda-count]");
+    const items = [...agendaRoot.querySelectorAll("[data-agenda-item]")];
+    const update = () => {
+      const tokens = normalizePhase17(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      items.forEach(item => {
+        const haystack = normalizePhase17(item.textContent);
+        item.hidden = !tokens.every(token => haystack.includes(token));
+        if (!item.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + items.length.toLocaleString("ar") + " بند";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
   document.documentElement.classList.add("ux-ready");
 })();
