@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}المستندات والأرشفة{% endblock %}
+{% block page_title %}سجل المستندات والأرشفة{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <form method="get" class="flex items-center gap-2 flex-1 max-w-xl">
+        <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="بحث سريع في عناوين وملخصات المراسلات أو أرقامها..."
+            class="w-full px-4 py-2 border border-[#DADCE0] rounded-full text-xs bg-[#F6F8FC] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+        >
+        <button type="submit" class="gm-btn-primary shrink-0">بحث سريع</button>
+        {% if q %}
+            <a href="{% url 'documents:document_list' %}" class="gm-btn-secondary">مسح</a>
+        {% endif %}
+    </form>
+    <a href="{% url 'documents:document_create' %}" class="gm-btn-primary">+ تسجيل مستند جديد</a>
+</div>
+<div class="gm-card">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F6F8FC] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">الرقم الداخلي</th>
+                    <th class="px-4 py-3">رقم الصادر/الوارد</th>
+                    <th class="px-4 py-3">العنوان والملخص</th>
+                    <th class="px-4 py-3">النوع</th>
+                    <th class="px-4 py-3">السرية</th>
+                    <th class="px-4 py-3">النسخة</th>
+                    <th class="px-4 py-3 text-center">معاينة / تنزيل</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for d in documents %}
+                    <tr class="hover:bg-[#F2F6FC]">
+                        <td class="px-4 py-3 mono-num font-bold text-[#0B57D0]"><a href="{% url 'documents:document_detail' d.id %}">{{ d.internal_number }}</a></td>
+                        <td class="px-4 py-3 mono-num text-[#5F6368]">{{ d.external_in_out_number|default:"—" }}</td>
+                        <td class="px-4 py-3">
+                            <a href="{% url 'documents:document_detail' d.id %}" class="font-bold text-[#1F1F1F] hover:text-[#0B57D0] block">{{ d.title }}</a>
+                            {% if d.summary %}<div class="text-[#5F6368] mt-0.5 line-clamp-2">{{ d.summary }}</div>{% endif %}
+                        </td>
+                        <td class="px-4 py-3"><span class="px-2.5 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0] font-bold">{{ d.doc_type.name }}</span></td>
+                        <td class="px-4 py-3 font-bold">{{ d.confidentiality.name }}</td>
+                        <td class="px-4 py-3 mono-num">v{{ d.current_version_number }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if d.primary_attachment %}
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onclick="openInlineAttachmentPreview('{{ d.primary_attachment.id }}', '{{ d.primary_attachment.original_filename|escapejs }}', '{{ d.primary_attachment.preview_kind|escapejs }}', '{% url 'documents:attachment_download' d.primary_attachment.id %}?inline=1&mode=stream', '{% url 'documents:attachment_download' d.primary_attachment.id %}', '{% url 'documents:attachment_preview' d.primary_attachment.id %}')"
+                                        class="px-2.5 py-1 rounded-full bg-[#D3E3FD] hover:bg-[#C2E7FF] text-[#001D35] font-bold"
+                                    >
+                                        👁 معاينة
+                                    </button>
+                                    <a href="{% url 'documents:attachment_download' d.primary_attachment.id %}" class="px-2.5 py-1 rounded-full border border-[#DADCE0] bg-white hover:bg-[#F6F8FC] text-[#444746] font-bold">تنزيل</a>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'documents:document_detail' d.id %}" class="text-[#0B57D0] font-bold hover:underline">التفاصيل</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-[#5F6368]">لا توجد مستندات مطابقة.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

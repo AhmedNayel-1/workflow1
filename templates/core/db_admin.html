@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}إدارة قاعدة البيانات{% endblock %}
+{% block heading %}إدارة قاعدة البيانات{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>إدارة قاعدة البيانات</h2><p>محرك القاعدة: <span class="tag code">{{ db_vendor }}</span> · فحص السلامة: <b>{{ integrity_result }}</b></p></div>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="export_json"><button class="btn" type="submit">{% icon 'download' 'sm' %}تصدير JSON</button></form></div>
+<div class="grid" style="grid-template-columns:300px minmax(0,1fr);align-items:start">
+  <section class="panel" data-table><div class="toolbar"><div class="search-in grow">{% icon 'search' 'sm' %}<input class="in sm" data-filter placeholder="ابحث عن جدول…" type="search"></div></div><div style="max-height:72vh;overflow:auto">
+    {% for t in tables_summary %}<a class="nav {% if t.key == selected_key %}on{% endif %}" href="?table={{ t.key }}" style="margin:2px 8px"><span class="trunc">{{ t.verbose_name }}</span><span class="cnt">{{ t.count }}</span></a>{% endfor %}</div></section>
+  <section class="panel"><div class="panel-h"><h3>{% if selected_verbose %}{{ selected_verbose }}{% else %}اختر جدولاً{% endif %}</h3><span class="tag code">{{ selected_key }}</span></div>
+    {% if fields %}<div class="tbl-wrap"><table class="tbl"><thead><tr>{% for f in fields %}<th>{{ f }}</th>{% endfor %}{% if can_edit_ref %}<th></th>{% endif %}</tr></thead><tbody>
+      {% for row in formatted_rows %}<tr>{% for c in row.cells %}<td class="sm ltr" style="max-width:220px">{{ c|default_if_none:"—"|short:48 }}</td>{% endfor %}{% if can_edit_ref %}<td><form method="post" data-confirm="حذف السجل #{{ row.id }}؟" data-danger>{% csrf_token %}<input type="hidden" name="action" value="delete_ref_row"><input type="hidden" name="table" value="{{ selected_key }}"><input type="hidden" name="row_id" value="{{ row.id }}"><button class="btn sm line-bad" type="submit" aria-label="حذف">{% icon 'trash' 'sm' %}</button></form></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="9">{% include "partials/empty.html" with title="لا توجد سجلات" icon_name="db" %}</td></tr>{% endfor %}</tbody></table></div><div class="panel-f xs muted">يعرض آخر 30 سجلاً وأول 8 حقول فقط.</div>
+    {% else %}{% include "partials/empty.html" with title="اختر جدولاً من القائمة" icon_name="db" %}{% endif %}</section>
+</div>
+{% endblock %}

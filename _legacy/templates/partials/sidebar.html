@@ -1,0 +1,191 @@
+<!-- القائمة الجانبية البسيطة بنمط Gmail (موسعة افتراضياً بوضوح للمبتدئين) -->
+<aside id="gmail-sidebar" class="gm-rail is-expanded hidden md:flex no-print" aria-label="القائمة الرئيسية">
+    <div class="space-y-3">
+        <!-- زر إنشاء معاملة / رسالة بنمط Gmail الأزرق الهادئ -->
+        <div class="px-1">
+            <button
+                type="button"
+                onclick="openComposeModal()"
+                data-tooltip="معاملة أو رسالة جديدة"
+                data-tooltip-pos="left"
+                class="gm-rail-compose gm-ripple"
+            >
+                <svg class="w-5 h-5 text-[#001D35] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6.232-6.232a2.5 2.5 0 113.536 3.536L12.536 14.536H9V11z"/></svg>
+                <span class="gm-rail-label text-[15px] font-bold text-[#001D35] truncate">معاملة / رسالة جديدة</span>
+            </button>
+        </div>
+
+        <!-- المجلدات الخمسة الأساسية -->
+        <nav class="space-y-1 text-[14px]">
+            <a
+                href="{% url 'core:dashboard' %}?folder=inbox"
+                data-tooltip="تحتاج إجراء مني"
+                data-tooltip-pos="left"
+                class="gm-rail-item gm-ripple {% if is_inbox_page and folder == 'inbox' %}is-active{% endif %}"
+            >
+                <span class="flex items-center gap-3 min-w-0">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                    <span class="gm-rail-label truncate">تحتاج إجراء مني</span>
+                </span>
+                {% if gmail_folder_counts.inbox %}
+                    <span class="gm-rail-badge text-xs mono-num font-bold">{{ gmail_folder_counts.inbox }}</span>
+                    <span class="gm-rail-dot-badge mono-num">{{ gmail_folder_counts.inbox }}</span>
+                {% endif %}
+            </a>
+
+            <a
+                href="{% url 'core:dashboard' %}?folder=pending"
+                data-tooltip="بانتظار الاستلام"
+                data-tooltip-pos="left"
+                class="gm-rail-item gm-ripple {% if is_inbox_page and folder == 'pending' %}is-active{% endif %}"
+            >
+                <span class="flex items-center gap-3 min-w-0">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="gm-rail-label truncate">بانتظار الاستلام</span>
+                </span>
+                {% if gmail_folder_counts.pending %}
+                    <span class="gm-rail-badge text-xs mono-num">{{ gmail_folder_counts.pending }}</span>
+                {% endif %}
+            </a>
+
+            <a
+                href="{% url 'core:dashboard' %}?folder=overdue"
+                data-tooltip="متأخرة"
+                data-tooltip-pos="left"
+                class="gm-rail-item gm-ripple {% if is_inbox_page and folder == 'overdue' %}is-active{% endif %}"
+            >
+                <span class="flex items-center gap-3 min-w-0">
+                    <svg class="w-5 h-5 shrink-0 text-[#8B5014]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span class="gm-rail-label truncate">متأخرة</span>
+                </span>
+                {% if gmail_folder_counts.overdue %}
+                    <span class="gm-rail-badge text-xs mono-num text-[#8B5014] font-bold">{{ gmail_folder_counts.overdue }}</span>
+                    <span class="gm-rail-dot-badge mono-num">{{ gmail_folder_counts.overdue }}</span>
+                {% endif %}
+            </a>
+
+            <a
+                href="{% url 'core:dashboard' %}?folder=sent"
+                data-tooltip="للمتابعة والصادر"
+                data-tooltip-pos="left"
+                class="gm-rail-item gm-ripple {% if is_inbox_page and folder == 'sent' %}is-active{% endif %}"
+            >
+                <span class="flex items-center gap-3 min-w-0">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                    <span class="gm-rail-label truncate">للمتابعة والصادر</span>
+                </span>
+                {% if gmail_folder_counts.sent %}<span class="gm-rail-badge text-xs mono-num">{{ gmail_folder_counts.sent }}</span>{% endif %}
+            </a>
+
+            <a
+                href="{% url 'core:dashboard' %}?folder=archive"
+                data-tooltip="الأرشيف والمغلق"
+                data-tooltip-pos="left"
+                class="gm-rail-item gm-ripple {% if is_inbox_page and folder == 'archive' %}is-active{% endif %}"
+            >
+                <span class="flex items-center gap-3 min-w-0">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                    <span class="gm-rail-label truncate">الأرشيف والمغلق</span>
+                </span>
+                {% if gmail_folder_counts.archive %}<span class="gm-rail-badge text-xs mono-num">{{ gmail_folder_counts.archive }}</span>{% endif %}
+            </a>
+
+            <div class="pt-2 border-t border-[#E1E3E1] mt-2 space-y-1">
+                <a
+                    href="{% url 'workflow:task_list' %}"
+                    data-tooltip="المهام والقرارات"
+                    data-tooltip-pos="left"
+                    class="gm-rail-item gm-ripple {% if '/workflow/tasks' in request.path %}is-active{% endif %}"
+                >
+                    <span class="flex items-center gap-3 min-w-0">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        <span class="gm-rail-label truncate">المهام والقرارات</span>
+                    </span>
+                    {% if gmail_folder_counts.open_tasks %}<span class="gm-rail-badge text-xs mono-num">{{ gmail_folder_counts.open_tasks }}</span>{% endif %}
+                </a>
+
+                <a
+                    href="{% url 'core:archive_search' %}"
+                    data-tooltip="البحث المتقدم"
+                    data-tooltip-pos="left"
+                    class="gm-rail-item gm-ripple {% if '/archive-search/' in request.path %}is-active{% endif %}"
+                >
+                    <span class="flex items-center gap-3 min-w-0">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                        <span class="gm-rail-label truncate">البحث المتقدم</span>
+                    </span>
+                </a>
+            </div>
+
+            <!-- أقسام إضافية مطوية افتراضياً لتجنب الازدحام -->
+            <div class="gm-rail-expanded-only pt-1">
+                <button type="button" onclick="toggleMoreFolders()" class="gm-rail-item text-[#5F6368]">
+                    <span class="flex items-center gap-2">
+                        <span id="more-arrow">▾</span>
+                        <span class="gm-rail-label font-medium">أقسام أخرى</span>
+                    </span>
+                </button>
+                <div id="more-folders" class="hidden space-y-0.5 mt-1">
+                    <a href="{% url 'core:dashboard' %}?folder=all" class="gm-rail-item {% if is_inbox_page and folder == 'all' %}is-active{% endif %}"><span class="gm-rail-label truncate">كل المعاملات المتاحة</span></a>
+                    <a href="{% url 'workflow:referral_inbox' %}" class="gm-rail-item"><span class="gm-rail-label truncate">صندوق الإحالات</span></a>
+                    <a href="{% url 'organization:org_tree' %}" class="gm-rail-item"><span class="gm-rail-label truncate">الهيكل التنظيمي</span></a>
+                    <a href="{% url 'documents:document_list' %}" class="gm-rail-item"><span class="gm-rail-label truncate">المستندات والمرفقات</span></a>
+                    <a href="{% url 'decisions:decision_list' %}" class="gm-rail-item"><span class="gm-rail-label truncate">القرارات الإدارية</span></a>
+                    <a href="{% url 'committees:committee_list' %}" class="gm-rail-item"><span class="gm-rail-label truncate">اللجان والمحاضر</span></a>
+                    <a href="{% url 'reports:dashboard' %}" class="gm-rail-item"><span class="gm-rail-label truncate">التقارير والمتابعة</span></a>
+                    <a href="{% url 'notifications:center' %}" class="gm-rail-item"><span class="gm-rail-label truncate">مركز التنبيهات</span></a>
+                    <a href="{% url 'core:settings' %}" class="gm-rail-item"><span class="gm-rail-label truncate">القوائم والإعدادات</span></a>
+                    <a href="{% url 'core:user_guide' %}" class="gm-rail-item"><span class="gm-rail-label truncate">دليل الاستخدام</span></a>
+
+                    {% if request.user.is_superuser or can_manage_users_scoped or can_view_audit %}
+                        <div class="pt-2 mt-2 border-t border-[#E1E3E1] text-xs font-bold text-[#5F6368] px-3">
+                            إدارة النظام
+                        </div>
+                        {% if request.user.is_superuser or can_manage_users_scoped %}
+                            <a href="{% url 'accounts:users_list' %}" class="gm-rail-item font-bold"><span class="gm-rail-label truncate">المستخدمون والأدوار</span></a>
+                        {% endif %}
+                        {% if can_view_audit or request.user.is_superuser %}
+                            <a href="{% url 'audit:audit_log' %}" class="gm-rail-item"><span class="gm-rail-label truncate">سجل المتابعة والتتبع</span></a>
+                        {% endif %}
+                        {% if request.user.is_superuser %}
+                            <a href="{% url 'core:db_admin' %}" class="gm-rail-item"><span class="gm-rail-label truncate">إدارة البيانات</span></a>
+                            <a href="{% url 'accounts:permissions_matrix' %}" class="gm-rail-item"><span class="gm-rail-label truncate">الصلاحيات</span></a>
+                            <a href="{% url 'accounts:delegations' %}" class="gm-rail-item"><span class="gm-rail-label truncate">التفويضات الرسمية</span></a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    {% if request.user.is_authenticated %}
+        <div class="mt-3 pt-2 border-t border-[#E1E3E1]">
+            <div id="rail-switcher-wrap" class="gm-rail-collapsed-only relative">
+                <button
+                    type="button"
+                    onclick="toggleRailSwitcherPopover(event)"
+                    data-tooltip="الحساب والخروج"
+                    data-tooltip-pos="left"
+                    class="gm-rail-item gm-ripple bg-white shadow-sm text-[#0B57D0] font-bold"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </button>
+
+                <div id="rail-switcher-popover" class="hidden absolute bottom-0 right-full mr-2 w-64 bg-white rounded-2xl shadow-xl border border-[#E1E3E1] p-3.5 z-50 space-y-2.5 text-sm">
+                    <div class="text-xs px-3 py-1.5 rounded-xl bg-[#EAF1FB] text-[#0B57D0] font-bold">
+                        {{ user_access_scope.short_label }}
+                    </div>
+                    <form method="post" action="{% url 'accounts:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full py-2 px-3 border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#444746] rounded-full text-xs font-bold">تسجيل الخروج</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="gm-rail-expanded-only px-2 text-xs text-[#5F6368] flex items-center justify-between gap-2">
+                <span class="truncate">{{ user_access_scope.short_label }}</span>
+                <a href="{% url 'core:user_guide' %}" class="text-[#0B57D0] font-bold hover:underline shrink-0">مساعدة</a>
+            </div>
+        </div>
+    {% endif %}
+</aside>

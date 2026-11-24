@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}البحث المتقدم في الأرشيف — منظومة السكرتارية{% endblock %}
+{% block page_title %}البحث المتقدم في أرشيف المراسلات والمستندات{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-5">
+    <!-- Advanced Search Filter Card -->
+    <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm p-4 sm:p-5">
+        <div class="flex items-center justify-between pb-3 border-b border-[#F0F2F5] mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-full bg-[#E8F0FE] text-[#0B57D0] flex items-center justify-center font-bold text-sm">🔍</span>
+                <div>
+                    <h2 class="text-sm font-bold text-[#1F1F1F]">معايير البحث المتقدم والفلترة</h2>
+                    <p class="text-xs text-[#5F6368]">ابحث بالتاريخ، جهة الصدور، نوع المستند، السرية، والكلمات الدالة مع عزل آمن للسرية</p>
+                </div>
+            </div>
+            {% if has_filters %}
+                <a href="{% url 'core:archive_search' %}" class="text-xs text-[#C5221F] hover:underline font-semibold flex items-center gap-1">
+                    <span>✕</span> مسح كل الفلاتر
+                </a>
+            {% endif %}
+        </div>
+
+        <form method="get" action="{% url 'core:archive_search' %}" class="space-y-4" id="archiveSearchForm">
+            <!-- Row 1: Search Query + Source -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">كلمة البحث (العنوان، الملخص، الرقم الداخلي أو الصادر/الوارد)</label>
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ q }}"
+                        placeholder="مثال: ترقية، نقل موظف، محطة سيدي كرير، 412/2026..."
+                        class="w-full px-3.5 py-2 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs sm:text-sm text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">جهة الصدور أو الورود أو اسم صاحب الطلب</label>
+                    <input
+                        type="text"
+                        name="source"
+                        value="{{ source }}"
+                        placeholder="مثال: وزارة الكهرباء، الشركة القابضة، الإدارة العامة للأمن..."
+                        class="w-full px-3.5 py-2 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs sm:text-sm text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                </div>
+            </div>
+
+            <!-- Row 2: Date Range + Type + Confidentiality + Sector -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">من تاريخ</label>
+                    <input
+                        type="date"
+                        name="date_from"
+                        value="{{ date_from }}"
+                        class="w-full px-3 py-1.5 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">إلى تاريخ</label>
+                    <input
+                        type="date"
+                        name="date_to"
+                        value="{{ date_to }}"
+                        class="w-full px-3 py-1.5 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">نوع المستند</label>
+                    <select
+                        name="doc_type"
+                        class="w-full px-3 py-1.5 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                        <option value="">(كل الأنواع)</option>
+                        {% for dt in doc_types %}
+                            <option value="{{ dt.id }}" {% if doc_type_id == dt.id|stringformat:"s" %}selected{% endif %}>{{ dt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-[#444746] mb-1">درجة السرية</label>
+                    <select
+                        name="confidentiality"
+                        class="w-full px-3 py-1.5 bg-[#F8FAFD] border border-[#DADCE0] rounded-xl text-xs text-[#1F1F1F] focus:bg-white focus:outline-none focus:border-[#0B57D0]"
+                    >
+                        <option value="">(كل الدرجات المسموحة)</option>
+                        {% for c in confidentialities %}
+                            <option value="{{ c.id }}" {% if conf_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Submit and Export Actions -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5">
+                        <span>🔍</span> تطبيق الفلاتر والبحث
+                    </button>
+                    {% if has_filters %}
+                        <a href="{% url 'core:archive_search' %}" class="px-4 py-2 bg-[#F1F3F4] hover:bg-[#E8EAED] text-[#444746] rounded-full text-xs font-semibold transition-colors">
+                            إلغاء الفلترة
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Direct PDF Export Button for Search Results -->
+                <button
+                    type="button"
+                    onclick="exportSearchResultsPdf()"
+                    class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F8FAFD] text-[#0B57D0] hover:border-[#0B57D0] rounded-full text-xs font-bold transition-colors flex items-center gap-1.5"
+                >
+                    <span>📄</span> تصدير نتائج البحث PDF للطباعة
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="searchResultsContainer">
+        <!-- Documents Column -->
+        <section class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div class="px-4 py-3 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-[#0B57D0] text-sm">📑</span>
+                    <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">المستندات والمراسلات المطابقة</h3>
+                </div>
+                <span class="mono-num text-xs font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0]">
+                    {{ doc_results|length }} مستند
+                </span>
+            </div>
+
+            <div class="divide-y divide-[#F0F2F5] flex-1">
+                {% for d in doc_results %}
+                    <div class="p-3.5 hover:bg-[#F9FBFD] transition-colors result-doc-row">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1 min-w-0">
+                                <a href="{% url 'documents:document_detail' d.id %}" class="font-bold text-xs sm:text-sm text-[#0B57D0] hover:underline block truncate">
+                                    {{ d.title }}
+                                </a>
+                                <div class="text-[11px] text-[#5F6368] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span class="mono-num font-semibold text-[#1F1F1F]">#{{ d.internal_number }}</span>
+                                    <span>·</span>
+                                    <span>النوع: {{ d.doc_type.name }}</span>
+                                    <span>·</span>
+                                    <span class="{% if d.confidentiality.rank >= 3 %}text-[#B3261E] font-bold{% endif %}">{{ d.confidentiality.name }}</span>
+                                    {% if d.sender_entity %}
+                                        <span>·</span>
+                                        <span class="truncate max-w-[180px]">الجهة: {{ d.sender_entity }}</span>
+                                    {% endif %}
+                                    {% if d.document_date %}
+                                        <span>·</span>
+                                        <span class="mono-num">{{ d.document_date|date:"Y-m-d" }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <a
+                                    href="{% url 'documents:document_export_pdf' d.id %}"
+                                    title="تصدير المستند PDF"
+                                    class="px-2.5 py-1 text-[11px] font-semibold text-[#0B57D0] hover:bg-[#E8F0FE] rounded-lg transition-colors border border-[#D3E3FD]"
+                                >
+                                    PDF
+                                </a>
+                                <a
+                                    href="{% url 'documents:document_detail' d.id %}"
+                                    class="px-2.5 py-1 text-[11px] font-semibold text-[#444746] hover:bg-[#F1F3F4] rounded-lg transition-colors"
+                                >
+                                    فتح
+                                </a>
+                            </div>
+                        </div>
+
+                        {% if d.summary %}
+                            <p class="text-xs text-[#444746] mt-2 line-clamp-2 bg-[#F8FAFD] p-2 rounded-lg border border-[#EEF2F6] leading-relaxed">
+                                {{ d.summary }}
+                            </p>
+                        {% endif %}
+
+                        <!-- Attached files quick view if any -->
+                        {% for v in d.versions.all %}
+                            {% if v.attachments.all %}
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    {% for att in v.attachments.all %}
+                                        <button
+                                            type="button"
+                                            onclick="openAttachmentModal({{ att.id }}, '{{ att.original_filename|escapejs }}', '{{ att.file.url }}', '{{ att.preview_kind }}')"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-[#F1F3F4] text-[#444746] hover:bg-[#E8F0FE] hover:text-[#0B57D0]"
+                                        >
+                                            <span>📎</span>
+                                            <span class="max-w-[120px] truncate">{{ att.original_filename }}</span>
+                                            <span class="text-[9px] text-[#747775]">({{ att.extension|upper }})</span>
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% empty %}
+                    <div class="p-8 text-center text-xs sm:text-sm text-[#747775]">
+                        {% if has_filters %}
+                            لا توجد مراسلات أو مستندات مطابقة لمعايير البحث المحددة ضمن نطاق صلاحياتك.
+                        {% else %}
+                            قم بإدخال معايير البحث أو الكلمات الدالة لعرض المستندات المطابقة.
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Subjects Column -->
+        <section class="bg-white rounded-[16px] shadow-sm overflow-hidden flex flex-col">
+            <div class="px-4 py-3 bg-[#F8F9FA] border-b border-[#ECEFF1] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-[#1A73E8] text-sm">📁</span>
+                    <h3 class="font-bold text-xs sm:text-sm text-[#202124]">ملفات الموضوعات المطابقة</h3>
+                </div>
+                <span class="mono-num text-xs font-bold px-2.5 py-0.5 rounded-[20px] bg-[#E8F0FE] text-[#1A73E8]">
+                    {{ subject_results|length }} موضوع
+                </span>
+            </div>
+
+            <div class="divide-y divide-[#ECEFF1] flex-1">
+                {% for s in subject_results %}
+                    <div class="p-3.5 hover:bg-[#F1F3F4] transition-colors result-subj-row">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1 min-w-0">
+                                <a href="{% url 'subjects:subject_detail' s.id %}" class="font-bold text-xs sm:text-sm text-[#202124] hover:text-[#1A73E8] block truncate">
+                                    {{ s.title }}
+                                </a>
+                                <div class="text-[11px] text-[#5F6368] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span class="mono-num font-semibold text-[#1A73E8]">#{{ s.internal_number }}</span>
+                                    <span>·</span>
+                                    <span>الحالة: {{ s.get_status_display }}</span>
+                                    <span>·</span>
+                                    <span>{{ s.org_unit.name }}</span>
+                                    <span>·</span>
+                                    <span class="{% if s.confidentiality.rank >= 3 %}text-[#A50E0E] font-bold{% endif %}">{{ s.confidentiality.name }}</span>
+                                    {% if s.created_at %}
+                                        <span>·</span>
+                                        <span class="mono-num">{{ s.created_at|date:"Y-m-d" }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <a
+                                    href="{% url 'subjects:subject_export_pdf' s.id %}"
+                                    data-tooltip="تصدير ملف الموضوع PDF"
+                                    class="px-2.5 py-1 text-[11px] font-semibold text-[#1A73E8] hover:bg-[#E8F0FE] rounded-[20px] transition-colors border border-[#D3E3FD]"
+                                >
+                                    PDF
+                                </a>
+                                <a
+                                    href="{% url 'subjects:subject_detail' s.id %}"
+                                    class="px-2.5 py-1 text-[11px] font-semibold text-[#5F6368] hover:bg-[#F1F3F4] rounded-[20px] transition-colors"
+                                >
+                                    فتح
+                                </a>
+                            </div>
+                        </div>
+
+                        {% if s.description %}
+                            <p class="text-xs text-[#5F6368] mt-2 line-clamp-2 bg-[#F8F9FA] p-2.5 rounded-[16px] leading-relaxed">
+                                {{ s.description }}
+                            </p>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="p-8 text-center text-xs sm:text-sm text-[#5F6368]">
+                        {% if has_filters %}
+                            لا توجد ملفات موضوعات مطابقة لمعايير البحث الحالية ضمن صلاحياتك.
+                        {% else %}
+                            قم بالبحث لعرض ملفات الموضوعات المطابقة.
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <!-- صف الإجمالي لنتائج البحث -->
+    <div class="bg-[#F1F3F4] rounded-[16px] px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#202124] border border-[#DADCE0]">
+        <span>صف الإجمالي</span>
+        <div class="flex flex-wrap items-center gap-4">
+            <span>إجمالي المستندات: <span class="mono-num text-[#1A73E8]">{{ doc_results|length }}</span></span>
+            <span>|</span>
+            <span>إجمالي الموضوعات: <span class="mono-num text-[#1A73E8]">{{ subject_results|length }}</span></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportSearchResultsPdf() {
+    const query = "{{ q|default:''|escapejs }}";
+    const source = "{{ source|default:''|escapejs }}";
+    const dateFrom = "{{ date_from|default:''|escapejs }}";
+    const dateTo = "{{ date_to|default:''|escapejs }}";
+    
+    let filterSummary = "كل الأرشيف المصرح به";
+    const parts = [];
+    if (query) parts.push("كلمة البحث: " + query);
+    if (source) parts.push("جهة الصدور: " + source);
+    if (dateFrom || dateTo) parts.push("الفترة: " + (dateFrom || "البداية") + " إلى " + (dateTo || "الآن"));
+    if (parts.length > 0) filterSummary = parts.join(" | ");
+
+    const docRows = Array.from(document.querySelectorAll(".result-doc-row")).map(el => [
+        el.querySelector("a")?.innerText.trim() || "—",
+        el.querySelector(".text-\\[11px\\]")?.innerText.trim() || "—",
+        el.querySelector("p")?.innerText.trim() || "—"
+    ]);
+
+    const subjRows = Array.from(document.querySelectorAll(".result-subj-row")).map(el => [
+        el.querySelector("a")?.innerText.trim() || "—",
+        el.querySelector(".text-\\[11px\\]")?.innerText.trim() || "—",
+        el.querySelector("p")?.innerText.trim() || "—"
+    ]);
+
+    if (window.exportInstitutionalPdf) {
+        window.exportInstitutionalPdf({
+            filename: "archive-search-" + new Date().toISOString().slice(0, 10),
+            title: "تقرير نتائج البحث المتقدم في الأرشيف",
+            subtitle: filterSummary,
+            metadata: [
+                ["المستندات المطابقة", String(docRows.length)],
+                ["الموضوعات المطابقة", String(subjRows.length)],
+                ["كلمة البحث", query || "الكل"],
+                ["تاريخ الاستخراج", new Date().toLocaleDateString("ar-EG")]
+            ],
+            sections: [
+                {
+                    heading: "أولاً: المستندات والمراسلات المطابقة (" + docRows.length + ")",
+                    table: {
+                        headers: ["المستند", "البيانات والسرية", "الملخص"],
+                        rows: docRows.length ? docRows : [["لا توجد مستندات مطابقة", "—", "—"]]
+                    }
+                },
+                {
+                    heading: "ثانياً: ملفات الموضوعات المطابقة (" + subjRows.length + ")",
+                    table: {
+                        headers: ["الموضوع", "الحالة والوحدة", "الوصف"],
+                        rows: subjRows.length ? subjRows : [["لا توجد موضوعات مطابقة", "—", "—"]]
+                    }
+                }
+            ]
+        });
+    }
+}
+</script>
+{% endblock %}

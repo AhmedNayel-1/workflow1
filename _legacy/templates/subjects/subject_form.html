@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}معاملة أو رسالة جديدة{% endblock %}
+{% block page_title %}تسجيل معاملة أو إرسال رسالة{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="max-w-3xl mx-auto w-full bg-white border border-[#E1E3E1] rounded-2xl p-6 space-y-5">
+    {% csrf_token %}
+    <input id="form-compose-mode-input" type="hidden" name="compose_mode" value="document">
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3.5">
+        <div class="inline-flex bg-[#F6F8FC] border border-[#DADCE0] rounded-full p-1 text-xs font-bold">
+            <button type="button" id="form-mode-doc-btn" onclick="setFormComposeMode('document')" class="px-4 py-1.5 rounded-full bg-[#D3E3FD] text-[#001D35]">تسجيل معاملة</button>
+            <button type="button" id="form-mode-msg-btn" onclick="setFormComposeMode('message')" class="px-4 py-1.5 rounded-full text-[#5F6368]">إرسال رسالة</button>
+        </div>
+        <span class="text-xs text-[#5F6368]">املأ الحقول الأساسية فقط ثم اضغط حفظ</span>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-bold text-[#1F1F1F] mb-1.5">عنوان المعاملة أو الرسالة *</label>
+            <input type="text" name="title" required placeholder="مثال: طلب نقل موظف إلى قسم الحسابات" class="w-full px-4 py-2.5 border border-[#DADCE0] rounded-xl text-[15px] focus:outline-none focus:border-[#0B57D0]">
+        </div>
+
+        <div id="form-msg-recipients-row" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1">إلى (المستلمون)</label>
+                <select name="to_user_ids" multiple size="4" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-xs bg-white">
+                    {% for u in users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1">نسخة للاطلاع</label>
+                <select name="cc_user_ids" multiple size="4" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-xs bg-white">
+                    {% for u in users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1">نسخة مخفية</label>
+                <select name="bcc_user_ids" multiple size="4" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-xs bg-white">
+                    {% for u in users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-bold text-[#1F1F1F] mb-1.5">القطاع المختص *</label>
+                <select id="form-sector-select" name="sector_id" required onchange="filterFormUnitsBySector()" class="w-full px-3.5 py-2.5 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                    {% for sec in sectors %}<option value="{{ sec.id }}">{{ sec.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-[#1F1F1F] mb-1.5">القسم المختص بالموضوع *</label>
+                <select id="form-unit-select" name="org_unit_id" required class="w-full px-3.5 py-2.5 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                    {% for u in org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }} ({{ u.sector.name }})</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-bold text-[#1F1F1F] mb-1.5">تفاصيل الموضوع</label>
+            <textarea name="description" rows="4" placeholder="اكتب ملخصاً واضحاً للمعاملة أو الطلب..." class="w-full px-4 py-2.5 border border-[#DADCE0] rounded-xl text-[15px] focus:outline-none focus:border-[#0B57D0]"></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-bold text-[#1F1F1F] mb-1.5">إرفاق ملف (اختياري)</label>
+            <input id="form-attachment-input" type="file" name="initial_attachment" onchange="previewSelectedFormFile()" class="w-full px-3.5 py-2 border border-dashed border-[#DADCE0] rounded-xl text-sm bg-[#F6F8FC]">
+        </div>
+    </div>
+
+    <!-- خيارات وتصنيفات إضافية مطوية افتراضياً -->
+    <div class="border-t border-[#ECEFF1] pt-3">
+        <button type="button" onclick="var el=document.getElementById('form-adv-panel'); var a=document.getElementById('form-adv-arrow'); var h=el.classList.toggle('hidden'); if(a) a.textContent=h?'▾':'▴';" class="inline-flex items-center gap-1.5 text-sm font-bold text-[#0B57D0] hover:underline">
+            <span id="form-adv-arrow">▾</span>
+            <span>خيارات وتصنيفات إضافية (اختياري)</span>
+        </button>
+
+        <div id="form-adv-panel" class="hidden mt-4 p-4 rounded-2xl bg-[#F6F8FC] border border-[#ECEFF1] space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">نوع المعاملة</label>
+                    <select name="transaction_type_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for tx in transaction_types %}<option value="{{ tx.id }}">{{ tx.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">درجة السرية</label>
+                    <select name="confidentiality_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">الأهمية</label>
+                    <select name="priority_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">المكلف المبدئي</label>
+                    <select name="current_owner_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for u in users %}<option value="{{ u.id }}" {% if u.id == request.user.id %}selected{% endif %}>{{ u }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">نوع المستند المرفق</label>
+                    <select name="initial_doc_type_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">اسم المستند المرفق</label>
+                    <input type="text" name="initial_doc_title" placeholder="تلقائي إذا تُرك فارغاً" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">مقدم الطلب / الجهة</label>
+                    <input type="text" name="applicant_name" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">موعد الإنجاز المتوقع</label>
+                    <input type="date" name="due_date" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white mono-num">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1">قالب مسار عمل جاهز</label>
+                <select name="workflow_template_version_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                    <option value="">-- بدون قالب محدد --</option>
+                    {% for tv in template_versions %}
+                        <option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }} — {{ tv.template.sector.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1">توجيه مبدئي عند الإنشاء</label>
+                <input type="text" name="sector_directive" placeholder="توجيه مختصر..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+            </div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+        <button id="form-submit-btn" type="submit" class="px-6 py-2.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-sm font-bold">حفظ وإنشاء المعاملة</button>
+        <a href="{% url 'core:dashboard' %}" class="px-5 py-2.5 border border-[#DADCE0] rounded-full text-sm text-[#444746] font-bold">إلغاء</a>
+    </div>
+</form>
+<script>
+function filterFormUnitsBySector() {
+    var secEl = document.getElementById('form-sector-select');
+    var unitEl = document.getElementById('form-unit-select');
+    if (!secEl || !unitEl) return;
+    var secId = secEl.value;
+    var firstVisible = null;
+    for (var i = 0; i < unitEl.options.length; i++) {
+        var opt = unitEl.options[i];
+        var match = !opt.getAttribute('data-sector') || opt.getAttribute('data-sector') === secId;
+        opt.hidden = !match;
+        if (match && !firstVisible) firstVisible = opt;
+    }
+    if (unitEl.selectedOptions.length === 0 || unitEl.selectedOptions[0].hidden) {
+        if (firstVisible) unitEl.value = firstVisible.value;
+    }
+}
+function setFormComposeMode(mode) {
+    var modeInput = document.getElementById('form-compose-mode-input');
+    var docBtn = document.getElementById('form-mode-doc-btn');
+    var msgBtn = document.getElementById('form-mode-msg-btn');
+    var msgRow = document.getElementById('form-msg-recipients-row');
+    var submitBtn = document.getElementById('form-submit-btn');
+    if (modeInput) modeInput.value = mode;
+    if (mode === 'message') {
+        if (msgRow) msgRow.classList.remove('hidden');
+        if (docBtn) { docBtn.classList.remove('bg-[#D3E3FD]', 'text-[#001D35]'); docBtn.classList.add('text-[#5F6368]'); }
+        if (msgBtn) { msgBtn.classList.add('bg-[#D3E3FD]', 'text-[#001D35]'); msgBtn.classList.remove('text-[#5F6368]'); }
+        if (submitBtn) submitBtn.textContent = 'إرسال الرسالة الآن';
+    } else {
+        if (msgRow) msgRow.classList.add('hidden');
+        if (docBtn) { docBtn.classList.add('bg-[#D3E3FD]', 'text-[#001D35]'); docBtn.classList.remove('text-[#5F6368]'); }
+        if (msgBtn) { msgBtn.classList.remove('bg-[#D3E3FD]', 'text-[#001D35]'); msgBtn.classList.add('text-[#5F6368]'); }
+        if (submitBtn) submitBtn.textContent = 'حفظ وإنشاء المعاملة';
+    }
+}
+function previewSelectedFormFile() {
+    var input = document.getElementById('form-attachment-input');
+    if (!input || !input.files || !input.files[0] || !window.openInlineAttachmentPreview) return;
+    var f = input.files[0];
+    var url = URL.createObjectURL(f);
+    window.openInlineAttachmentPreview('draft', f.name, 'auto', url, url, '');
+}
+document.addEventListener('DOMContentLoaded', filterFormUnitsBySector);
+</script>
+{% endblock %}

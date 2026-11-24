@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}اللجان والاجتماعات{% endblock %}
+{% block heading %}اللجان والاجتماعات{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>اللجان والاجتماعات</h2><p>جدول الجلسات، واختر يوماً من التقويم لتصفيتها.</p></div>{% if can_manage %}<button class="btn primary" data-open="new-meeting">{% icon 'plus' %}جلسة جديدة</button>{% endif %}</div>
+<script id="meet-data" type="application/json">[{% for c in committees %}{% for m in c.meetings.all %}{"date":"{{ m.meeting_date|date:'Y-m-d' }}"},{% endfor %}{% endfor %}{"date":""}]</script>
+<div class="grid g-main-r">
+  <div class="col" style="gap:16px">
+    <section class="panel"><div class="cal" id="cal"></div><div class="panel-f row between"><span class="xs muted">النقطة = يوجد اجتماع</span><button class="btn sm ghost" id="cal-clear" hidden>عرض الكل</button></div></section>
+    <section class="panel"><div class="panel-h"><h3>اللجان</h3><span class="cnt">{{ committees|length }}</span></div><div class="panel-b">{% for c in committees %}<div class="item"><span class="avatar c{{ forloop.counter0|add:1|stringformat:'s'|slice:'-1:' }}">{{ c.name|initials }}</span><div class="grow"><h5>{{ c.name }}</h5><span class="muted xs">{% if c.chair %}الرئيس: {{ c.chair }} · {% endif %}{{ c.members.all|length }} أعضاء · {{ c.sector.name|default:"كل القطاعات" }}</span></div></div>{% empty %}<p class="muted sm">لا توجد لجان ضمن نطاقك.</p>{% endfor %}</div></section>
+  </div>
+  <section style="min-width:0">
+    {% for c in committees %}{% for m in c.meetings.all %}
+    <a class="meet" href="{% url 'committees:meeting_detail' m.id %}" data-date="{{ m.meeting_date|date:'Y-m-d' }}"><div class="meet-d"><b class="num">{{ m.meeting_date|date:"j" }}</b><small>{{ m.meeting_date|date:"F" }}</small></div>
+      <div class="grow"><b>{{ c.name }}</b><div class="muted sm">جلسة رقم <span class="num">{{ m.meeting_number }}</span>{% if m.location %} · {{ m.location }}{% endif %}</div></div><span class="pill {% if m.status == 'APPROVED' %}ok{% elif m.status == 'CONVENED' %}brand{% else %}info{% endif %}">{{ m.get_status_display }}</span><span class="muted">{% icon 'chevl' %}</span></a>
+    {% endfor %}{% empty %}<div class="panel">{% include "partials/empty.html" with title="لا توجد اجتماعات" icon_name="calendar" %}</div>{% endfor %}
+  </section>
+</div>
+{% if can_manage %}<div class="overlay" id="new-meeting"><div class="modal"><div class="modal-h"><h3>تسجيل اجتماع لجنة</h3><button class="iconbtn" data-close aria-label="إغلاق">{% icon 'x' %}</button></div>
+  <form method="post">{% csrf_token %}<div class="modal-b form"><label class="fld full"><span>اللجنة</span><select class="in" name="committee_id" required>{% for c in committees %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label><label class="fld"><span>رقم الجلسة</span><input class="in" name="meeting_number" required></label><label class="fld"><span>تاريخ الجلسة</span><input class="in" type="date" name="meeting_date" required></label><label class="fld full"><span>المكان</span><input class="in" name="location"></label><label class="fld full"><span>ملخص / جدول الأعمال</span><textarea class="in" name="minutes_summary" rows="3"></textarea></label></div>
+  <div class="modal-f"><span class="grow"></span><button class="btn" type="button" data-close>إلغاء</button><button class="btn primary" type="submit">تسجيل الجلسة</button></div></form></div></div>{% endif %}
+{% endblock %}

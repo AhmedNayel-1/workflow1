@@ -1,0 +1,65 @@
+{% load ui_extras %}
+{# تأكيد #}
+<div class="overlay" id="confirm"><div class="modal sm"><div class="modal-b"><div class="row" style="align-items:flex-start;gap:14px"><span class="avatar lg" style="background:var(--warn-soft);color:var(--warn)">{% icon 'alert' %}</span><div><h3>تأكيد الإجراء</h3><p class="muted mt-s" id="confirm-msg">هل أنت متأكد؟</p></div></div></div><div class="modal-f"><span class="grow"></span><button class="btn" type="button" data-close>إلغاء</button><button class="btn primary" type="button" id="confirm-ok">تأكيد</button></div></div></div>
+
+{# لوحة الأوامر #}
+<div class="overlay top" id="cmdk" data-search="{% url 'core:archive_search' %}"><div class="cmdk"><input id="cmdk-in" class="cmdk-in" placeholder="ماذا تريد أن تفعل؟ اكتب اسم صفحة أو إجراء أو كلمة للبحث…" autocomplete="off"><div id="cmdk-l" class="cmdk-l"></div><div class="cmdk-f"><span>↑↓ للتنقل</span><span>Enter للفتح</span><span>Esc للإغلاق</span></div></div></div>
+
+{# معاينة مرفق #}
+<div class="overlay" id="pv"><div class="modal xl"><div class="modal-h"><div class="row"><span class="ficon">{% icon 'file' %}</span><b id="pv-name" class="trunc">مرفق</b></div><div class="row"><a class="btn sm" id="pv-page" href="#" target="_blank" rel="noopener">{% icon 'ext' 'sm' %}الصفحة الكاملة</a><a class="btn sm primary" id="pv-dl" href="#">{% icon 'download' 'sm' %}تنزيل</a><button class="iconbtn" type="button" data-close aria-label="إغلاق">{% icon 'x' %}</button></div></div><div class="pv-b" id="pv-body" style="flex:1;min-height:0;background:var(--panel-2)"></div></div></div>
+
+{# معالج الإنشاء #}
+<div class="overlay" id="compose" role="dialog" aria-modal="true" aria-labelledby="wz-title" data-sticky>
+  <div class="modal lg">
+    <div class="modal-h"><h3 id="wz-title">موضوع جديد</h3><button type="button" class="iconbtn" data-close aria-label="إغلاق">{% icon 'x' %}</button></div>
+    <div class="wz-steps"><div class="wz-s on" data-s="1"><b>1</b><span>ماذا تريد؟</span></div><div class="wz-s" data-s="2"><b>2</b><span>التفاصيل</span></div><div class="wz-s" data-s="3"><b>3</b><span>التوجيه والمراجعة</span></div></div>
+    <form id="wz-form" method="post" action="{% url 'subjects:subject_create' %}" enctype="multipart/form-data" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden" data-multi>
+      {% csrf_token %}<input type="hidden" id="wz-mode" name="compose_mode" value="document">
+      <div class="modal-b">
+        <div data-wz-pane="1" class="on">
+          <h4 style="font-size:20px">ماذا تريد أن تنشئ؟</h4><p class="muted mb">اختر نوع العمل وسنرشدك للخطوات المناسبة.</p>
+          <div class="tiles mb">
+            <button type="button" class="tile on" data-mode="document"><span class="ico">{% icon 'file' %}</span><b>موضوع رسمي</b><small>معاملة تُسجَّل برقم داخلي وتمر بدورة الإحالة والقرار والأرشفة.</small></button>
+            <button type="button" class="tile" data-mode="message"><span class="ico">{% icon 'chat' %}</span><b>مراسلة سريعة</b><small>رسالة داخلية لمستلمين محددين دون مسار رسمي كامل.</small></button>
+          </div>
+          <div id="wz-tx"><h4 style="font-size:16px" class="mb">ما نوع المعاملة؟</h4>
+            <div class="tiles">{% for tx in compose_meta.transaction_types %}<button type="button" class="tile {% if forloop.first %}on{% endif %}" data-txid="{{ tx.id }}"><b>{{ tx.name }}</b></button>{% endfor %}</div>
+            <select id="wz-tx-sel" name="transaction_type_id" hidden tabindex="-1">{% for tx in compose_meta.transaction_types %}<option value="{{ tx.id }}">{{ tx.name }}</option>{% endfor %}</select>
+          </div>
+        </div>
+        <div data-wz-pane="2">
+          <h4 style="font-size:20px">عمّ يتحدث الموضوع؟</h4><p class="muted mb">اكتب عنواناً واضحاً يسهّل البحث عنه لاحقاً.</p>
+          <div class="form">
+            <label class="fld full"><span>العنوان</span><input id="wz-ttl" class="in" name="title" required placeholder="مثال: طلب نقل الموظف أحمد محمد إلى قطاع التشغيل"></label>
+            <div id="wz-to" class="full form" hidden>
+              <label class="fld"><span>إلى (المستلمون)</span><select id="wz-to-sel" class="in" name="to_user_ids" multiple>{% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} — {{ u.job_display_title|default:u.username }}</option>{% endfor %}</select><small>اضغط Ctrl لاختيار أكثر من مستلم.</small></label>
+              <label class="fld"><span>نسخة للاطلاع (CC)</span><select class="in" name="cc_user_ids" multiple>{% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
+            </div>
+            <label class="fld full"><span>الوصف والتفاصيل <small>(اختياري)</small></span><textarea class="in" name="description" rows="4" placeholder="اكتب ملخصاً للموضوع أو نص المراسلة…"></textarea></label>
+            <label class="fld"><span>إرفاق ملف <small>(اختياري)</small></span><input id="wz-file" class="in" type="file" name="initial_attachment" multiple><small id="wz-file-l">لم يتم اختيار مرفق</small></label>
+            <label class="fld"><span>تصنيف المرفق</span><select class="in" name="initial_doc_type_id">{% for dt in compose_meta.doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
+          </div>
+        </div>
+        <div data-wz-pane="3">
+          <h4 style="font-size:20px">إلى أين يُوجَّه، وما مدى سريته؟</h4><p class="muted mb">حدّد الجهة ودرجة السرية والأولوية ثم راجع الملخص.</p>
+          <div class="form">
+            <label class="fld"><span>القطاع</span><select id="wz-sector" class="in" name="sector_id" required>{% for s in compose_meta.sectors %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
+            <label class="fld"><span>الإدارة / الوحدة</span><select id="wz-unit" class="in" name="org_unit_id" required>{% for u in compose_meta.org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }}</option>{% endfor %}</select></label>
+            <label class="fld"><span>درجة السرية</span><select id="wz-conf" class="in" name="confidentiality_id" required>{% for c in compose_meta.confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+            <label class="fld"><span>الأولوية</span><select id="wz-prio" class="in" name="priority_id" required>{% for p in compose_meta.priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+            <label class="fld full"><span>المسؤول الحالي</span><select id="wz-owner" class="in" name="current_owner_id"><option value="">أنا ({{ request.user.get_full_name|default:request.user.username }})</option>{% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
+          </div>
+          <button type="button" class="btn ghost mt-s" id="wz-adv">{% icon 'plus' 'sm' %}خيارات إضافية (الجهة الواردة، مقدم الطلب، الاستحقاق)</button>
+          <div id="wz-advbox" class="form mt-s" hidden>
+            <label class="fld"><span>الجهة الوارد منها</span><input class="in" name="external_source"></label>
+            <label class="fld"><span>اسم مقدم الطلب / المعني</span><input class="in" name="applicant_name"></label>
+            <label class="fld"><span>تاريخ الاستحقاق</span><input class="in" type="date" name="due_date"></label>
+            <label class="fld"><span>الكلمات المفتاحية</span><input class="in" name="keywords"></label>
+          </div>
+          <h4 style="font-size:16px" class="mt-l mb">مراجعة سريعة</h4><dl class="review" id="wz-review"></dl>
+        </div>
+      </div>
+      <div class="modal-f"><a class="btn ghost" href="{% url 'subjects:subject_create' %}">النموذج الكامل</a><span class="grow"></span><button type="button" class="btn" id="wz-back" hidden>السابق</button><button type="button" class="btn primary" id="wz-next">التالي</button><button type="submit" class="btn primary" id="wz-submit" hidden>حفظ وإنشاء الموضوع</button></div>
+    </form>
+  </div>
+</div>

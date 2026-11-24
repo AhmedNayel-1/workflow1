@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}التقارير الإدارية ومؤشرات الأداء{% endblock %}
+{% block page_title %}فهرس التقارير الإدارية والتشغيلية (12 تقريراً){% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <div class="bg-[#F2F6FC] border border-[#D3E3FD] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <div class="text-sm font-bold text-[#041E49]">مركز التقارير الإدارية والتحليلية</div>
+            <p class="text-xs text-[#444746] mt-0.5">
+                جميع التقارير تعمل ضمن نطاق صلاحياتك فقط: <strong>{{ user_scope.label }}</strong>
+            </p>
+        </div>
+        <div class="text-xs text-[#5F6368] bg-white px-3 py-1.5 rounded-full border border-[#DADCE0]">
+            المتاح لك: <strong class="mono-num text-[#0B57D0]">{{ reports_list|length }}</strong> تقرير
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for rep in reports_list %}
+            <a href="{% url 'reports:report_detail' rep.slug %}" class="group bg-white border border-[#DADCE0] hover:border-[#0B57D0] hover:shadow-md rounded-2xl p-5 flex flex-col justify-between transition-all">
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="w-10 h-10 rounded-xl bg-[#E8F0FE] text-[#0B57D0] flex items-center justify-center text-lg">{{ rep.icon }}</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F6F8FC] text-[#5F6368] border border-[#ECEFF1]">
+                            تقرير #<span class="mono-num">{{ rep.number }}</span> · {{ rep.category }}
+                        </span>
+                    </div>
+                    <h2 class="text-sm font-bold text-[#1F1F1F] leading-snug">{{ rep.title }}</h2>
+                    <p class="text-xs text-[#5F6368] leading-relaxed">{{ rep.subtitle }}</p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-[#ECEFF1] flex items-center justify-between text-xs font-bold text-[#0B57D0]">
+                    <span>فتح التقرير والفلاتر والتصدير</span>
+                    <span>←</span>
+                </div>
+            </a>
+        {% empty %}
+            <div class="col-span-3 bg-[#F6F8FC] border border-[#ECEFF1] rounded-2xl p-8 text-center text-xs text-[#5F6368]">
+                لا توجد تقارير متاحة لصلاحياتك الحالية.
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

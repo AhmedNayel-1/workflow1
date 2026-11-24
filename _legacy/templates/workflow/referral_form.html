@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}إحالة موضوع {{ subject.internal_number }}{% endblock %}
+{% block page_title %}محرك الإحالات — {{ subject.internal_number }}{% endblock %}
+
+{% block content %}
+<form method="post" class="max-w-3xl bg-white border border-[#ECEFF1] rounded-2xl p-6 space-y-4">
+    {% csrf_token %}
+    <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+    <div class="p-3.5 bg-[#F6F8FC] border border-[#ECEFF1] rounded-xl text-xs text-[#1F1F1F]">
+        <strong>الموضوع:</strong> {{ subject.title }} ({{ subject.confidentiality.name }})
+    </div>
+    {% if routing_hint %}
+    <div class="p-3.5 bg-[#E8F0FE] border border-[#C2E7FF] rounded-xl text-xs text-[#041E49] font-bold">
+        {{ routing_hint }}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">نمط الإحالة *</label>
+            <select name="routing_mode" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for val, label in routing_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">غرض الإحالة *</label>
+            <select name="purpose" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for val, label in purpose_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">شرط استكمال الإحالة المتوازية</label>
+            <select name="parallel_completion_rule" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for val, label in parallel_rules %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">الموعد المطلوب</label>
+            <input type="date" name="due_date" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl font-mono">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">إحالة إلى مستخدمين (متعدد)</label>
+            <select name="target_user_ids" multiple size="6" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for u in users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">إحالة إلى وحدات تنظيمية (متعدد)</label>
+            <select name="target_unit_ids" multiple size="6" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for unit in org_units %}<option value="{{ unit.id }}">{{ unit.name }} ({{ unit.sector.name }})</option>{% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="text-xs">
+        <label class="block font-bold text-[#444746] mb-1">نص التوجيه والملاحظات</label>
+        <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl"></textarea>
+    </div>
+    <div class="flex items-center gap-3">
+        <button type="submit" class="px-6 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">تنفيذ الإحالة</button>
+        <a href="{% url 'subjects:subject_detail' subject.id %}" class="px-5 py-2 border border-[#DADCE0] rounded-full text-xs font-bold text-[#444746]">رجوع</a>
+    </div>
+</form>
+{% endblock %}

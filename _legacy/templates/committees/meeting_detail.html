@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}محضر جلسة {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}{{ meeting.committee.name }} — جلسة {{ meeting.meeting_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex justify-between items-center bg-[#F6F8FC] border border-[#ECEFF1] rounded-2xl p-4 text-xs">
+    <div>التاريخ: <span class="mono-num font-bold text-[#1F1F1F]">{{ meeting.meeting_date|date:"Y-m-d" }}</span> · المكان: {{ meeting.location|default:"—" }}</div>
+    <a href="{% url 'committees:minutes_print' meeting.id %}" target="_blank" class="px-4 py-1.5 bg-[#0B57D0] text-white rounded-full font-bold">طباعة المحضر الرسمي</a>
+</div>
+
+{% if can_manage %}
+<form method="post" class="bg-white border border-[#ECEFF1] rounded-2xl p-5 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+    {% csrf_token %}
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">الموضوع المعروض</label>
+        <select name="subject_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            {% for s in visible_subjects %}<option value="{{ s.id }}">{{ s.internal_number }} — {{ s.title }}</option>{% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">نتيجة العرض</label>
+        <select name="resolution_type" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            {% for val, label in resolution_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <input type="text" name="recommendation" placeholder="التوصية" class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+    <input type="text" name="resolution_text" placeholder="نص قرار اللجنة" required class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+    <button type="submit" class="md:col-span-2 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">إدراج البند وتسجيل القرار</button>
+</form>
+{% endif %}
+
+<div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F6F8FC] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">الموضوع</th>
+                    <th class="px-4 py-3">التوصية</th>
+                    <th class="px-4 py-3">النتيجة</th>
+                    <th class="px-4 py-3">قرار اللجنة</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for item in items %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-3"><a href="{% url 'subjects:subject_detail' item.subject_id %}" class="text-[#0B57D0] font-bold hover:underline">{{ item.subject.internal_number }} — {{ item.subject.title }}</a></td>
+                        <td class="px-4 py-3">{{ item.recommendation }}</td>
+                        <td class="px-4 py-3 font-bold">{{ item.get_resolution_type_display }}</td>
+                        <td class="px-4 py-3">{{ item.resolution_text }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="px-4 py-6 text-center text-[#5F6368]">لا توجد بنود مسجلة في هذه الجلسة.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

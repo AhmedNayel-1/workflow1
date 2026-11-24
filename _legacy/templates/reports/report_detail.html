@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ definition.title }} — التقارير الإدارية{% endblock %}
+{% block page_title %}تقرير #{{ definition.number }}: {{ definition.title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <!-- شريط التنقل العلوي وأزرار التصدير والطباعة -->
+    <div class="flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'reports:dashboard' %}" class="px-3.5 py-1.5 border border-[#DADCE0] bg-white hover:bg-[#F6F8FC] text-[#444746] rounded-full text-xs font-bold">
+                → فهرس التقارير
+            </a>
+            <span class="px-3 py-1 rounded-full bg-[#E8F0FE] text-[#041E49] text-xs font-bold">
+                {{ definition.icon }} {{ definition.category }}
+            </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="?date_from={{ query_params.date_from }}&date_to={{ query_params.date_to }}&sector={{ query_params.sector }}&transaction_type={{ query_params.transaction_type }}&export=pdf"
+               class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold transition-colors shadow-xs flex items-center gap-1">
+                <span>📄</span> تصدير PDF
+            </a>
+            <a href="?date_from={{ query_params.date_from }}&date_to={{ query_params.date_to }}&sector={{ query_params.sector }}&transaction_type={{ query_params.transaction_type }}&export=xlsx"
+               class="px-4 py-2 bg-[#137333] hover:bg-[#0D652D] text-white rounded-full text-xs font-bold transition-colors">
+                تصدير Excel (.xlsx)
+            </a>
+            <a href="?date_from={{ query_params.date_from }}&date_to={{ query_params.date_to }}&sector={{ query_params.sector }}&transaction_type={{ query_params.transaction_type }}&print=1"
+               target="_blank"
+               class="px-4 py-2 bg-[#444746] hover:bg-[#1F1F1F] text-white rounded-full text-xs font-bold transition-colors">
+                طباعة A4 رسمية
+            </a>
+        </div>
+    </div>
+
+    <!-- رسالة خطأ عند وجود تواريخ غير منطقية أو معاملات تصفية غير صالحة -->
+    {% if error_message %}
+        <div class="p-4 rounded-2xl bg-[#FCE8E6] border border-[#F6AEA9] text-[#A50E0E] text-xs font-bold">
+            تعذر تطبيق الفلترة: {{ error_message }}
+        </div>
+    {% endif %}
+
+    <!-- شريط الفلاتر التفاعلي -->
+    <form method="get" id="report-filter-form" class="bg-[#F6F8FC] border border-[#ECEFF1] rounded-2xl p-4 space-y-3 no-print" onsubmit="showReportLoading()">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div>
+                <label class="block font-bold text-[#444746] mb-1">من تاريخ</label>
+                <input type="date" name="date_from" value="{{ query_params.date_from }}" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white mono-num">
+            </div>
+            <div>
+                <label class="block font-bold text-[#444746] mb-1">إلى تاريخ</label>
+                <input type="date" name="date_to" value="{{ query_params.date_to }}" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white mono-num">
+            </div>
+            <div>
+                <label class="block font-bold text-[#444746] mb-1">القطاع</label>
+                <select name="sector" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                    <option value="">كل القطاعات المتاحة لصلاحياتك</option>
+                    {% for sec in report.filters.allowed_sectors %}
+                        <option value="{{ sec.id }}" {% if report.filters.sector and report.filters.sector.id == sec.id %}selected{% endif %}>{{ sec.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if definition.supports_tx_filter %}
+                <div>
+                    <label class="block font-bold text-[#444746] mb-1">نوع المعاملة</label>
+                    <select name="transaction_type" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                        <option value="">كل أنواع المعاملات</option>
+                        {% for tx in report.filters.transaction_types %}
+                            <option value="{{ tx.id }}" {% if report.filters.transaction_type and report.filters.transaction_type.id == tx.id %}selected{% endif %}>{{ tx.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">
+                    تطبيق التصفية
+                </button>
+                <a href="{% url 'reports:report_detail' definition.slug %}" class="px-4 py-2 border border-[#DADCE0] bg-white hover:bg-[#F2F6FC] text-[#444746] rounded-full text-xs font-bold">
+                    إعادة تعيين
+                </a>
+                <span id="report-loading-indicator" class="hidden text-xs font-bold text-[#0B57D0]">
+                    ⏳ جاري تحديث بيانات التقرير...
+                </span>
+            </div>
+            <div class="text-[11px] text-[#5F6368]">
+                نطاق العرض الفعلي: <strong>{{ user_access_scope.short_label }}</strong> · وقت الاستخراج: <span class="mono-num">{{ report.generated_at|date:"Y-m-d H:i" }}</span>
+            </div>
+        </div>
+    </form>
+
+    <!-- بطاقات المؤشرات الرئيسية (KPIs) -->
+    {% if report.kpis %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {% for kpi in report.kpis %}
+                <div class="bg-white border border-[#ECEFF1] rounded-2xl p-4">
+                    <div class="text-xs text-[#5F6368]">{{ kpi.label }}</div>
+                    <div class="text-2xl font-bold mono-num mt-1 {% if kpi.tone == 'green' %}text-[#137333]{% elif kpi.tone == 'red' %}text-[#C5221F]{% elif kpi.tone == 'amber' %}text-amber-700{% elif kpi.tone == 'blue' %}text-[#0B57D0]{% else %}text-[#1F1F1F]{% endif %}">
+                        {{ kpi.value }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- الملاحظة المنهجية ودقة الاحتساب -->
+    {% if report.method_note %}
+        <div class="bg-[#F2F6FC] border border-[#D3E3FD] rounded-2xl p-3.5 text-xs text-[#041E49] leading-relaxed">
+            <strong>منهجية التقرير:</strong> {{ report.method_note }}
+        </div>
+    {% endif %}
+
+    <!-- جدول بيانات التقرير مع التمرير الأفقي وحالات عدم وجود بيانات -->
+    <div class="bg-white rounded-[16px] shadow-sm overflow-hidden">
+        <div class="px-5 py-3 bg-[#F8F9FA] border-b border-[#ECEFF1] flex items-center justify-between text-xs">
+            <span class="font-bold text-[#202124]">تفاصيل السجلات ({{ report.rows|length }})</span>
+            <span class="text-[#5F6368]">{{ definition.subtitle }}</span>
+        </div>
+
+        {% if report.rows %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                    <thead class="bg-[#F8F9FA] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            <th class="px-3 py-2.5 font-bold whitespace-nowrap">#</th>
+                            {% for col in report.columns %}
+                                <th class="px-3 py-2.5 font-bold whitespace-nowrap">{{ col.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#ECEFF1]">
+                        {% for row in report.rows %}
+                            <tr class="hover:bg-[#F1F3F4]">
+                                <td class="px-3 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                                {% for col in report.columns %}
+                                    <td class="px-3 py-2.5 {% if col.type == 'number' or col.type == 'date' or col.type == 'link' %}mono-num whitespace-nowrap{% endif %}">
+                                        {% for k, v in row.items %}
+                                            {% if k == col.key %}
+                                                {% if col.type == "link" and row.url_name and row.url_arg %}
+                                                    <a href="{% url row.url_name row.url_arg %}" class="font-bold text-[#1A73E8] hover:underline">{{ v }}</a>
+                                                {% else %}
+                                                    {{ v }}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-[#F1F3F4] font-bold text-[#202124] border-t-2 border-[#DADCE0]">
+                            <td class="px-3 py-2.5 whitespace-nowrap">صف الإجمالي</td>
+                            <td colspan="{{ report.columns|length }}" class="px-3 py-2.5">
+                                إجمالي السجلات المعروضة: <span class="mono-num text-[#1A73E8]">{{ report.rows|length }}</span> سجل
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-10 text-center space-y-2">
+                <div class="text-sm font-bold text-[#444746]">لا توجد بيانات مطابقة لمعايير التصفية المحددة</div>
+                <p class="text-xs text-[#5F6368]">جرّب توسيع نطاق التاريخ أو إعادة تعيين الفلاتر أعلاه، أو تحقق من نطاق القطاع المسموح به لصلاحياتك.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function showReportLoading() {
+    var el = document.getElementById('report-loading-indicator');
+    if (el) el.classList.remove('hidden');
+}
+</script>
+{% endblock %}

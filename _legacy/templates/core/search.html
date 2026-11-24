@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}البحث المتقدم — منظومة السكرتارية{% endblock %}
+{% block page_title %}البحث المتقدم في الموضوعات والمستندات{% endblock %}
+
+{% block content %}
+<form method="get" class="bg-[#F6F8FC] border border-[#ECEFF1] rounded-2xl p-5 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+    <div class="md:col-span-2">
+        <label class="block font-bold text-[#444746] mb-1">كلمة البحث (رقم الموضوع / رقم المستند / العنوان)</label>
+        <input type="text" name="q" value="{{ q_text }}" placeholder="ابحث برقم الموضوع أو الكلمات المفتاحية..." class="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-xl">
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">نوع المعاملة</label>
+        <select name="transaction_type" class="w-full px-3 py-2 bg-white border border-[#DADCE0] rounded-xl">
+            <option value="">الكل</option>
+            {% for tx in transaction_types %}
+                <option value="{{ tx.id }}" {% if filters.transaction_type == tx.id|stringformat:"s" %}selected{% endif %}>{{ tx.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">الحالة</label>
+        <select name="status" class="w-full px-3 py-2 bg-white border border-[#DADCE0] rounded-xl">
+            <option value="">الكل</option>
+            {% for val, label in status_choices %}
+                <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">القطاع</label>
+        <select name="sector" class="w-full px-3 py-2 bg-white border border-[#DADCE0] rounded-xl">
+            <option value="">الكل</option>
+            {% for sec in sectors %}
+                <option value="{{ sec.id }}" {% if filters.sector == sec.id|stringformat:"s" %}selected{% endif %}>{{ sec.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">درجة السرية</label>
+        <select name="confidentiality" class="w-full px-3 py-2 bg-white border border-[#DADCE0] rounded-xl">
+            <option value="">الكل</option>
+            {% for c in confidentialities %}
+                <option value="{{ c.id }}" {% if filters.confidentiality == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">من تاريخ</label>
+        <input type="date" name="date_from" value="{{ filters.date_from }}" class="w-full px-3 py-2 bg-white border border-[#DADCE0] rounded-xl font-mono">
+    </div>
+    <div class="flex items-end gap-2">
+        <button type="submit" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">بحث</button>
+        <a href="{% url 'core:search' %}" class="px-4 py-2 bg-white border border-[#DADCE0] rounded-full text-[#444746] hover:bg-[#F2F6FC]">إعادة ضبط</a>
+    </div>
+</form>
+
+<div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+    <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] text-sm font-bold text-[#1F1F1F]">
+        نتائج البحث المصرح لك بالاطلاع عليها (<span class="mono-num text-[#0B57D0]">{{ results|length }}</span>)
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F9FBFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">رقم الموضوع</th>
+                    <th class="px-4 py-3">العنوان</th>
+                    <th class="px-4 py-3">القطاع / الوحدة</th>
+                    <th class="px-4 py-3">السرية</th>
+                    <th class="px-4 py-3">الحالة</th>
+                    <th class="px-4 py-3">تاريخ الإنشاء</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for s in results %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-3 mono-num font-bold text-[#0B57D0]">
+                            <a href="{% url 'subjects:subject_detail' s.id %}">{{ s.internal_number }}</a>
+                        </td>
+                        <td class="px-4 py-3 font-bold text-[#1F1F1F]">
+                            <a href="{% url 'subjects:subject_detail' s.id %}" class="hover:text-[#0B57D0]">{{ s.title }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-[#444746]">{{ s.sector.name }} / {{ s.org_unit.name }}</td>
+                        <td class="px-4 py-3 font-bold">{{ s.confidentiality.name }}</td>
+                        <td class="px-4 py-3">{{ s.get_status_display }}</td>
+                        <td class="px-4 py-3 mono-num text-[#5F6368]">{{ s.created_at|date:"Y-m-d" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-[#5F6368]">لا توجد نتائج مطابقة ضمن نطاق صلاحياتك.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}دليل الاستخدام{% endblock %}
+{% block heading %}دليل الاستخدام{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>دليل الاستخدام السريع</h2><p>كل شاشة في المنظومة تعرض لك «الخطوة التالية» المناسبة لدورك. هذه خريطة الرحلة.</p></div></div>
+<section class="panel mb"><div class="panel-b"><div class="steps"><div class="step done"><i>1</i><span>التسجيل والمرفقات</span></div><div class="step done"><i>2</i><span>توجيه القطاع والمدير العام</span></div><div class="step done"><i>3</i><span>التوزيع على القسم والمختص</span></div><div class="step done"><i>4</i><span>المذكرة والقرار</span></div><div class="step now"><i>5</i><span>الإغلاق والأرشفة</span></div></div></div></section>
+<div class="grid g3">
+  <div class="tile"><span class="ico">{% icon 'plus' %}</span><b>1 · تسجيل موضوع</b><small>اضغط «جديد» أو الاختصار <span class="kbd">N</span>. معالج من 3 خطوات: النوع، التفاصيل، التوجيه والسرية.</small></div>
+  <div class="tile"><span class="ico">{% icon 'inbox' %}</span><b>2 · مهامي</b><small>الوارد: عهدتي، للاطلاع، المتأخرة، والمهام. اضغط على موضوع لمعاينته فوراً.</small></div>
+  <div class="tile"><span class="ico">{% icon 'share' %}</span><b>3 · الإحالة</b><small>اختر الغرض ثم نمط التوجيه ثم المستلمين. أكّد الاستلام ثم أتمم الرد.</small></div>
+  <div class="tile"><span class="ico">{% icon 'note' %}</span><b>4 · المذكرة والقرار</b><small>أعدّ مذكرة العرض، وبعد اعتمادها أنشئ القرار وأسند التنفيذ.</small></div>
+  <div class="tile"><span class="ico">{% icon 'clock' %}</span><b>5 · التعليق والاستيفاء</b><small>علّق الموضوع لاستيفاء مستند، وأنهِ التعليق من قسم التأشيرات بعد رفع المطلوب.</small></div>
+  <div class="tile"><span class="ico">{% icon 'archive' %}</span><b>6 · الإغلاق والأرشفة</b><small>عند اكتمال المتطلبات أغلق الموضوع ليُؤرشف، ويمكن إعادة فتحه بسبب موثق.</small></div>
+</div>
+<section class="panel mt"><div class="panel-h"><h3>اختصارات مفيدة</h3></div><div class="panel-b row wrap"><span class="tag"><span class="kbd">Ctrl K</span> لوحة الأوامر والبحث</span><span class="tag"><span class="kbd">/</span> بحث سريع</span><span class="tag"><span class="kbd">N</span> موضوع جديد</span><span class="tag"><span class="kbd">Esc</span> إغلاق النوافذ</span></div></section>
+{% endblock %}

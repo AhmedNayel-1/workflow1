@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}دليل الاستخدام المصور — منظومة السكرتارية{% endblock %}
+{% block page_title %}دليل الاستخدام المصور خطوة بخطوة{% endblock %}
+
+{% block content %}
+<div class="bg-[#E8F0FE] border border-[#C2E7FF] rounded-2xl p-5 mb-6">
+    <h2 class="text-base font-bold text-[#041E49]">مرحباً بك! النظام مصمم ليقودك بوضوح في كل خطوة</h2>
+    <p class="text-xs text-[#041E49] mt-1 leading-relaxed">
+        كل معاملة في البريد الوارد تصلك بوضوح: السطر بالخط العريض في «الرسائل الأساسية» ينتظر تحركك، وكل توجيه أو مذكرة يتم توثيقها في سلسلة واحدة متسلسلة.
+    </p>
+    <div class="mt-4 flex flex-wrap gap-3">
+        <a href="{% url 'subjects:subject_create' %}" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">ابدأ الآن: إنشاء موضوع جديد</a>
+        <a href="{% url 'core:archive_search' %}" class="px-5 py-2 bg-white border border-[#DADCE0] text-[#1F1F1F] rounded-full text-xs font-bold">جرب البحث السريع في الأرشيف</a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
+    <!-- الخطوة 1 -->
+    <article class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden flex flex-col">
+        <div class="aspect-video bg-[#F6F8FC] border-b border-[#ECEFF1] overflow-hidden">
+            <img src="{% static 'guide/step1_intake.jpg' %}" alt="الخطوة الأولى: إنشاء موضوع وإرفاق المستند" class="w-full h-full object-cover">
+        </div>
+        <div class="p-5 flex-1">
+            <h3 class="text-sm font-bold text-[#1F1F1F]">الخطوة 1: إنشاء موضوع وإرفاق المستند (زر إنشاء)</h3>
+            <ol class="mt-3 space-y-2 text-xs text-[#444746] list-decimal list-inside leading-relaxed">
+                <li>اضغط على زر «إنشاء موضوع» الأزرق السماوي في أعلى القائمة اليمنى.</li>
+                <li>اكتب عنوان الموضوع، وأرفق صورة الخطاب أو ملف PDF وحدد نوع المستند والقسم المختص.</li>
+                <li>اضغط «حفظ وإنشاء الموضوع» ليتم توليد الرقم وتوجيه رئيس القطاع تلقائياً.</li>
+            </ol>
+        </div>
+    </article>
+
+    <!-- الخطوة 2 -->
+    <article class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden flex flex-col">
+        <div class="aspect-video bg-[#F6F8FC] border-b border-[#ECEFF1] overflow-hidden">
+            <img src="{% static 'guide/step2_referral.jpg' %}" alt="الخطوة الثانية: فتح السلسلة والتوجيه الهرمي" class="w-full h-full object-cover">
+        </div>
+        <div class="p-5 flex-1">
+            <h3 class="text-sm font-bold text-[#1F1F1F]">الخطوة 2: فتح السلسلة والتوجيه الهرمي (إحالة لأسفل)</h3>
+            <ol class="mt-3 space-y-2 text-xs text-[#444746] list-decimal list-inside leading-relaxed">
+                <li>السطر بالخط العريض في البريد الوارد يعني أنه في عهدتك وينتظر تحركك.</li>
+                <li>افتح الموضوع فتظهر سلسلة التوجيهات بالترتيب (توجيهات رئيس القطاع مقفلة للاطلاع فقط).</li>
+                <li>اضغط «إحالة / توجيه لأسفل» أسفل السلسلة لتمرير المعاملة للمستوى الأدنى المختص.</li>
+            </ol>
+        </div>
+    </article>
+
+    <!-- الخطوة 3 -->
+    <article class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden flex flex-col">
+        <div class="aspect-video bg-[#F6F8FC] border-b border-[#ECEFF1] overflow-hidden">
+            <img src="{% static 'guide/step3_security.jpg' %}" alt="الخطوة الثالثة: رد الموظف المختص وإعداد المذكرة" class="w-full h-full object-cover">
+        </div>
+        <div class="p-5 flex-1">
+            <h3 class="text-sm font-bold text-[#1F1F1F]">الخطوة 3: رد الموظف المختص وإعداد المذكرة</h3>
+            <ol class="mt-3 space-y-2 text-xs text-[#444746] list-decimal list-inside leading-relaxed">
+                <li>عندما تصل المعاملة إلى الموظف المختص يضغط على زر «رد / إعداد مذكرة».</li>
+                <li>يكتب المذكرة المطلوبة ويرفق ملفها في مربع الرد أسفل المحادثة.</li>
+                <li>تظهر المذكرة فوراً في السلسلة ليعتمدها المدير أو رئيس المجلس.</li>
+            </ol>
+        </div>
+    </article>
+
+    <!-- الخطوة 4 -->
+    <article class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden flex flex-col">
+        <div class="aspect-video bg-[#F6F8FC] border-b border-[#ECEFF1] overflow-hidden">
+            <img src="{% static 'guide/step4_decision.jpg' %}" alt="الخطوة الرابعة: متابعة المتأخرات والاعتماد والإغلاق" class="w-full h-full object-cover">
+        </div>
+        <div class="p-5 flex-1">
+            <h3 class="text-sm font-bold text-[#1F1F1F]">الخطوة 4: متابعة المتأخرات والاعتماد والإغلاق</h3>
+            <ol class="mt-3 space-y-2 text-xs text-[#444746] list-decimal list-inside leading-relaxed">
+                <li>تبويب «متأخرة وعاجلة» يجمع المعاملات التي تجاوزت تاريخ الاستحقاق.</li>
+                <li>استخدم شريط البحث الدائري بالأعلى للبحث الفوري في العناوين والملخصات.</li>
+                <li>بعد اعتماد المذكرة، يغلق المسؤول المختص الموضوع ليُحفظ في الأرشيف.</li>
+            </ol>
+        </div>
+    </article>
+</div>
+{% endblock %}

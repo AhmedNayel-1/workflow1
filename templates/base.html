@@ -1,0 +1,43 @@
+{% load static ui_extras %}<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}الرئيسية{% endblock %} — منظومة الاتصالات الإدارية</title>
+  <script>try{var t=JSON.parse(localStorage.getItem("theme")||"null")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
+  <style>.drawer:not(.open),.overlay:not(.open),.scrim:not(.open){display:none!important}[hidden]{display:none!important}</style>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=4">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <a class="skip" href="#main">تخطَّ إلى المحتوى</a>
+  {% if request.user.is_authenticated %}
+  <div class="shell">
+    {% include "partials/rail.html" %}
+    <div class="main">
+      <header class="top">
+        <button type="button" class="iconbtn" data-rail-toggle aria-label="القائمة">{% icon 'panel' %}</button>
+        <h1 class="trunc">{% block heading %}{% endblock %}</h1>
+        <button type="button" class="search-trigger" data-cmdk aria-label="بحث سريع (Ctrl+K)">{% icon 'search' 'sm' %}<span>ابحث أو اكتب أمراً…</span><kbd class="kbd">Ctrl K</kbd></button>
+        <button type="button" class="btn primary" data-compose="document" style="flex:none">{% icon 'plus' %}<span class="hide-sm">جديد</span></button>
+        <button type="button" class="iconbtn" data-drawer="dr-notif" aria-label="التنبيهات">{% icon 'bell' %}<span id="notif-badge" class="cnt bad" data-poll="1" {% if not unread_notifications_count and not overdue_alerts_count %}hidden{% endif %}>{{ unread_notifications_count|add:overdue_alerts_count }}</span></button>
+        <button type="button" class="iconbtn" data-drawer="dr-chat" aria-label="المحادثات">{% icon 'chat' %}<span id="chat-badge" class="cnt bad" {% if not chat_unread_count %}hidden{% endif %}>{{ chat_unread_count }}</span></button>
+      </header>
+      <main class="page" id="main">{% block content %}{% endblock %}</main>
+    </div>
+  </div>
+  {% include "partials/overlays.html" %}
+  {% include "partials/drawers.html" %}
+  {% else %}
+  {% block auth_content %}{% endblock %}
+  {% endif %}
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  {% if messages %}
+  <div id="server-msgs" hidden>{% for m in messages %}<span data-t="{% if 'error' in m.tags %}error{% elif 'warning' in m.tags %}warning{% elif 'success' in m.tags %}success{% else %}info{% endif %}">{{ m }}</span>{% endfor %}</div>
+  {% endif %}
+  <script src="{% static 'js/app.js' %}?v=4" defer></script>
+  <script>setTimeout(function(){var css=getComputedStyle(document.documentElement).getPropertyValue("--ui-version").trim(),js=window.UI_VERSION,bad=[];if(css!=="4")bad.push(css?"ملف التنسيق app.css قديم":"لم يُحمَّل app.css");if(js!==4)bad.push(js?"ملف app.js قديم":"لم يُحمَّل app.js أو توقف بخطأ (F12 ثم Console)");if(!bad.length)return;var d=document.createElement("div");d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#b00020;color:#fff;padding:10px 16px;text-align:center;font:14px Tahoma,sans-serif";d.textContent=bad.join(" · ")+" — يُقدَّم من مسار static قديم أو من الكاش. نفّذ collectstatic ثم Ctrl+F5.";document.body.insertBefore(d,document.body.firstChild)},2500)</script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

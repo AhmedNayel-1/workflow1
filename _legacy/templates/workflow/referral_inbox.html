@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}صندوق الإحالات{% endblock %}
+{% block page_title %}صندوق الإحالات الواردة والصادرة{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] font-bold text-sm text-[#1F1F1F]">الإحالات الواردة إليّ</div>
+        <div class="divide-y divide-[#ECEFF1]">
+            {% for rec in incoming %}
+                <div class="p-4 text-xs hover:bg-[#F6F8FC]">
+                    <div class="flex justify-between items-start gap-2">
+                        <a href="{% url 'subjects:subject_detail' rec.referral.subject_id %}" class="font-bold text-sm text-[#0B57D0] hover:underline">
+                            {{ rec.referral.subject.internal_number }} — {{ rec.referral.subject.title }}
+                        </a>
+                        <span class="px-2.5 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0] font-bold shrink-0">{{ rec.get_status_display }}</span>
+                    </div>
+                    <div class="text-[#5F6368] mt-1 flex flex-wrap items-center gap-2">
+                        <span>من: {{ rec.referral.referred_by }} · {{ rec.referral.get_routing_mode_display }} · {{ rec.referral.get_purpose_display }}</span>
+                        {% if rec.referral.due_date %}
+                            <span class="mono-num {% if rec.referral.due_date < today_date and not rec.referral.is_completed %}px-2 py-0.5 bg-[#FCE8E6] text-[#A50E0E] rounded-full font-bold{% endif %}">
+                                الاستحقاق: {{ rec.referral.due_date|date:"Y-m-d" }}{% if rec.referral.due_date < today_date and not rec.referral.is_completed %} (متأخرة){% endif %}
+                            </span>
+                        {% endif %}
+                    </div>
+                    {% if rec.referral.notes %}<p class="text-[#444746] mt-2 bg-[#F9FBFD] p-2.5 rounded-xl border border-[#ECEFF1]">{{ rec.referral.notes }}</p>{% endif %}
+                    {% if rec.is_active_step and not rec.referral.is_completed and not rec.referral.is_withdrawn and rec.status == 'PENDING' or rec.is_active_step and not rec.referral.is_completed and not rec.referral.is_withdrawn and rec.status == 'RECEIVED' %}
+                        <div class="mt-2.5 pt-2.5 border-t border-[#ECEFF1] flex flex-wrap items-center gap-2">
+                            <form method="post" action="{% url 'workflow:referral_respond' rec.id %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'workflow:referral_inbox' %}">
+                                <input type="hidden" name="action" value="complete">
+                                <button type="submit" class="px-3 py-1 rounded-full bg-[#0B57D0] hover:bg-[#0842A0] text-white font-bold text-[11px]">✓ تأكيد الاستلام / الإفادة</button>
+                            </form>
+                            {% if rec.referral.purpose != 'FOR_INFO' %}
+                                <form method="post" action="{% url 'workflow:referral_reject' rec.id %}" class="inline-flex flex-wrap items-center gap-1.5">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'workflow:referral_inbox' %}">
+                                    <input type="text" name="reason" required placeholder="سبب الرفض أو الإرجاع..." class="px-2.5 py-1 border border-[#DADCE0] rounded-full text-[11px] bg-white">
+                                    <button type="submit" class="px-3 py-1 rounded-full bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#A50E0E] font-bold text-[11px]">↩ رفض / إرجاع للمحيل</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div class="p-8 text-center text-sm text-[#5F6368]">لا توجد إحالات واردة.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] font-bold text-sm text-[#1F1F1F]">الإحالات الصادرة مني</div>
+        <div class="divide-y divide-[#ECEFF1]">
+            {% for ref in outgoing %}
+                <div class="p-4 text-xs hover:bg-[#F6F8FC] space-y-2">
+                    <div class="flex flex-wrap justify-between items-start gap-2">
+                        <a href="{% url 'subjects:subject_detail' ref.subject_id %}" class="font-bold text-sm text-[#1F1F1F] hover:text-[#0B57D0]">
+                            {{ ref.subject.internal_number }} — {{ ref.subject.title }}
+                        </a>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] {% if ref.is_withdrawn %}bg-[#FCE8E6] text-[#A50E0E]{% elif ref.is_completed %}bg-[#E6F4EA] text-[#137333]{% else %}bg-[#E8F0FE] text-[#0B57D0]{% endif %}">
+                                {% if ref.is_withdrawn %}مسحوبة{% elif ref.is_completed %}مكتملة{% else %}جارية{% endif %}
+                            </span>
+                            {% if ref.can_withdraw %}
+                                <form method="post" action="{% url 'workflow:referral_withdraw' ref.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'workflow:referral_inbox' %}">
+                                    <button type="submit" class="px-2.5 py-0.5 rounded-full border border-[#F28B82] bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#A50E0E] font-bold text-[11px]">سحب الإحالة</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-[#5F6368] flex flex-wrap items-center gap-2">
+                        <span>{{ ref.get_routing_mode_display }} · {{ ref.get_purpose_display }}</span>
+                        {% if ref.due_date %}
+                            <span class="mono-num {% if ref.due_date < today_date and not ref.is_completed %}px-2 py-0.5 bg-[#FCE8E6] text-[#A50E0E] rounded-full font-bold{% endif %}">
+                                · الاستحقاق: {{ ref.due_date|date:"Y-m-d" }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    {% if not ref.is_completed and not ref.is_withdrawn %}
+                        <div class="space-y-1.5 pt-1">
+                            {% for r in ref.recipients.all %}
+                                {% if r.status == 'PENDING' or r.status == 'WAITING_TURN' %}
+                                    <form method="post" action="{% url 'workflow:referral_reassign' r.id %}" class="flex flex-wrap items-center gap-1.5 bg-[#F9FBFD] p-2 rounded-xl border border-[#ECEFF1]">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'workflow:referral_inbox' %}">
+                                        <span class="text-[11px] text-[#5F6368]">المستلم المعلّق: <strong class="text-[#1F1F1F]">{{ r.target_user|default:r.target_unit }}</strong></span>
+                                        <select name="new_user_id" required class="px-2 py-1 border border-[#DADCE0] rounded-full text-[11px] bg-white">
+                                            <option value="">-- إعادة إسناد إلى --</option>
+                                            {% for cand in reassign_candidates %}
+                                                <option value="{{ cand.id }}">{{ cand }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="px-2.5 py-1 rounded-full bg-white border border-[#DADCE0] hover:bg-[#E8F0FE] text-[#0B57D0] font-bold text-[11px]">إعادة إسناد</button>
+                                    </form>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div class="p-8 text-center text-sm text-[#5F6368]">لا توجد إحالات صادرة.</div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

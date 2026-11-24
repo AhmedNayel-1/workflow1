@@ -1,0 +1,25 @@
+# Python & Virtual Environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Django & Local Environment
+.env
+*.sqlite3
+*.sqlite3-journal
+/staticfiles/
+/media/
+/storage_vault/
+/logs/
+
+# Offline Wheelhouse (اختياري حسب سياسة المستودع)
+# /wheelhouse/
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

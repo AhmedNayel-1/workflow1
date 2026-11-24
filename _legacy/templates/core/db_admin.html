@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}إدارة قواعد البيانات — مسؤول النظام فقط{% endblock %}
+{% block page_title %}مركز إدارة قواعد البيانات والصلاحيات (حصرياً لمسؤول النظام){% endblock %}
+
+{% block content %}
+<div class="bg-[#F2F6FC] border border-[#DADCE0] rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+        <div class="text-xs text-[#5F6368]">بيئة قاعدة البيانات النشطة</div>
+        <div class="text-sm font-bold text-[#1F1F1F] mt-0.5">
+            المحرك: <span class="mono-num text-[#0B57D0]">{{ db_vendor|upper }}</span>
+            · فحص السلامة: <span class="mono-num text-[#137333]">{{ integrity_result }}</span>
+        </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="export_json">
+            <button type="submit" class="px-4 py-2 bg-[#137333] hover:bg-[#0D652D] text-white rounded-full text-xs font-bold">
+                نسخة احتياطية JSON
+            </button>
+        </form>
+        <a href="{% url 'accounts:permissions_matrix' %}" class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">
+            جداول الصلاحيات والأدوار
+        </a>
+        <a href="{% url 'accounts:users_list' %}" class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F6F8FC] text-[#444746] rounded-full text-xs font-bold">
+            جدول المستخدمين
+        </a>
+        <a href="{% url 'organization:org_tree' %}" class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F6F8FC] text-[#444746] rounded-full text-xs font-bold">
+            جداول الهيكل التنظيمي
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- قائمة الجداول وعدد السجلات -->
+    <section class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+        <div class="px-4 py-3 bg-[#F6F8FC] border-b border-[#ECEFF1] font-bold text-sm text-[#1F1F1F]">
+            جداول قاعدة البيانات ({{ tables_summary|length }} جدول)
+        </div>
+        <div class="divide-y divide-[#ECEFF1] max-h-[620px] overflow-y-auto">
+            {% for t in tables_summary %}
+                <a href="?table={{ t.key }}" class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-[#F6F8FC] {% if t.key == selected_key %}bg-[#D3E3FD] text-[#041E49] font-bold{% endif %}">
+                    <div>
+                        <div class="text-[#1F1F1F]">{{ t.verbose_name }}</div>
+                        <div class="mono-num text-[11px] text-[#5F6368]">{{ t.db_table }}</div>
+                    </div>
+                    <span class="mono-num px-2.5 py-0.5 bg-white border border-[#DADCE0] text-[#1F1F1F] rounded-full font-bold">{{ t.count }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- مستعرض سجلات الجدول المحدد -->
+    <section class="lg:col-span-2 space-y-6">
+        <div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm text-[#1F1F1F]">محتوى جدول: {{ selected_verbose }}</h2>
+                    <div class="mono-num text-xs text-[#5F6368]">{{ selected_key }} (أحدث 30 سجل)</div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-right">
+                    <thead class="bg-[#F9FBFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            {% for f in fields %}
+                                <th class="px-3 py-2.5 font-mono">{{ f }}</th>
+                            {% endfor %}
+                            {% if can_edit_ref %}<th class="px-3 py-2.5">إجراء</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#ECEFF1]">
+                        {% for row in formatted_rows %}
+                            <tr class="hover:bg-[#F6F8FC]">
+                                {% for cell in row.cells %}
+                                    <td class="px-3 py-2 text-[#444746] max-w-[200px] truncate">{{ cell|default:"—" }}</td>
+                                {% endfor %}
+                                {% if can_edit_ref %}
+                                    <td class="px-3 py-2">
+                                        <form method="post" class="inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_ref_row">
+                                            <input type="hidden" name="table" value="{{ selected_key }}">
+                                            <input type="hidden" name="row_id" value="{{ row.id }}">
+                                            <button type="submit" class="text-[#C5221F] hover:underline font-bold">حذف</button>
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="9" class="px-4 py-8 text-center text-[#5F6368]">هذا الجدول فارغ حالياً.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- إضافة سجل مرجعي سريع -->
+        <form method="post" class="bg-white border border-[#ECEFF1] rounded-2xl p-5 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_ref_tx">
+            <h3 class="font-bold text-sm text-[#1F1F1F]">إضافة نوع معاملة جديدة لقاعدة البيانات</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input type="text" name="code" placeholder="الكود الإنجليزي (مثال: TRAINING_GRANT)" required class="px-3 py-2 border border-[#DADCE0] rounded-xl text-xs font-mono">
+                <input type="text" name="name" placeholder="اسم نوع المعاملة بالعربية" required class="px-3 py-2 border border-[#DADCE0] rounded-xl text-xs">
+            </div>
+            <div class="flex flex-wrap items-center gap-4 text-xs">
+                <label class="flex items-center gap-2"><input type="checkbox" name="requires_committee"> يتطلب عرض على لجنة</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="requires_decision" checked> يتطلب إصدار قرار</label>
+                <button type="submit" class="mr-auto px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">إضافة وحفظ بالجدول</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

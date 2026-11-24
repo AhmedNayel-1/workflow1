@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}الهيكل التنظيمي والشركات التابعة{% endblock %}
+{% block page_title %}الهيكل التنظيمي لمجموعة الشركات والمظلة القابضة والقطاعات{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-5">
+    <!-- Holding Company Umbrella Banner -->
+    <div class="bg-gradient-to-l from-[#E8F0FE] to-[#F1F3F4] border border-[#D3E3FD] rounded-2xl p-4 sm:p-5 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-[#0B57D0] text-white flex items-center justify-center text-xl shadow-xs shrink-0">
+                    ⚡
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-bold text-[#1F1F1F]">الشركة القابضة لكهرباء مصر (EEHC)</h2>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D3E3FD] text-[#041E49]">المظلة الحاكمة</span>
+                    </div>
+                    <p class="text-xs text-[#444746] mt-0.5">
+                        الهيكل المؤسسي الموحد للشركات التابعة — شركة غرب الدلتا لإنتاج الكهرباء (WDEPCO) والشركات الموازية الشقيقة
+                    </p>
+                </div>
+            </div>
+
+            <!-- View Switcher -->
+            <div class="inline-flex items-center p-1 bg-white border border-[#DADCE0] rounded-xl self-start sm:self-auto">
+                <button type="button" id="org-tab-tree-btn" onclick="switchOrgView('tree')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#D3E3FD] text-[#001D35] transition-colors">الشجرة التفاعلية</button>
+                <button type="button" id="org-tab-tables-btn" onclick="switchOrgView('tables')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-[#5F6368] hover:bg-[#F2F6FC] transition-colors">الجداول التفصيلية</button>
+            </div>
+        </div>
+
+        <!-- Subsidiary Companies Tabs -->
+        <div class="mt-4 pt-3 border-t border-[#D3E3FD]/60 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold text-[#5F6368]">الشركات التابعة:</span>
+                <a
+                    href="{% url 'organization:org_tree' %}"
+                    class="px-3.5 py-1.5 rounded-[20px] text-xs font-bold transition-all {% if not current_company %}bg-[#1A73E8] text-white shadow-xs{% else %}bg-white border border-[#DADCE0] text-[#202124] hover:bg-[#F1F3F4]{% endif %}"
+                >
+                    كل الشركات تحت القابضة (EEHC)
+                </a>
+                {% for c in companies %}
+                    <a
+                        href="{% url 'organization:org_tree' %}?company={{ c.code }}"
+                        class="px-3.5 py-1.5 rounded-[20px] text-xs font-bold transition-all {% if current_company and current_company.code == c.code %}bg-[#1A73E8] text-white shadow-xs{% else %}bg-white border border-[#DADCE0] text-[#202124] hover:bg-[#F1F3F4]{% endif %}"
+                    >
+                        {{ c.name }} <span class="mono-num text-[11px] opacity-80">({{ c.code }})</span>
+                    </a>
+                {% empty %}
+                    <span class="text-xs text-[#5F6368]">شركة غرب الدلتا لإنتاج الكهرباء (WDEPCO)</span>
+                {% endfor %}
+            </div>
+
+            {% if can_manage %}
+                <button
+                    type="button"
+                    onclick="document.getElementById('add-company-modal').classList.toggle('hidden')"
+                    class="gm-ripple px-4 py-1.5 bg-white border border-[#1A73E8] text-[#1A73E8] hover:bg-[#E8F0FE] rounded-[20px] text-xs font-bold transition-colors flex items-center gap-1"
+                >
+                    <span>+</span> إضافة شركة موازية تحت القابضة
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal / Form to add parallel company -->
+    {% if can_manage %}
+        <div id="add-company-modal" class="hidden bg-white border border-[#0B57D0]/30 rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 border-b border-[#F0F2F5] mb-3">
+                <h3 class="text-xs sm:text-sm font-bold text-[#1F1F1F]">إضافة شركة تابعة جديدة تحت مظلة الشركة القابضة لكهرباء مصر</h3>
+                <button type="button" onclick="document.getElementById('add-company-modal').classList.add('hidden')" class="text-[#747775] hover:text-[#1F1F1F] font-bold text-base">✕</button>
+            </div>
+            <form method="post" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_company">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-[#444746] mb-1">اسم الشركة التابعة *</label>
+                        <input type="text" name="name" required placeholder="مثال: شركة شرق الدلتا لإنتاج الكهرباء" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#444746] mb-1">كود الشركة المختصر *</label>
+                        <input type="text" name="code" required placeholder="EDEPCO" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0] mono-num uppercase">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" onclick="document.getElementById('add-company-modal').classList.add('hidden')" class="px-4 py-1.5 rounded-full text-xs font-semibold text-[#444746] hover:bg-[#F1F3F4]">إلغاء</button>
+                    <button type="submit" class="px-5 py-1.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold transition-colors">إضافة واعتماد الشركة</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- الشجرة التفاعلية RTL -->
+    <section
+        id="org-tree-panel"
+        data-move-unit-url="{% url 'organization:move_unit' %}"
+        data-move-user-url="{% url 'organization:move_user' %}"
+        class="bg-white border border-[#E0E2E6] rounded-[16px] shadow-sm overflow-hidden"
+    >
+        <div class="px-4 py-3 bg-[#F8F9FA] border-b border-[#ECEFF1] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🌳</span>
+                <h2 class="font-bold text-xs sm:text-sm text-[#202124]">
+                    شجرة الوحدات والمستخدمين — {% if current_company %}{{ current_company.name }}{% else %}{{ holding_company.name }} (كل الشركات التابعة){% endif %}
+                </h2>
+                <span class="text-xs text-[#5F6368] mono-num">({{ visible_units|length }} وحدة تنظيمية)</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <input id="org-tree-search" type="text" placeholder="بحث في الوحدات أو المستخدمين..." class="px-3.5 py-1.5 bg-white border border-[#DADCE0] rounded-[20px] text-xs text-[#202124] focus:outline-none focus:border-[#1A73E8] w-48 sm:w-56">
+                <button id="org-tree-expand-all" type="button" class="gm-ripple px-3 py-1.5 border border-[#DADCE0] bg-white rounded-[20px] text-xs font-medium text-[#5F6368] hover:bg-[#F1F3F4]">+ فتح الكل</button>
+                <button id="org-tree-collapse-all" type="button" class="gm-ripple px-3 py-1.5 border border-[#DADCE0] bg-white rounded-[20px] text-xs font-medium text-[#5F6368] hover:bg-[#F1F3F4]">− طي الكل</button>
+            </div>
+        </div>
+        {% if can_manage %}
+            <div id="org-tree-dnd-status" class="px-4 py-2 bg-[#E8F0FE]/60 border-b border-[#D3E3FD] text-[11px] text-[#202124] flex flex-wrap items-center justify-between gap-2">
+                <span>⋮⋮ اسحب أي <strong>وحدة تنظيمية</strong> أو <strong>مستخدم</strong> وأفلته على الوحدة الهدف للنقل محلياً فوراً وتحديث قاعدة البيانات.</span>
+            </div>
+        {% endif %}
+        <div id="interactive-org-tree-body" class="p-4 sm:p-5 overflow-x-auto max-h-[620px] overflow-y-auto space-y-1"></div>
+    </section>
+
+    {% if can_manage %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- إضافة قطاع جديد -->
+            <form method="post" class="bg-white border border-[#E0E2E6] rounded-2xl p-5 shadow-sm space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_sector">
+                <div class="flex items-center gap-2 pb-2 border-b border-[#F0F2F5]">
+                    <span class="text-sm">🏢</span>
+                    <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">إضافة قطاع جديد تالٍ لـ {{ current_company.name }}</h3>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">كود القطاع *</label>
+                        <input type="text" name="code" placeholder="LEGAL" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] mono-num uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">اسم القطاع *</label>
+                        <input type="text" name="name" placeholder="قطاع الشئون القانونية" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                    </div>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button type="submit" class="px-5 py-2 bg-[#444746] hover:bg-[#1F1F1F] text-white rounded-full text-xs font-bold transition-colors">
+                        إضافة القطاع
+                    </button>
+                </div>
+            </form>
+
+            <!-- إضافة وحدة تنظيمية -->
+            <form id="create-unit-form" method="post" class="bg-white border border-[#E0E2E6] rounded-2xl p-5 shadow-sm space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_unit">
+                <div class="flex items-center gap-2 pb-2 border-b border-[#F0F2F5]">
+                    <span class="text-sm">📁</span>
+                    <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">إضافة وحدة تنظيمية / إدارة عامة / قسم</h3>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">الكود التنظيمي *</label>
+                        <input type="text" name="code" placeholder="SEC_GEN_DIR" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] mono-num uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">اسم الوحدة *</label>
+                        <input type="text" name="name" placeholder="الإدارة العامة للتحقيقات" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">القطاع التابع له *</label>
+                        <select name="sector_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                            {% for s in sectors %}
+                                <option value="{{ s.id }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">المستوى الإداري *</label>
+                        <select name="unit_type_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                            {% for ut in unit_types %}
+                                <option value="{{ ut.id }}">{{ ut.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-[11px] font-semibold text-[#444746] mb-1">الوحدة الأب (اختياري للتبعيات)</label>
+                        <select name="parent_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                            <option value="">-- بدون وحدة أب (مباشرة تحت القطاع) --</option>
+                            {% for u in all_units %}
+                                <option value="{{ u.id }}">{{ u.name }} ({{ u.sector.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button type="submit" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold transition-colors">
+                        حفظ الوحدة التنظيمية
+                    </button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- الجداول التفصيلية -->
+    <div id="org-tables-panel" class="hidden space-y-5">
+        <!-- الجدول الأول: شجرة الوحدات -->
+        <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] font-bold text-xs sm:text-sm text-[#1F1F1F]">
+                جدول الوحدات التنظيمية والقطاعات ({{ all_units|length }} وحدة)
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-right">
+                    <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            <th class="px-4 py-3">الكود</th>
+                            <th class="px-4 py-3">الوحدة التنظيمية</th>
+                            <th class="px-4 py-3">المستوى الإداري</th>
+                            <th class="px-4 py-3">القطاع</th>
+                            <th class="px-4 py-3">الوحدة الأب</th>
+                            {% if can_manage %}<th class="px-4 py-3 text-center">إجراء</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#F0F2F5]">
+                        {% for u in all_units %}
+                            <tr class="hover:bg-[#F9FBFD] transition-colors">
+                                <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ u.code }}</td>
+                                <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ u.name }}</td>
+                                <td class="px-4 py-2.5 text-[#444746]">{{ u.unit_type.name }}</td>
+                                <td class="px-4 py-2.5 text-[#0B57D0] font-bold">{{ u.sector.name }}</td>
+                                <td class="px-4 py-2.5 text-[#5F6368]">{{ u.parent.name|default:"—" }}</td>
+                                {% if can_manage %}
+                                    <td class="px-4 py-2.5 text-center">
+                                        <a href="{% url 'accounts:users_list' %}?unit_id={{ u.id }}&sector_id={{ u.sector_id }}" class="px-2.5 py-1 rounded-lg bg-[#E6F4EA] hover:bg-[#CEEAD6] text-[#137333] font-bold text-[11px] transition-colors">
+                                            + إضافة مستخدم
+                                        </a>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- الجدول الثاني: الموظفون -->
+        <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] font-bold text-xs sm:text-sm text-[#1F1F1F]">
+                توزيع الموظفين على الوحدات التنظيمية ({{ employees|length }} موظف)
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-right">
+                    <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            <th class="px-4 py-3">الكود الوظيفي</th>
+                            <th class="px-4 py-3">الاسم الكامل</th>
+                            <th class="px-4 py-3">المسمى الوظيفي</th>
+                            <th class="px-4 py-3">القسم / الوحدة التنظيمية</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#F0F2F5]">
+                        {% for emp in employees %}
+                            <tr class="hover:bg-[#F9FBFD] transition-colors">
+                                <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ emp.employee_number|default:"—" }}</td>
+                                <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ emp.full_name }}</td>
+                                <td class="px-4 py-2.5 text-[#444746]">{{ emp.job_title }}</td>
+                                <td class="px-4 py-2.5 text-[#0B57D0] font-bold">{{ emp.current_unit.name|default:"—" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="px-4 py-6 text-center text-[#5F6368]">لا توجد بيانات موظفين مسجلة.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="org-tree-payload" type="application/json">{{ org_tree_payload_json|safe }}</script>
+<script>
+function switchOrgView(mode) {
+    var treePanel = document.getElementById('org-tree-panel');
+    var tablesPanel = document.getElementById('org-tables-panel');
+    var treeBtn = document.getElementById('org-tab-tree-btn');
+    var tablesBtn = document.getElementById('org-tab-tables-btn');
+    if (!treePanel || !tablesPanel) return;
+    if (mode === 'tables') {
+        treePanel.classList.add('hidden');
+        tablesPanel.classList.remove('hidden');
+        if (treeBtn) { treeBtn.classList.remove('bg-[#D3E3FD]', 'text-[#001D35]'); treeBtn.classList.add('text-[#5F6368]'); }
+        if (tablesBtn) { tablesBtn.classList.add('bg-[#D3E3FD]', 'text-[#001D35]'); tablesBtn.classList.remove('text-[#5F6368]'); }
+    } else {
+        tablesPanel.classList.add('hidden');
+        treePanel.classList.remove('hidden');
+        if (tablesBtn) { tablesBtn.classList.remove('bg-[#D3E3FD]', 'text-[#001D35]'); tablesBtn.classList.add('text-[#5F6368]'); }
+        if (treeBtn) { treeBtn.classList.add('bg-[#D3E3FD]', 'text-[#001D35]'); treeBtn.classList.remove('text-[#5F6368]'); }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var payloadEl = document.getElementById('org-tree-payload');
+    var payload = null;
+    try {
+        payload = payloadEl ? JSON.parse(payloadEl.textContent || '{}') : null;
+    } catch (_) {
+        payload = null;
+    }
+
+    if (typeof window.initInteractiveOrgTree === 'function') {
+        window.initInteractiveOrgTree(
+            payload,
+            "{% url 'accounts:users_list' %}",
+            {% if can_manage %}true{% else %}false{% endif %}
+        );
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}القرارات الإدارية{% endblock %}
+{% block page_title %}سجل القرارات الإدارية ومتابعة تنفيذها{% endblock %}
+
+{% block content %}
+<div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F6F8FC] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">رقم القرار</th>
+                    <th class="px-4 py-3">العنوان</th>
+                    <th class="px-4 py-3">الموضوع</th>
+                    <th class="px-4 py-3">النوع</th>
+                    <th class="px-4 py-3">الحالة</th>
+                    <th class="px-4 py-3">تاريخ الإصدار</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for d in decisions %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-3 mono-num font-bold text-[#0B57D0]"><a href="{% url 'decisions:decision_detail' d.id %}">{{ d.decision_number }}</a></td>
+                        <td class="px-4 py-3 font-bold text-[#1F1F1F]"><a href="{% url 'decisions:decision_detail' d.id %}" class="hover:text-[#0B57D0]">{{ d.title }}</a></td>
+                        <td class="px-4 py-3"><a href="{% url 'subjects:subject_detail' d.subject_id %}" class="text-[#444746] hover:underline mono-num">{{ d.subject.internal_number }}</a></td>
+                        <td class="px-4 py-3 text-[#5F6368]">{{ d.get_decision_type_display }}</td>
+                        <td class="px-4 py-3 font-bold text-[#137333]">{{ d.get_status_display }}</td>
+                        <td class="px-4 py-3 mono-num text-[#5F6368]">{{ d.issued_date|date:"Y-m-d"|default:"—" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-[#5F6368]">لا توجد قرارات مسجلة.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

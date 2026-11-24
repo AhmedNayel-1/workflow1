@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}البريد الإداري — صندوق العمل{% endblock %}
+{% block card_header %}{% endblock %}
+{% block content_padding %}p-0{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col min-h-0">
+    <!-- شريط الأدوات العلوي فوق التبويبات -->
+    <div class="px-5 py-2.5 border-b border-[#ECEFF1] flex items-center justify-between gap-3 text-sm text-[#5F6368] shrink-0 bg-white">
+        <div class="flex items-center gap-3">
+            <input type="checkbox" onclick="document.querySelectorAll('.row-check').forEach(c => c.checked = this.checked)" aria-label="تحديد الكل" class="rounded border-[#747775] cursor-pointer w-4 h-4">
+            <a href="{% url 'core:dashboard' %}?folder={{ folder }}&tab={{ tab }}" data-tooltip="تحديث" data-tooltip-pos="bottom" class="gm-ripple p-2 rounded-full hover:bg-[#F1F3F4] text-[#5F6368]">⟳</a>
+            <span class="text-xs text-[#5F6368] hidden md:inline">
+                {% if folder == "inbox" %}
+                    المطلوب منك ({{ user_access_scope.short_label }})
+                {% elif folder == "pending" %}
+                    معاملات بانتظار تأكيد الاستلام
+                {% elif folder == "overdue" %}
+                    معاملات تجاوزت الموعد المحدد
+                {% elif folder == "sent" %}
+                    المعاملات الصادرة للمتابعة
+                {% elif folder == "archive" %}
+                    الأرشيف والمغلق
+                {% else %}
+                    جميع المعاملات المتاحة لك
+                {% endif %}
+            </span>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-[#5F6368] mono-num">
+            <span>
+                {% if tab == "tasks" %}
+                    {{ tasks_list|length }} مهمة · {{ decisions_list|length }} قرار
+                {% elif page_obj and page_obj.paginator.count > 0 %}
+                    {{ page_obj.start_index }}–{{ page_obj.end_index }} من {{ page_obj.paginator.count }}
+                {% elif displayed_subjects|length > 0 %}
+                    1–{{ displayed_subjects|length }} من {{ displayed_subjects|length }}
+                {% else %}
+                    0 من 0
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- 3 تبويبات واضحة بنمط Gmail -->
+    {% if folder == "inbox" %}
+    <div class="grid grid-cols-3 border-b border-[#ECEFF1] bg-white shrink-0">
+        <a href="?folder=inbox&tab=primary{% if q %}&q={{ q }}{% endif %}" class="flex items-center justify-center sm:justify-start gap-2.5 px-5 py-3.5 text-right text-[14px] border-b-[3px] transition-colors hover:bg-[#F2F6FC] {% if tab == 'primary' %}border-[#0B57D0] text-[#0B57D0] font-bold{% else %}border-transparent text-[#5F6368] font-medium{% endif %}">
+            <span class="truncate">مطلوب منك الآن</span>
+            {% if tab_counts.primary > 0 %}<span class="px-2 py-0.5 rounded-full text-xs font-bold mono-num bg-[#EAF1FB] text-[#0B57D0]">{{ tab_counts.primary }}</span>{% endif %}
+        </a>
+        <a href="?folder=inbox&tab=readonly{% if q %}&q={{ q }}{% endif %}" class="flex items-center justify-center sm:justify-start gap-2.5 px-5 py-3.5 text-right text-[14px] border-b-[3px] transition-colors hover:bg-[#F2F6FC] {% if tab == 'readonly' %}border-[#0B57D0] text-[#0B57D0] font-bold{% else %}border-transparent text-[#5F6368] font-medium{% endif %}">
+            <span class="truncate">للاطلاع فقط</span>
+            {% if tab_counts.readonly > 0 %}<span class="px-2 py-0.5 rounded-full text-xs font-bold mono-num bg-[#F1F3F4] text-[#5F6368]">{{ tab_counts.readonly }}</span>{% endif %}
+        </a>
+        <a href="?folder=inbox&tab=tasks{% if q %}&q={{ q }}{% endif %}" class="flex items-center justify-center sm:justify-start gap-2.5 px-5 py-3.5 text-right text-[14px] border-b-[3px] transition-colors hover:bg-[#F2F6FC] {% if tab == 'tasks' %}border-[#0B57D0] text-[#0B57D0] font-bold{% else %}border-transparent text-[#5F6368] font-medium{% endif %}">
+            <span class="truncate">المهام والقرارات</span>
+            {% if tab_counts.tasks > 0 %}<span class="px-2 py-0.5 rounded-full text-xs font-bold mono-num bg-[#E6F4EA] text-[#137333]">{{ tab_counts.tasks }}</span>{% endif %}
+        </a>
+    </div>
+    {% endif %}
+
+    {% if folder == "inbox" and tab == "tasks" %}
+        <!-- محتوى تبويب المهام والقرارات -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F6F8FC]">
+            <section class="bg-white rounded-2xl border border-[#E1E3E1] overflow-hidden">
+                <div class="px-5 py-4 bg-[#F6F8FC] border-b border-[#ECEFF1] flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-[#1F1F1F]">المهام الجارية ({{ tasks_list|length }})</h2>
+                        <p class="text-xs text-[#5F6368] mt-0.5">المهام المطلوب تنفيذها ومتابعتها</p>
+                    </div>
+                    <a href="{% url 'workflow:task_list' %}" class="text-sm font-bold text-[#0B57D0] hover:underline">عرض الكل ↗</a>
+                </div>
+                <div class="divide-y divide-[#ECEFF1]">
+                    {% for t in tasks_list %}
+                        <div class="p-4 flex flex-wrap items-center justify-between gap-3 hover:bg-[#F2F6FC] text-sm transition-colors">
+                            <div class="min-w-0 space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-[#EAF1FB] text-[#0B57D0] font-bold text-xs">{{ t.get_status_display }}</span>
+                                    <a href="{% url 'subjects:subject_detail' t.subject_id %}" class="font-bold text-[15px] text-[#1F1F1F] hover:text-[#0B57D0]">{{ t.title }}</a>
+                                </div>
+                                <div class="text-xs text-[#5F6368]">
+                                    المعاملة: <a href="{% url 'subjects:subject_detail' t.subject_id %}" class="font-bold text-[#0B57D0] mono-num">{{ t.subject.internal_number }}</a> ·
+                                    المكلف: <strong class="text-[#1F1F1F]">{{ t.assigned_to }}</strong>
+                                    {% if t.due_date %} · الموعد: <span class="mono-num">{{ t.due_date|date:"Y-m-d" }}</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <a href="{% url 'subjects:subject_detail' t.subject_id %}" class="px-4 py-2 rounded-full border border-[#DADCE0] bg-white hover:bg-[#F1F3F4] text-xs font-bold">فتح المعاملة</a>
+                                <form method="post" action="{% url 'workflow:task_update_status' t.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="COMPLETED">
+                                    <input type="hidden" name="outcome" value="تم تنفيذ المهمة بنجاح">
+                                    <input type="hidden" name="next" value="{% url 'core:dashboard' %}?folder=inbox&tab=tasks">
+                                    <button type="submit" class="gm-ripple px-4 py-2 rounded-full bg-[#137333] hover:bg-[#0D652D] text-white text-xs font-bold">✓ تم التنفيذ</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="p-10 text-center text-sm text-[#5F6368]">لا توجد مهام مفتوحة مسندة إليك حالياً.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="bg-white rounded-2xl border border-[#E1E3E1] overflow-hidden">
+                <div class="px-5 py-4 bg-[#F6F8FC] border-b border-[#ECEFF1] flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-[#1F1F1F]">القرارات الإدارية ({{ decisions_list|length }})</h2>
+                        <p class="text-xs text-[#5F6368] mt-0.5">القرارات الصادرة وقيد المراجعة</p>
+                    </div>
+                    <a href="{% url 'decisions:decision_list' %}" class="text-sm font-bold text-[#0B57D0] hover:underline">عرض الكل ↗</a>
+                </div>
+                <div class="divide-y divide-[#ECEFF1]">
+                    {% for d in decisions_list %}
+                        <div class="p-4 flex flex-wrap items-center justify-between gap-3 hover:bg-[#F2F6FC] text-sm transition-colors">
+                            <div class="min-w-0 space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="mono-num font-bold text-[#0B57D0]">{{ d.decision_number }}</span>
+                                    <a href="{% url 'decisions:decision_detail' d.id %}" class="font-bold text-[15px] text-[#1F1F1F] hover:text-[#0B57D0]">{{ d.title }}</a>
+                                    <span class="px-2.5 py-0.5 rounded-full bg-[#E6F4EA] text-[#137333] font-bold text-xs">{{ d.get_status_display }}</span>
+                                </div>
+                                <div class="text-xs text-[#5F6368]">المعاملة: {{ d.subject.internal_number }} · {{ d.subject.title }}</div>
+                            </div>
+                            <a href="{% url 'decisions:decision_detail' d.id %}" class="gm-ripple px-4 py-2 rounded-full bg-[#0B57D0] hover:bg-[#0842A0] text-white text-xs font-bold shrink-0">عرض القرار ←</a>
+                        </div>
+                    {% empty %}
+                        <div class="p-10 text-center text-sm text-[#5F6368]">لا توجد قرارات إدارية مسجلة حتى الآن.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    {% else %}
+        <!-- قائمة المعاملات الهادئة بنمط Gmail -->
+        <div id="inbox-main-split" class="flex-1 flex min-h-0 overflow-hidden">
+            <div class="flex-1 overflow-y-auto divide-y divide-[#ECEFF1] min-w-0 bg-white">
+                {% for s in displayed_subjects %}
+                    <div
+                        data-subject-row="{{ s.id }}"
+                        onclick="openInboxSplitPreview({{ s.id }}, this)"
+                        ondblclick="window.location='{% url 'subjects:subject_detail' s.id %}'"
+                        class="gm-row min-h-[62px] hover:bg-[#F2F6FC] {% if s.can_act or s.has_pending_ref %}bg-white text-[#1F1F1F]{% else %}bg-[#F8FAFD] text-[#5F6368]{% endif %}"
+                    >
+                        <!-- اليمين: تحديد + نجمة + أفاتار -->
+                        <div class="flex items-center gap-2.5 shrink-0" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="row-check rounded border-[#747775] cursor-pointer w-4 h-4" aria-label="تحديد">
+                            <span class="{% if s.priority.rank >= 2 %}text-[#F4B400]{% else %}text-[#DADCE0]{% endif %}" data-tooltip="أولوية" data-tooltip-pos="bottom">★</span>
+                            <span class="w-9 h-9 rounded-full {% cycle 'bg-[#1A73E8]' 'bg-[#1E8E3E]' 'bg-[#9334E6]' 'bg-[#00897B]' 'bg-[#D93025]' 'bg-[#F9AB00]' %} text-white flex items-center justify-center text-sm font-bold shrink-0">
+                                {{ s.sender_label|default:"م"|slice:":1" }}
+                            </span>
+                        </div>
+
+                        <div class="w-32 sm:w-44 shrink-0 truncate text-[14px] {% if s.can_act or s.has_pending_ref %}font-bold text-[#1F1F1F]{% else %}font-medium text-[#5F6368]{% endif %}">
+                            {{ s.sender_label }}
+                        </div>
+
+                        <!-- الوسط: العنوان الواضح + سطر مقتطف هادئ -->
+                        <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5 py-0.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <a href="{% url 'subjects:subject_detail' s.id %}" onclick="event.preventDefault(); event.stopPropagation(); openInboxSplitPreview({{ s.id }}, this.closest('[data-subject-row]'))" class="truncate text-[15px] {% if s.can_act or s.has_pending_ref %}font-bold text-[#1F1F1F]{% else %}font-medium text-[#5F6368]{% endif %} hover:text-[#0B57D0]">
+                                    {{ s.title }}
+                                </a>
+                            </div>
+                            <div class="text-[13px] text-[#5F6368] font-normal truncate">
+                                <span class="mono-num text-[#0B57D0] font-semibold">{{ s.internal_number }}</span>
+                                <span> · {{ s.org_unit.name }}</span>
+                                {% if s.description %}<span> — {{ s.description|truncatechars:65 }}</span>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- اليسار: حالة نصية هادئة بدون تكديس + زر استلام مباشر للمعلق + التاريخ -->
+                        <div class="flex items-center gap-2.5 shrink-0">
+                            {% if s.is_overdue %}
+                                <span class="text-xs font-bold text-[#8B5014] whitespace-nowrap">متأخر {{ s.overdue_days }}ي</span>
+                            {% elif s.confidentiality.rank >= 3 %}
+                                <span class="text-xs font-bold text-[#A50E0E] whitespace-nowrap">سري</span>
+                            {% endif %}
+
+                            {% if s.has_pending_ref %}
+                                <form method="post" action="{% url 'workflow:referral_respond' s.pending_ref_id %}" onclick="event.stopPropagation()">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="acknowledge">
+                                    <button type="submit" class="gm-ripple px-3.5 py-1.5 rounded-full bg-[#0B57D0] hover:bg-[#0842A0] text-white text-xs font-bold">استلام</button>
+                                </form>
+                            {% endif %}
+
+                            {% if s.doc_count > 0 %}
+                                <span class="gm-row-date inline-flex items-center gap-1 text-xs text-[#5F6368] shrink-0" data-tooltip="{{ s.doc_count }} مرفق" data-tooltip-pos="bottom">
+                                    <span>📎</span>
+                                    <span class="mono-num">{{ s.doc_count }}</span>
+                                </span>
+                            {% endif %}
+
+                            <div class="gm-row-actions" onclick="event.stopPropagation()">
+                                {% if s.first_att %}
+                                    <button
+                                        type="button"
+                                        data-tooltip="معاينة المرفق"
+                                        data-tooltip-pos="bottom"
+                                        onclick="openInlineAttachmentPreview('{{ s.first_att.id }}', '{{ s.first_att.original_filename|escapejs }}', '{{ s.first_att.preview_kind|escapejs }}', '{% url 'documents:attachment_download' s.first_att.id %}?inline=1&mode=stream', '{% url 'documents:attachment_download' s.first_att.id %}', '{% url 'documents:attachment_preview' s.first_att.id %}')"
+                                        class="gm-ripple p-1.5 rounded-full hover:bg-[#E8F0FE] text-[#0B57D0]"
+                                    >📎</button>
+                                {% endif %}
+                                <a href="{% url 'subjects:subject_detail' s.id %}" data-tooltip="فتح واتخاذ إجراء" data-tooltip-pos="bottom" class="gm-ripple px-3 py-1 rounded-full bg-[#EAF1FB] hover:bg-[#D3E3FD] text-[#0B57D0] text-xs font-bold">فتح</a>
+                            </div>
+
+                            <div class="gm-row-date w-24 text-left shrink-0 text-xs mono-num {% if s.is_overdue %}text-[#8B5014] font-bold{% else %}text-[#5F6368]{% endif %}">
+                                {% if s.due_date %}{{ s.due_date|date:"Y-m-d" }}{% else %}{{ s.created_at|date:"Y-m-d" }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="py-16 px-6 text-center space-y-4 gm-fade-up">
+                        <svg class="w-16 h-16 mx-auto text-[#DADCE0]" fill="none" stroke="currentColor" viewBox="0 0 64 64" aria-hidden="true">
+                            <rect x="8" y="14" width="48" height="36" rx="6" fill="#F6F8FC" stroke="#DADCE0" stroke-width="2"/>
+                            <path d="M10 18L32 35L54 18" stroke="#0B57D0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div class="text-base font-bold text-[#1F1F1F]">لا توجد معاملات هنا حالياً</div>
+                        <div class="text-sm text-[#5F6368] max-w-md mx-auto">كل ما يخصك في هذا القسم منجز. يمكنك تسجيل معاملة أو إرسال رسالة جديدة من الزر أدناه.</div>
+                        <button type="button" onclick="openComposeModal()" class="gm-ripple inline-flex items-center gap-2 px-6 py-2.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-sm font-bold shadow-xs">
+                            <span>+ معاملة / رسالة جديدة</span>
+                        </button>
+                    </div>
+                {% endfor %}
+
+                {% if page_obj and page_obj.has_other_pages %}
+                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-[#F6F8FC] border-t border-[#ECEFF1] text-sm text-[#5F6368] no-print">
+                    <div class="font-medium">
+                        عرض <span class="mono-num font-bold text-[#1F1F1F]">{{ page_obj.start_index }}–{{ page_obj.end_index }}</span> من <span class="mono-num font-bold text-[#1F1F1F]">{{ page_obj.paginator.count }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 mono-num">
+                        {% if page_obj.has_previous %}
+                            <a href="?folder={{ folder }}&tab={{ tab }}{% if q %}&q={{ q }}{% endif %}&page={{ page_obj.previous_page_number }}" class="px-4 py-1.5 bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#1F1F1F] rounded-full text-xs font-bold transition">السابق</a>
+                        {% endif %}
+                        <span class="px-2 text-xs font-bold text-[#1F1F1F]">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}
+                            <a href="?folder={{ folder }}&tab={{ tab }}{% if q %}&q={{ q }}{% endif %}&page={{ page_obj.next_page_number }}" class="px-4 py-1.5 bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#1F1F1F] rounded-full text-xs font-bold transition">التالي</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- لوحة القراءة الجانبية المنقسمة -->
+            <aside id="inbox-split-panel" class="hidden gm-split-panel no-print" aria-label="معاينة المعاملة السريعة"></aside>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

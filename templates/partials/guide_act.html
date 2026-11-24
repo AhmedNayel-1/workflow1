@@ -1,0 +1,4 @@
+{% if a.kind == "link" %}<a href="{{ a.href }}" class="{{ cls }}">{{ a.label }}</a>
+{% elif a.kind == "jump" %}<button type="button" class="{{ cls }}" data-jump="{{ a.target }}">{{ a.label }}</button>
+{% elif a.kind == "compose" %}<button type="button" class="{{ cls }}" data-compose="document">{{ a.label }}</button>
+{% elif a.kind == "post" %}<form method="post" action="{{ a.href }}" class="inline">{% csrf_token %}{% for k, v in a.fields.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}<button type="submit" class="{{ cls }}">{{ a.label }}</button></form>{% endif %}

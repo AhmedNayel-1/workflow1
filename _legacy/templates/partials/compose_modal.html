@@ -1,0 +1,148 @@
+<!-- نافذة «معاملة / رسالة جديدة» المبسطة للمبتدئين بنمط Gmail -->
+{% if request.user.is_authenticated and compose_meta %}
+<div id="gmail-compose-modal" class="gm-compose-dialog hidden no-print">
+    <div class="bg-[#F2F6FC] px-4 py-3 rounded-t-2xl flex items-center justify-between border-b border-[#E1E3E1] shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="text-[15px] font-bold text-[#1F1F1F]">معاملة / رسالة جديدة</span>
+            <div class="inline-flex bg-white border border-[#DADCE0] rounded-full p-0.5 text-xs font-bold">
+                <button type="button" id="compose-mode-doc-btn" onclick="setComposeMode('document')" class="px-3 py-1 rounded-full bg-[#D3E3FD] text-[#001D35]">تسجيل معاملة</button>
+                <button type="button" id="compose-mode-msg-btn" onclick="setComposeMode('message')" class="px-3 py-1 rounded-full text-[#5F6368]">إرسال رسالة</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+            <a href="{% url 'subjects:subject_create' %}" class="px-3 py-1 rounded-full hover:bg-[#E1E5EA] text-xs font-bold text-[#0B57D0]">شاشة كاملة</a>
+            <button type="button" onclick="toggleComposeMinimize()" class="p-1.5 rounded-full hover:bg-[#E1E5EA] text-[#444746]" title="تصغير">—</button>
+            <button type="button" onclick="toggleComposeExpand()" class="p-1.5 rounded-full hover:bg-[#E1E5EA] text-[#444746]" title="تكبير">⤢</button>
+            <button type="button" onclick="closeComposeModal()" class="p-1.5 rounded-full hover:bg-[#E1E5EA] text-[#444746]" title="إغلاق">✕</button>
+        </div>
+    </div>
+    <form method="post" action="{% url 'subjects:subject_create' %}" enctype="multipart/form-data" class="flex-1 flex flex-col min-h-0 overflow-y-auto">
+        {% csrf_token %}
+        <input id="compose-mode-input" type="hidden" name="compose_mode" value="document">
+
+        <div class="p-5 flex-1 space-y-4 text-sm">
+            <!-- الحقول الأساسية الواضحة -->
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1.5">عنوان المعاملة أو الرسالة *</label>
+                <input type="text" name="title" required placeholder="اكتب عنواناً واضحاً يصف الموضوع..." class="w-full px-3.5 py-2.5 border border-[#DADCE0] rounded-xl text-[15px] bg-white focus:outline-none focus:border-[#0B57D0]">
+            </div>
+
+            <!-- مستلمو الرسالة (في وضع إرسال رسالة) -->
+            <div id="compose-msg-recipients-row" class="hidden space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1">إلى (اختر مستلماً أو أكثر)</label>
+                    <select name="to_user_ids" multiple size="3" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-[#444746] mb-1">نسخة للاطلاع (اختياري)</label>
+                        <select name="cc_user_ids" multiple size="2" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl text-xs bg-white">
+                            {% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#444746] mb-1">نسخة مخفية (اختياري)</label>
+                        <select name="bcc_user_ids" multiple size="2" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl text-xs bg-white">
+                            {% for u in compose_meta.users %}<option value="{{ u.id }}">{{ u }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- القطاع والقسم الأساسيان -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1.5">القطاع المختص *</label>
+                    <select id="compose-sector-select" name="sector_id" required onchange="filterComposeUnitsBySector()" class="w-full px-3 py-2.5 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for sec in compose_meta.sectors %}<option value="{{ sec.id }}">{{ sec.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#444746] mb-1.5">القسم المختص *</label>
+                    <select id="compose-unit-select" name="org_unit_id" required class="w-full px-3 py-2.5 border border-[#DADCE0] rounded-xl text-sm bg-white">
+                        {% for u in compose_meta.org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- النص والمرفق -->
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1.5">تفاصيل الموضوع</label>
+                <textarea name="description" rows="3" placeholder="اكتب ملخص الموضوع أو الطلب بوضوح..." class="w-full px-3.5 py-2.5 border border-[#DADCE0] rounded-xl text-[15px] bg-white focus:outline-none focus:border-[#0B57D0]"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#444746] mb-1.5">إرفاق ملف (اختياري)</label>
+                <div class="flex items-center gap-2">
+                    <input id="compose-attachment-input" type="file" name="initial_attachment" onchange="handleComposeFileSelect(this)" class="w-full px-3 py-2 border border-dashed border-[#DADCE0] rounded-xl text-xs text-[#5F6368] bg-[#F6F8FC]">
+                    <button id="compose-file-preview-btn" type="button" onclick="previewSelectedComposeFile()" class="hidden px-3.5 py-2 rounded-full bg-[#D3E3FD] text-[#001D35] text-xs font-bold shrink-0">معاينة</button>
+                </div>
+                <div id="compose-file-label" class="text-xs text-[#0B57D0] mt-1 font-bold"></div>
+            </div>
+
+            <!-- خيارات إضافية مطوية افتراضياً (لتقليل الازدحام للمبتدئين) -->
+            <div class="pt-1">
+                <button type="button" onclick="toggleComposeAdvanced()" class="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B57D0] hover:underline">
+                    <span id="compose-adv-arrow">▾</span>
+                    <span>خيارات إضافية (السرية، الأهمية، موعد الإنجاز، التوجيه)</span>
+                </button>
+                <div id="compose-advanced-options" class="hidden mt-3 p-4 rounded-2xl bg-[#F6F8FC] border border-[#ECEFF1] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">المسؤول المبدئي</label>
+                        <select name="current_owner_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                            {% for u in compose_meta.users %}
+                                <option value="{{ u.id }}" {% if u.id == request.user.id %}selected{% endif %}>{{ u }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">نوع المعاملة</label>
+                        <select name="transaction_type_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                            {% for tx in compose_meta.transaction_types %}<option value="{{ tx.id }}">{{ tx.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">درجة السرية</label>
+                        <select name="confidentiality_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                            {% for c in compose_meta.confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">درجة الأهمية</label>
+                        <select name="priority_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                            {% for p in compose_meta.priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">موعد الإنجاز المتوقع</label>
+                        <input type="date" name="due_date" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white mono-num">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">تصنيف الملف المرفق</label>
+                        <select name="initial_doc_type_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                            {% for dt in compose_meta.doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">مقدم الطلب / الجهة الواردة</label>
+                        <input type="text" name="applicant_name" placeholder="اسم الشخص أو الجهة..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[#444746] mb-1">توجيه مبدئي (اختياري)</label>
+                        <input type="text" name="sector_directive" placeholder="توجيه مختصر عند الإنشاء..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-5 py-3.5 border-t border-[#ECEFF1] flex items-center justify-between gap-3 shrink-0 bg-white">
+            <button id="compose-submit-btn" type="submit" class="gm-ripple px-6 py-2.5 rounded-full bg-[#0B57D0] hover:bg-[#0842A0] text-white text-sm font-bold">
+                حفظ وإرسال الآن
+            </button>
+            <button type="button" onclick="closeComposeModal()" class="gm-ripple px-5 py-2 rounded-full border border-[#DADCE0] hover:bg-[#F1F3F4] text-sm font-bold text-[#444746]">إلغاء</button>
+        </div>
+    </form>
+</div>
+{% endif %}

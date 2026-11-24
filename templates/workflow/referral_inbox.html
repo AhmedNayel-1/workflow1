@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}صندوق الإحالات{% endblock %}
+{% block heading %}صندوق الإحالات{% endblock %}
+{% block content %}
+{% with nxt=request.get_full_path %}
+<div class="page-h"><div><h2>صندوق الإحالات</h2><p>ما وصلك من إحالات وما أحلته إلى غيرك.</p></div></div>
+<div data-tabs-root data-hash>
+  <div class="tabs mb"><button class="tab" data-tab="in">الواردة <span class="cnt brand">{{ incoming|length }}</span></button><button class="tab" data-tab="out">الصادرة <span class="cnt">{{ outgoing|length }}</span></button></div>
+
+  <section class="panel" data-pane="in"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>الموضوع</th><th>من</th><th>الغرض</th><th>الاستحقاق</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+    {% for it in incoming %}{% with ref=it.referral %}<tr>
+      <td style="max-width:320px"><a class="title" href="{% url 'subjects:subject_detail' ref.subject_id %}">{{ ref.subject.title|short:60 }}</a><br><span class="tag code">{{ ref.subject.internal_number }}</span>{% if ref.subject.confidentiality.overrides_hierarchy %} <span class="lock">{% icon 'lock' 'sm' %}</span>{% endif %}</td>
+      <td>{{ ref.referred_by }}</td><td><span class="pill brand nodot">{{ ref.get_purpose_display }}</span></td>
+      <td class="num {% if ref.due_date and ref.due_date < today_date %}bold{% endif %}" {% if ref.due_date and ref.due_date < today_date %}style="color:var(--bad)"{% endif %}>{{ ref.due_date|date:"Y-m-d"|default:"—" }}</td>
+      <td><span class="pill {{ it.status|tone }}">{{ it.get_status_display }}</span></td>
+      <td>{% if it.status == "PENDING" and it.is_active_step %}<form class="inline" method="post" action="{% url 'workflow:referral_respond' it.id %}">{% csrf_token %}<input type="hidden" name="action" value="acknowledge"><input type="hidden" name="next" value="{{ nxt }}"><button class="btn sm ok" type="submit">تأكيد الاستلام</button></form>{% else %}<a class="btn sm" href="{% url 'subjects:subject_detail' ref.subject_id %}">فتح</a>{% endif %}</td></tr>{% endwith %}
+    {% empty %}<tr><td colspan="6">{% include "partials/empty.html" with title="لا توجد إحالات واردة" icon_name="share" %}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+
+  <section class="panel" data-pane="out"><div class="panel-b">
+    {% for ref in outgoing %}<div class="item" style="flex-direction:column"><div class="row between wrap" style="width:100%"><div><a class="title" href="{% url 'subjects:subject_detail' ref.subject_id %}"><b>{{ ref.subject.title|short:70 }}</b></a> <span class="tag code">{{ ref.subject.internal_number }}</span></div><div class="row gap-s"><span class="pill brand nodot">{{ ref.get_purpose_display }}</span>{% if ref.is_withdrawn %}<span class="pill nodot">مسحوبة</span>{% elif ref.is_completed %}<span class="pill ok">مكتملة</span>{% endif %}<span class="muted xs num">{{ ref.created_at|date:"Y-m-d" }}</span></div></div>
+      <div class="col" style="width:100%;gap:6px">{% for rec in ref.recipients.all %}<div class="row between note" style="margin:0"><span>{{ rec.target_user|default:rec.target_unit }}</span><span class="row gap-s"><span class="pill {{ rec.status|tone }}">{{ rec.get_status_display }}</span>{% if rec.status == "PENDING" or rec.status == "RECEIVED" %}<details class="dd" style="border:0"><summary style="padding:0;display:inline-flex">{% icon 'users' 'sm' %}</summary><form class="row gap-s" method="post" action="{% url 'workflow:referral_reassign' rec.id %}" style="position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;z-index:5;box-shadow:var(--sh-2)">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><select class="in sm" name="new_user_id" style="width:180px">{% for u in reassign_candidates %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select><input class="in sm" name="reason" placeholder="السبب" required style="width:130px"><button class="btn sm" type="submit">نقل</button></form></details>{% endif %}</span></div>{% endfor %}</div>
+      {% if ref.can_withdraw %}<form method="post" action="{% url 'workflow:referral_withdraw' ref.id %}" class="row gap-s" data-confirm="سحب هذه الإحالة؟" data-danger>{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input class="in sm" name="reason" placeholder="سبب السحب" required><button class="btn sm line-bad" type="submit">سحب</button></form>{% endif %}</div>
+    {% empty %}{% include "partials/empty.html" with title="لا توجد إحالات صادرة" icon_name="send" %}{% endfor %}
+  </div></section>
+</div>
+{% endwith %}
+{% endblock %}

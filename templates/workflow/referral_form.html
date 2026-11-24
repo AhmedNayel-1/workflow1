@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}إحالة موضوع{% endblock %}
+{% block heading %}<span class="crumb">إحالة /</span> <span class="num">{{ subject.internal_number }}</span>{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>إحالة الموضوع</h2><p>{{ subject.title }}</p></div><a class="btn" href="{% url 'subjects:subject_detail' subject.id %}">إلغاء</a></div>
+<div class="note brand">{% icon 'info' 'sm' %} {{ routing_hint }}</div>
+<form method="post" class="col" style="gap:16px">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+  <section class="panel"><div class="panel-h"><h3><span class="cnt brand">1</span> ما الغرض من الإحالة؟</h3></div><div class="panel-b"><div class="tiles">
+    {% for v, l in purpose_choices %}<label class="tile"><input type="radio" name="purpose" value="{{ v }}" {% if v == "FOR_EXECUTION" %}checked{% endif %}><span class="ico">{% if v == "FOR_INFO" %}{% icon 'eye' %}{% elif v == "FOR_STUDY" %}{% icon 'book' %}{% elif v == "FOR_APPROVAL" %}{% icon 'check' %}{% elif v == "FOR_MEMO" %}{% icon 'note' %}{% else %}{% icon 'task' %}{% endif %}</span><b>{{ l }}</b></label>{% endfor %}
+  </div></div></section>
+  <section class="panel"><div class="panel-h"><h3><span class="cnt brand">2</span> كيف تُوجَّه؟</h3></div><div class="panel-b"><div class="tiles">
+    {% for v, l in routing_choices %}<label class="tile"><input type="radio" name="routing_mode" value="{{ v }}" {% if forloop.first %}checked{% endif %}><span class="ico">{% icon 'flow' %}</span><b>{{ l }}</b><small>{% if v == "DIRECT" %}إلى مستلم أو أكثر دفعة واحدة.{% elif v == "SEQUENTIAL" %}واحداً تلو الآخر بحسب الترتيب.{% else %}إلى الجميع معاً مع قاعدة لإنهاء الإحالة.{% endif %}</small></label>{% endfor %}
+  </div><div id="par" class="form mt" hidden><label class="fld"><span>قاعدة الإنهاء المتوازي</span><select class="in" name="parallel_completion_rule">{% for v, l in parallel_rules %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></label><label class="fld"><span>جهة لازمة للإنهاء <small>(اختياري)</small></span><select class="in" name="required_unit_id"><option value="">—</option>{% for u in org_units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></label></div></div></section>
+  <section class="panel"><div class="panel-h"><h3><span class="cnt brand">3</span> إلى من؟</h3></div><div class="panel-b form">
+    <label class="fld"><span>موظفون</span><input class="in sm" data-fsel="#t-users" placeholder="تصفية بالاسم…"><select class="in" id="t-users" name="target_user_ids" multiple size="8">{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} — {{ u.job_display_title|default:"" }}</option>{% endfor %}</select><small>Ctrl لاختيار أكثر من مستلم.</small></label>
+    <label class="fld"><span>أقسام / وحدات</span><input class="in sm" data-fsel="#t-units" placeholder="تصفية بالاسم…"><select class="in" id="t-units" name="target_unit_ids" multiple size="8">{% for u in org_units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></label>
+  </div></section>
+  <section class="panel"><div class="panel-h"><h3><span class="cnt brand">4</span> التفاصيل</h3></div><div class="panel-b form"><label class="fld"><span>الموعد النهائي</span><input class="in" type="date" name="due_date"></label><label class="fld full"><span>ملاحظات / توجيه</span><textarea class="in" name="notes" rows="3"></textarea></label></div></section>
+  <div class="row end"><a class="btn" href="{% url 'subjects:subject_detail' subject.id %}">إلغاء</a><button class="btn primary lg" type="submit">{% icon 'send' %}تسجيل الإحالة</button></div>
+</form>
+{% endblock %}
+{% block extra_js %}<script>(function(){var p=document.getElementById("par");function r(){var v=document.querySelector('input[name=routing_mode]:checked');p.hidden=!(v&&v.value==="PARALLEL")}document.querySelectorAll('input[name=routing_mode]').forEach(function(i){i.addEventListener("change",r)});r();document.querySelectorAll("[data-fsel]").forEach(function(i){i.addEventListener("input",function(){var q=i.value.trim();Array.prototype.forEach.call(document.querySelector(i.dataset.fsel).options,function(o){o.hidden=!!q&&o.textContent.indexOf(q)<0})})})})()</script>{% endblock %}

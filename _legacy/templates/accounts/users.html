@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}إدارة المستخدمين ونطاق الرؤية{% endblock %}
+{% block page_title %}إدارة حسابات المستخدمين وصلاحيات النطاق{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-5">
+    {% if not is_full_admin %}
+        <div class="bg-[#FFF8E1] border border-[#FFE082] rounded-2xl p-4 text-xs text-[#8D6E63] flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🛡️</span>
+                <div>
+                    <strong class="text-[#5D4037]">صلاحيات مسؤول قطاع / إدارة عامة:</strong>
+                    <span>أنت تدير حسابات الموظفين التابعين لقطاع <strong>{{ scoped_sector.name|default:"وحدتك التنظيمية" }}</strong> فقط. يمكنك إضافة وحذف الموظفين وتعديل حالتهم دون التأثير على القطاعات الأخرى.</span>
+                </div>
+            </div>
+            <a href="{% url 'organization:org_tree' %}" class="px-3.5 py-1.5 bg-white border border-[#D7CCC8] text-[#5D4037] rounded-full text-xs font-semibold hover:bg-[#FBE9E7]">
+                عرض الهيكل التنظيمي
+            </a>
+        </div>
+    {% else %}
+        <div class="bg-[#F8FAFD] border border-[#DADCE0] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[#444746]">
+            <div>
+                <strong>صلاحيات الإدارة الكاملة للنظام:</strong> بصفتك مدير النظام، يمكنك إدارة كافة الحسابات والقطاعات وصلاحيات التشغيل على مستوى الشركة.
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% if request.user.is_superuser %}
+                    <a href="{% url 'accounts:permissions_matrix' %}" class="px-3.5 py-1.5 bg-[#0B57D0] text-white rounded-full text-xs font-bold hover:bg-[#0842A0] transition-colors">مصفوفة الصلاحيات</a>
+                {% endif %}
+                <a href="{% url 'organization:org_tree' %}" class="px-3.5 py-1.5 bg-white border border-[#DADCE0] text-[#444746] rounded-full text-xs font-semibold hover:bg-[#F1F3F4] transition-colors">الهيكل التنظيمي</a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- نموذج إضافة مستخدم جديد -->
+    <form id="create-user-form" method="post" class="bg-white border border-[#E0E2E6] rounded-2xl p-5 shadow-sm space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_user">
+        <div class="flex items-center justify-between pb-2 border-b border-[#F0F2F5]">
+            <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-[#E6F4EA] text-[#137333] flex items-center justify-center font-bold text-xs">+</span>
+                <h2 class="text-sm font-bold text-[#1F1F1F]">إضافة حساب مستخدم جديد</h2>
+            </div>
+            <span class="text-[11px] text-[#5F6368]">يتم إنشاء الموظف وتعيين قطاعه وصلاحياته تلقائياً</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">الاسم الكامل *</label>
+                <input type="text" name="full_name" required placeholder="مثال: م. مصطفى محمود" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">اسم الدخول (Username) *</label>
+                <input type="text" name="username" required placeholder="mustafa_eng" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0] mono-num">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">كلمة المرور *</label>
+                <input type="password" name="password" required placeholder="••••••••" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">المسمى الوظيفي</label>
+                <input type="text" name="job_display_title" placeholder="مهندس تشغيل أول" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">القسم / الوحدة التنظيمية *</label>
+                <select name="org_unit_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+                    <option value="">-- اختر الوحدة التنظيمية --</option>
+                    {% for unit in org_units %}
+                        <option value="{{ unit.id }}">{{ unit.name }} ({{ unit.sector.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">الدور الوظيفي الأساسي</label>
+                <select name="role_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+                    <option value="">-- اختر الدور --</option>
+                    {% for r in roles %}
+                        <option value="{{ r.id }}">{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">القطاع</label>
+                <select name="sector_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0]">
+                    <option value="">-- تلقائي من الوحدة --</option>
+                    {% for s in sectors %}
+                        <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-[#444746] mb-1">الرقم الوظيفي</label>
+                <input type="text" name="employee_number" placeholder="تلقائي إن ترك فارغاً" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-[#F8FAFD] focus:bg-white focus:outline-none focus:border-[#0B57D0] mono-num">
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs">
+            <label class="inline-flex items-center gap-2 text-[#444746] cursor-pointer">
+                <input type="checkbox" name="is_secretariat" class="rounded text-[#0B57D0]">
+                <span>منح صلاحيات سكرتارية ومكتب فني</span>
+            </label>
+            <button type="submit" class="px-5 py-2 bg-[#137333] hover:bg-[#0F5C29] text-white rounded-full text-xs font-bold transition-colors shadow-xs">
+                حفظ وإنشاء الحساب
+            </button>
+        </div>
+    </form>
+
+    <!-- إسناد دور إضافي لمستخدم -->
+    <form method="post" class="bg-white border border-[#E0E2E6] rounded-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign_role">
+        <div>
+            <label class="block text-[11px] font-semibold text-[#444746] mb-1">المستخدم</label>
+            <select name="user_id" required class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.username }} — {{ u.get_full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-[11px] font-semibold text-[#444746] mb-1">الدور الإضافي</label>
+            <select name="role_id" required class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                {% for r in roles %}
+                    <option value="{{ r.id }}">{{ r.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-[11px] font-semibold text-[#444746] mb-1">القطاع</label>
+            <select name="sector_id" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                <option value="">(القطاع الافتراضي)</option>
+                {% for s in sectors %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-[11px] font-semibold text-[#444746] mb-1">الوحدة التنظيمية</label>
+            <select name="org_unit_id" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-xl bg-[#F8FAFD]">
+                <option value="">(كل الوحدات)</option>
+                {% for unit in org_units %}<option value="{{ unit.id }}">{{ unit.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="w-full py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-xl text-xs font-bold transition-colors">
+                إسناد الدور
+            </button>
+        </div>
+    </form>
+
+    <!-- جدول المستخدمين -->
+    <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between">
+            <div class="font-bold text-xs sm:text-sm text-[#1F1F1F] flex items-center gap-2">
+                <span>👥</span>
+                <span>جدول حسابات المستخدمين والنطاق التنظيمي</span>
+            </div>
+            <span class="mono-num text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0]">
+                {{ users|length }} مستخدم
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-right">
+                <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                    <tr>
+                        <th class="px-4 py-3">اسم الدخول</th>
+                        <th class="px-4 py-3">الاسم والوظيفة</th>
+                        <th class="px-4 py-3">القطاع / الوحدة</th>
+                        <th class="px-4 py-3">الأدوار المسندة</th>
+                        <th class="px-4 py-3">نطاق الرؤية</th>
+                        <th class="px-4 py-3">الحالة</th>
+                        <th class="px-4 py-3 text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#F0F2F5]">
+                    {% for u in users %}
+                        <tr class="hover:bg-[#F9FBFD] transition-colors">
+                            <td class="px-4 py-3 mono-num font-bold text-[#1F1F1F]">{{ u.username }}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-[#1F1F1F]">{{ u.get_full_name|default:u.username }}</div>
+                                <div class="text-[#5F6368] text-[11px]">{{ u.job_display_title|default:"—" }}</div>
+                            </td>
+                            <td class="px-4 py-3 text-[#444746]">
+                                <div>{{ u.current_unit.name|default:"—" }}</div>
+                                {% if u.current_unit.sector %}
+                                    <div class="text-[10px] text-[#747775]">{{ u.current_unit.sector.name }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-[#0B57D0]">
+                                {% if u.is_superuser %}
+                                    <span class="px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0] font-bold text-[11px]">مدير النظام</span>
+                                {% else %}
+                                    {% for ra in u.role_assignments.all %}
+                                        <span class="inline-flex items-center gap-1 bg-[#F1F3F4] px-2 py-0.5 rounded-full ml-1 mb-1 text-[11px] text-[#374151]">
+                                            <span>{{ ra.role.name }}</span>
+                                            <form method="post" class="inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="remove_role">
+                                                <input type="hidden" name="assignment_id" value="{{ ra.id }}">
+                                                <button type="submit" title="سحب الدور" class="text-[#C5221F] hover:font-bold">×</button>
+                                            </form>
+                                        </span>
+                                    {% empty %}—{% endfor %}
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {% if u.scope_info.is_manager %}bg-[#E8F0FE] text-[#0B57D0]{% else %}bg-[#F1F3F4] text-[#444746]{% endif %}">
+                                    {{ u.scope_info.short_label }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_active">
+                                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                                    <button type="submit" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {% if u.is_active %}bg-[#E6F4EA] text-[#137333]{% else %}bg-[#FCE8E6] text-[#A50E0E]{% endif %}">
+                                        {% if u.is_active %}مفعل{% else %}موقوف{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                {% if not u.is_superuser and u.id != request.user.id %}
+                                    <div class="inline-flex items-center gap-1" id="del-wrap-{{ u.id }}">
+                                        <button type="button" onclick="this.classList.add('hidden');document.getElementById('del-form-{{ u.id }}').classList.remove('hidden');" class="px-2.5 py-1 text-[11px] text-[#C5221F] hover:bg-[#FCE8E6] rounded-lg transition-colors font-semibold">
+                                            حذف
+                                        </button>
+                                        <form id="del-form-{{ u.id }}" method="post" class="hidden inline-flex items-center gap-1">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_user">
+                                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                                            <button type="submit" class="px-2 py-1 text-[10px] bg-[#C5221F] text-white rounded-lg font-bold">تأكيد الحذف</button>
+                                            <button type="button" onclick="this.closest('form').classList.add('hidden');this.closest('#del-wrap-{{ u.id }}').querySelector('button').classList.remove('hidden');" class="px-2 py-1 text-[10px] bg-[#F1F3F4] text-[#444746] rounded-lg">إلغاء</button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <span class="text-[#9E9E9E] text-[11px]">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1062 @@
+{% extends "base.html" %}
+{% block title %}{{ subject.internal_number }} — تفاصيل وسير المعاملة{% endblock %}
+{% block card_header %}{% endblock %}
+{% block content_padding %}p-0{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden bg-[#F6F8FC]">
+    <!-- العمود الرئيسي: القراءة المريحة والإجراءات -->
+    <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        <div class="flex-1 overflow-y-auto">
+            <!-- شريط أدوات هادئ بنمط Gmail -->
+            <div class="px-5 py-3 border-b border-[#E1E3E1] flex flex-wrap items-center justify-between gap-2 sticky top-0 bg-white z-20 no-print">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <a href="{% url 'core:dashboard' %}" class="gm-ripple px-3.5 py-1.5 rounded-full hover:bg-[#F2F6FC] text-[#444746] inline-flex items-center gap-1.5 text-sm font-bold transition-colors">
+                        <span>→ رجوع لصندوق العمل</span>
+                    </a>
+                    <span class="text-[#DADCE0]">|</span>
+                    <span class="mono-num text-sm font-bold text-[#0B57D0]">{{ subject.internal_number }}</span>
+                    <span class="text-xs text-[#5F6368] font-medium">· {{ subject.org_unit.name }}</span>
+                    {% if subject.confidentiality.rank >= 3 %}
+                        <span class="text-xs font-bold text-[#A50E0E]">· {{ subject.confidentiality.name }}</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="document.getElementById('timeline-box').classList.toggle('hidden')" class="gm-ripple px-4 py-1.5 rounded-full bg-[#EAF1FB] hover:bg-[#D3E3FD] text-xs font-bold text-[#0B57D0] transition-colors">
+                        سجل الحركة والمراحل ({{ workflow_stages|length }})
+                    </button>
+                    <a href="{% url 'subjects:subject_export_pdf' subject.id %}" class="gm-ripple px-3.5 py-1.5 rounded-full border border-[#DADCE0] hover:bg-[#F2F6FC] text-xs font-bold text-[#444746] transition-colors">
+                        تصدير PDF
+                    </a>
+                    <button type="button" onclick="window.print()" class="gm-ripple px-3.5 py-1.5 rounded-full border border-[#DADCE0] hover:bg-[#F2F6FC] text-xs font-bold text-[#444746] transition-colors">طباعة</button>
+                </div>
+            </div>
+
+            <div class="p-6 max-w-4xl w-full mx-auto space-y-5 gm-fade-up">
+                <!-- 1. تنبيه موعد الاستحقاق (بأسلوب هادئ وواضح بدون مصطلحات تقنية) -->
+                {% if subject.due_date and subject.due_date < today_date and subject.status != 'CLOSED' %}
+                    <div class="rounded-2xl px-4 py-3 bg-[#FFF9F2] border border-[#F0DCB8] text-sm text-[#8B5014] flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-full bg-[#FAF0E4] flex items-center justify-center shrink-0 text-[#B26A00] font-bold">!</span>
+                            <div>
+                                <div class="font-bold text-[#8B5014]">معاملة متأخرة عن الموعد المحدد</div>
+                                <div class="text-xs text-[#A0581A]">كان موعد الإنجاز: <strong class="mono-num">{{ subject.due_date|date:"Y-m-d" }}</strong> — يُرجى اتخاذ الإجراء المطلوب.</div>
+                            </div>
+                        </div>
+                    </div>
+                {% elif subject.due_date and subject.status != 'CLOSED' %}
+                    <div class="text-xs text-[#5F6368] flex items-center gap-2 px-1">
+                        <span>موعد الإنجاز المحدد: <strong class="mono-num text-[#1F1F1F]">{{ subject.due_date|date:"Y-m-d" }}</strong></span>
+                    </div>
+                {% endif %}
+
+                <!-- 2. عنوان المعاملة وشريط التقدم المبسط -->
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                            <h2 class="text-xl sm:text-2xl font-bold text-[#1F1F1F] leading-snug">{{ subject.title }}</h2>
+                            <div class="text-sm text-[#5F6368] flex flex-wrap items-center gap-2">
+                                <span>بدأها: <strong class="text-[#1F1F1F]">{{ subject.created_by }}</strong></span>
+                                <span>·</span>
+                                <span class="mono-num">{{ subject.created_at|date:"Y-m-d H:i" }}</span>
+                                <span>·</span>
+                                <span>حالياً لدى: <strong class="text-[#0B57D0]">{{ subject.current_owner }}</strong></span>
+                            </div>
+                        </div>
+                        <span class="px-3.5 py-1 rounded-full bg-[#EAF1FB] text-xs font-bold text-[#0B57D0] shrink-0">{{ subject.get_status_display }}</span>
+                    </div>
+
+                    <!-- مؤشر التقدم الأفقي المدمج -->
+                    <div class="overflow-x-auto">
+                        <div class="flex items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-white border border-[#E1E3E1] min-w-[520px]">
+                            {% for st in workflow_steps %}
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if st.done and not st.current %}bg-[#E6F4EA] text-[#137333]{% elif st.current %}bg-[#0B57D0] text-white{% else %}bg-[#F1F3F4] text-[#5F6368]{% endif %}">
+                                        {% if st.done and not st.current %}✓{% else %}{{ st.id }}{% endif %}
+                                    </span>
+                                    <span class="text-xs whitespace-nowrap {% if st.current %}font-bold text-[#0B57D0]{% elif st.done %}font-semibold text-[#137333]{% else %}text-[#5F6368]{% endif %}">{{ st.title }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if pending_recipient %}
+                        <div class="p-4 rounded-2xl bg-[#EAF1FB] border border-[#C2E7FF] text-sm text-[#1F1F1F] flex flex-wrap items-center justify-between gap-3 no-print">
+                            <span>
+                                <strong>إحالة بانتظار استلامك:</strong>
+                                موجهة من <strong>{{ pending_recipient.referral.referred_by }}</strong>
+                                ({{ pending_recipient.referral.get_purpose_display }})
+                                {% if pending_recipient.referral.notes %} — «{{ pending_recipient.referral.notes }}»{% endif %}
+                            </span>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <form method="post" action="{% url 'workflow:referral_respond' pending_recipient.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="complete">
+                                    <button type="submit" class="gm-ripple px-4 py-1.5 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-[20px] text-xs font-bold">
+                                        تأكيد الاستلام / الاطلاع
+                                    </button>
+                                </form>
+                                {% if pending_recipient.referral.purpose != 'FOR_INFO' %}
+                                    <form method="post" action="{% url 'workflow:referral_reject' pending_recipient.id %}" class="inline-flex flex-wrap items-center gap-1.5">
+                                        {% csrf_token %}
+                                        <input type="text" name="reason" required placeholder="سبب الإرجاع..." class="px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                        <button type="submit" class="gm-ripple px-3.5 py-1.5 bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#A50E0E] rounded-[20px] text-xs font-bold">
+                                            ↩ رفض / إرجاع للمحيل
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if perms.can_refer and subject.status != "CLOSED" and template_versions %}
+                        <form method="post" action="{% url 'workflow:apply_template' subject.id %}" class="p-3 rounded-[16px] bg-white border border-[#E1E3E1] text-xs flex flex-wrap items-center justify-between gap-2 shadow-xs no-print">
+                            {% csrf_token %}
+                            <span class="font-bold text-[#202124]">تطبيق قالب مسار عمل قياسي:</span>
+                            <div class="flex flex-wrap items-center gap-2 flex-1 justify-end">
+                                <select name="template_version_id" required class="px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-white max-w-sm">
+                                    <option value="">-- اختر إصدار القالب --</option>
+                                    {% for tv in template_versions %}
+                                        <option value="{{ tv.id }}" {% if subject.workflow_template_version_id == tv.id %}selected{% endif %}>{{ tv.template.name }} (v{{ tv.version_number }})</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="gm-ripple px-4 py-1.5 bg-[#E8F0FE] hover:bg-[#D3E3FD] text-[#1A73E8] rounded-[20px] text-xs font-bold">تطبيق القالب</button>
+                            </div>
+                        </form>
+                    {% endif %}
+
+                    <!-- 3. بطاقة «ماذا أفعل الآن؟» المبسطة للمستخدم -->
+                    {% if not perms.can_act %}
+                        <div class="p-4 rounded-2xl bg-white border border-[#E1E3E1] text-sm text-[#5F6368] flex items-center justify-between gap-3">
+                            <div>
+                                <div class="font-bold text-[#1F1F1F]">للاطلاع فقط</div>
+                                <div class="text-xs text-[#5F6368] mt-0.5">
+                                    المعاملة حالياً عند <strong>{{ subject.current_owner }}</strong> ولا يلزمك إجراء فيها الآن.
+                                </div>
+                            </div>
+                            <button type="button" onclick="document.getElementById('timeline-box').classList.remove('hidden')" class="px-4 py-1.5 rounded-full border border-[#DADCE0] hover:bg-[#F2F6FC] text-xs font-bold text-[#0B57D0]">
+                                عرض سجل الحركة
+                            </button>
+                        </div>
+                    {% elif subject.status == "CLOSED" %}
+                        <div class="p-4 rounded-2xl bg-[#E6F4EA] border border-[#CEEAD6] text-sm text-[#137333] flex items-center gap-3">
+                            <span class="text-base font-bold">✓</span>
+                            <div>
+                                <div class="font-bold">تم إغلاق المعاملة وأرشفتها</div>
+                                <div class="text-xs text-[#137333]/90 mt-0.5">
+                                    اكتملت جميع الإجراءات ({% if subject.closed_at %}بتاريخ {{ subject.closed_at|date:"Y-m-d H:i" }}{% endif %}).
+                                </div>
+                            </div>
+                        </div>
+                    {% elif user_level == "L5" or user_level == "L6" %}
+                        <div class="p-4 rounded-2xl bg-[#EAF1FB] border-r-4 border-[#0B57D0] text-sm text-[#1F1F1F] flex flex-wrap items-center justify-between gap-4 no-print">
+                            <div class="space-y-1 max-w-xl">
+                                <div class="font-bold text-[15px] text-[#0B57D0]">ماذا أفعل الآن؟</div>
+                                <p class="text-sm text-[#444746]">
+                                    اقرأ المراسلة والمرفقات أدناه، ثم اضغط على «كتابة الرد أو المذكرة» لرفع رأيك لمديرك.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <button type="button" onclick="showDrawer('reply-drawer'); document.getElementById('reply-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-5 py-2.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-sm font-bold shadow-xs">
+                                    كتابة الرد أو المذكرة
+                                </button>
+                                <button type="button" onclick="showDrawer('attach-drawer'); document.getElementById('attach-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2.5 border border-[#DADCE0] bg-white hover:bg-[#F1F3F4] text-[#1F1F1F] rounded-full text-xs font-bold">
+                                    إرفاق مستند
+                                </button>
+                            </div>
+                        </div>
+                    {% elif user_level == "L3" or user_level == "L4" %}
+                        <div class="p-4 rounded-2xl bg-[#EAF1FB] border-r-4 border-[#0B57D0] text-sm text-[#1F1F1F] flex flex-wrap items-center justify-between gap-4 no-print">
+                            <div class="space-y-1 max-w-xl">
+                                <div class="font-bold text-[15px] text-[#0B57D0]">ماذا أفعل الآن؟</div>
+                                <p class="text-sm text-[#444746]">
+                                    {% if draft_memo %}
+                                        توجد مذكرة مرفوعة بانتظار مراجعتك واعتمادها الآن.
+                                    {% else %}
+                                        وجّه المعاملة للموظف المختص لدراستها، أو علّقها إذا كانت تنقصها أوراق.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                {% if draft_memo and perms.can_approve %}
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="approve_memo">
+                                        <input type="hidden" name="memo_id" value="{{ draft_memo.id }}">
+                                        <button type="submit" class="gm-ripple px-5 py-2.5 bg-[#137333] hover:bg-[#0D652D] text-white rounded-full text-sm font-bold shadow-xs">
+                                            ✓ اعتماد المذكرة الآن
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                {% if perms.can_refer %}
+                                    <a href="{% url 'workflow:referral_create' subject.id %}" class="gm-ripple px-5 py-2.5 {% if draft_memo and perms.can_approve %}border border-[#DADCE0] bg-white hover:bg-[#F1F3F4] text-[#1F1F1F]{% else %}bg-[#0B57D0] hover:bg-[#0842A0] text-white shadow-xs{% endif %} rounded-full text-sm font-bold">
+                                        إحالة لموظف مختص
+                                    </a>
+                                {% endif %}
+                                <button type="button" onclick="showDrawer('suspend-drawer'); document.getElementById('suspend-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2.5 border border-[#F0DCB8] bg-[#FFF9F2] hover:bg-[#FAF0E4] text-[#8B5014] rounded-full text-xs font-bold">
+                                    تعليق مؤقت
+                                </button>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="p-4 rounded-2xl bg-[#EAF1FB] border-r-4 border-[#0B57D0] text-sm text-[#1F1F1F] flex flex-wrap items-center justify-between gap-4 no-print">
+                            <div class="space-y-1 max-w-xl">
+                                <div class="font-bold text-[15px] text-[#0B57D0]">ماذا أفعل الآن؟</div>
+                                <p class="text-sm text-[#444746]">
+                                    أضف تأشيرتك وتوجيهك، أو أحِل المعاملة لمدير عام، أو أغلِق المعاملة بعد استيفائها.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <button type="button" onclick="showDrawer('annotation-drawer'); document.getElementById('annotation-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-5 py-2.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-sm font-bold shadow-xs">
+                                    إضافة تأشيرة وتوجيه
+                                </button>
+                                {% if perms.can_refer %}
+                                    <a href="{% url 'workflow:referral_create' subject.id %}" class="gm-ripple px-4 py-2.5 border border-[#DADCE0] bg-white hover:bg-[#F1F3F4] text-[#1F1F1F] rounded-full text-xs font-bold">
+                                        إحالة لمدير عام
+                                    </a>
+                                {% endif %}
+                                {% if perms.can_close %}
+                                    <button type="button" onclick="showDrawer('close-drawer'); document.getElementById('close-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2.5 bg-[#FFF9F2] border border-[#F0DCB8] text-[#8B5014] hover:bg-[#FAF0E4] rounded-full text-xs font-bold">
+                                        إغلاق المعاملة
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- بطاقات التعليق المؤقت والاستيفاء -->
+                    {% for susp in suspensions %}
+                        <div class="p-4 rounded-[16px] shadow-sm text-xs space-y-3 {% if susp.is_fulfilled %}bg-[#E6F4EA] border border-[#CEEAD6]{% else %}bg-amber-50 border border-amber-200{% endif %}">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <div class="text-sm font-bold text-[#202124]">
+                                        {% if susp.is_fulfilled %}✓ تم استيفاء التعليق واستئناف العمل{% else %}⏸ الموضوع معلق حالياً للاستيفاء{% endif %}
+                                    </div>
+                                    {% if susp.reason_ref %}
+                                        <div class="text-[11px] font-bold text-amber-800 mt-0.5">سبب التعليق المرجعي: {{ susp.reason_ref.name }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-[11px] text-[#5F6368] mono-num">
+                                    تاريخ التعليق: {{ susp.suspended_at|date:"Y-m-d H:i" }}
+                                    {% if susp.expected_follow_up_date %} · متابعة متوقعة: <strong>{{ susp.expected_follow_up_date|date:"Y-m-d" }}</strong>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-3 rounded-[16px]">
+                                <div>
+                                    <div class="text-[11px] text-[#5F6368] font-bold">المستند / الإجراء المطلوب استيفاؤه:</div>
+                                    <div class="font-bold text-[#202124] mt-0.5">{{ susp.required_item }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] text-[#5F6368] font-bold">الجهة أو الشخص المطلوب منه:</div>
+                                    <div class="font-bold text-[#202124] mt-0.5">{{ susp.required_from|default:"صاحب الشأن / الجهة المختصة" }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] text-[#5F6368] font-bold">السبب التفصيلي للتعليق:</div>
+                                    <div class="text-[#5F6368] mt-0.5">{{ susp.reason_details|default:"—" }}</div>
+                                </div>
+                            </div>
+
+                            {% if susp.is_fulfilled %}
+                                <div class="bg-white p-2.5 rounded-[16px] border border-[#CEEAD6] text-[#137333]">
+                                    <strong>ما تم تقديمه للاستيفاء:</strong> {{ susp.fulfillment_notes }}
+                                    {% if susp.fulfilled_by %} · <span class="text-[#5F6368]">بواسطة: {{ susp.fulfilled_by }} ({{ susp.fulfilled_at|date:"Y-m-d H:i" }})</span>{% endif %}
+                                </div>
+                            {% else %}
+                                {% if perms.can_act %}
+                                    <form method="post" enctype="multipart/form-data" class="bg-white p-3.5 rounded-[16px] border border-amber-300 space-y-2.5 no-print">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="fulfill_suspension">
+                                        <input type="hidden" name="suspension_id" value="{{ susp.id }}">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-[#5F6368] mb-1">بيان ما تم تقديمه لاستيفاء التعليق *</label>
+                                                <input type="text" name="fulfillment_notes" placeholder="مثال: تم تقديم أصل شهادة التحليل المعتمدة..." required class="w-full px-3 py-1.5 border border-amber-300 rounded-[20px] text-xs bg-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-[#5F6368] mb-1">استئناف العمل بحالة</label>
+                                                <select name="resume_status" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                                    {% for val, label in resume_status_choices %}
+                                                        <option value="{{ val }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-[#5F6368] mb-1">نوع مستند الاستيفاء (عند إرفاق ملف)</label>
+                                                <select name="fulfillment_doc_type_id" class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                                    {% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-[#5F6368] mb-1">إرفاق المستند المستوفي (اختياري)</label>
+                                                <input type="file" name="fulfillment_attachment" class="w-full px-2.5 py-1 border border-dashed border-[#DADCE0] rounded-[20px] text-xs bg-[#F8F9FA]">
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-end">
+                                            <button type="submit" class="gm-ripple px-5 py-1.5 bg-[#137333] hover:bg-[#0D652D] text-white rounded-[20px] text-xs font-bold">✓ تسجيل الاستيفاء واستئناف العمل</button>
+                                        </div>
+                                    </form>
+                                {% else %}
+                                    <div class="text-[11px] text-[#5F6368]">بانتظار صاحب العهدة ({{ subject.current_owner }}) لتسجيل الاستيفاء واستئناف العمل.</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 4. بطاقة القراءة الرئيسية بخط واضح ومريح للعين -->
+                <article class="bg-white rounded-2xl border border-[#E1E3E1] p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#ECEFF1]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-[#0B57D0] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                                {{ subject.created_by.get_full_name|default:subject.created_by.username|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-[#1F1F1F]">{{ subject.created_by }}</div>
+                                <div class="text-xs text-[#5F6368]">{{ subject.transaction_type.name }}{% if subject.applicant_name %} · الجهة: {{ subject.applicant_name }}{% endif %}</div>
+                            </div>
+                        </div>
+                        <span class="mono-num text-xs text-[#5F6368]">{{ subject.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+
+                    {% if subject.description %}
+                        <p class="text-[15px] text-[#1F1F1F] leading-[1.8] whitespace-pre-line">{{ subject.description }}</p>
+                    {% else %}
+                        <p class="text-sm text-[#5F6368]">لا يوجد نص وصف إضافي مسجل للمعاملة.</p>
+                    {% endif %}
+
+                    <!-- شرائح المرفقات المدمجة أسفل بطاقة القراءة (Attachment Chips) -->
+                    {% if doc_links %}
+                        <div class="pt-3 border-t border-[#ECEFF1] flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-bold text-[#5F6368]">المرفقات السريعة:</span>
+                            {% for link in doc_links %}
+                                {% for ver in link.document.versions.all %}
+                                    {% for att in ver.attachments.all %}
+                                        <button
+                                            type="button"
+                                            onclick="openInlineAttachmentPreview('{{ att.id }}', '{{ att.original_filename|escapejs }}', '{{ att.preview_kind|escapejs }}', '{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream', '{% url 'documents:attachment_download' att.id %}', '{% url 'documents:attachment_preview' att.id %}')"
+                                            class="gm-ripple inline-flex items-center gap-1.5 px-3 py-1 rounded-[20px] bg-[#F1F3F4] hover:bg-[#E8F0FE] text-xs text-[#202124] hover:text-[#1A73E8] transition-colors"
+                                        >
+                                            <span>📎</span>
+                                            <span class="font-bold max-w-[180px] truncate">{{ att.original_filename }}</span>
+                                            <span class="text-[10px] text-[#5F6368] mono-num">({{ att.file_size|filesizeformat }})</span>
+                                        </button>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </article>
+
+                <!-- التأشيرات القيادية الملزمة -->
+                {% if annotations %}
+                <section class="space-y-2.5">
+                    <h3 class="text-xs font-bold text-[#5F6368]">التأشيرات والتوجيهات القيادية ({{ annotations|length }})</h3>
+                    {% for ann in annotations %}
+                        <div class="rounded-[16px] p-4 bg-[#FAF5FF] border border-[#E9D5FF] shadow-xs space-y-1.5 text-xs">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="font-bold text-[#581C87]">✍ {{ ann.author }}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-0.5 rounded-[20px] bg-white border border-[#E9D5FF] text-[10px] font-bold text-[#9333EA]">{{ ann.get_execution_status_display }}</span>
+                                    <span class="mono-num text-[11px] text-[#5F6368]">{{ ann.annotation_date|date:"Y-m-d H:i" }}</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-[#202124] leading-relaxed">{{ ann.annotation_text }}</p>
+                            {% if ann.required_action %}
+                                <div class="text-[11px] font-bold text-[#9333EA]">الإجراء المطلوب: {{ ann.required_action }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </section>
+                {% endif %}
+
+                <!-- المذكرات الرسمية والردود التنفيذية -->
+                {% if memos %}
+                <section class="space-y-2.5">
+                    <h3 class="text-xs font-bold text-[#5F6368]">المذكرات الرسمية والردود التنفيذية ({{ memos|length }})</h3>
+                    {% for m in memos %}
+                        <article class="border border-[#E1E3E1] rounded-[16px] p-4 bg-white shadow-xs space-y-2.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-[#1A73E8] text-white flex items-center justify-center text-sm font-bold shrink-0">
+                                        {{ m.author.get_full_name|default:m.author.username|slice:":1" }}
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-[#202124]">
+                                            {{ m.author }}
+                                            <span class="mr-2 mono-num text-xs text-[#1A73E8]">{{ m.memo_number }}</span>
+                                        </div>
+                                        <div class="text-xs text-[#5F6368]">
+                                            {{ m.get_memo_type_display }} · موجهة إلى: {{ m.directed_to }} · الحالة:
+                                            <strong class="{% if m.status == 'APPROVED' %}text-[#137333]{% else %}text-[#8B5014]{% endif %}">{{ m.get_status_display }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 no-print">
+                                    <a href="{% url 'subjects:memo_export_pdf' m.id %}" class="gm-ripple px-3 py-1 bg-white border border-[#DADCE0] hover:bg-[#E8F0FE] text-[#1A73E8] rounded-[20px] text-xs font-bold">
+                                        📄 تصدير PDF
+                                    </a>
+                                    <a href="{% url 'subjects:memo_print' m.id %}" target="_blank" class="gm-ripple px-3 py-1 bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#5F6368] rounded-[20px] text-xs font-bold">
+                                        طباعة
+                                    </a>
+                                    {% if m.status != 'APPROVED' and perms.can_approve %}
+                                        <form method="post" class="inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="approve_memo">
+                                            <input type="hidden" name="memo_id" value="{{ m.id }}">
+                                            <button type="submit" class="gm-ripple px-3.5 py-1 bg-[#1E8E3E] hover:bg-[#0D652D] text-white rounded-[20px] text-xs font-bold">
+                                                ✓ اعتماد المذكرة
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="pr-12 space-y-1">
+                                <div class="text-sm font-bold text-[#202124]">{{ m.title }}</div>
+                                <p class="text-sm text-[#202124] bg-[#F8F9FA] p-3 rounded-[14px] leading-relaxed whitespace-pre-line">{{ m.body }}</p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </section>
+                {% endif %}
+
+                <!-- 5. عرض المرفقات المصنفة حسب نوع المستند -->
+                {% if doc_links %}
+                <section class="rounded-[16px] p-5 bg-white border border-[#E1E3E1] shadow-xs space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#ECEFF1] pb-2.5">
+                        <div>
+                            <h3 class="text-sm font-bold text-[#202124]">المرفقات والمستندات المصنفة ({{ doc_links|length }})</h3>
+                            <p class="text-[11px] text-[#5F6368]">اضغط «معاينة» لعرض المرفق أو تصفح حسب النوع.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
+                            <a href="?" class="px-3 py-1 rounded-[20px] font-bold {% if not selected_doc_type %}bg-[#1A73E8] text-white{% else %}bg-white border border-[#DADCE0] text-[#5F6368] hover:bg-[#F1F3F4]{% endif %}">
+                                الكل ({{ doc_links|length }})
+                            </a>
+                            {% for grp in all_doc_groups %}
+                                <a href="?doc_type={{ grp.doc_type.id }}" class="px-3 py-1 rounded-[20px] font-bold {% if selected_doc_type == grp.doc_type.id|stringformat:'s' %}bg-[#1A73E8] text-white{% else %}bg-white border border-[#DADCE0] text-[#5F6368] hover:bg-[#F1F3F4]{% endif %}">
+                                    {{ grp.doc_type.name }} ({{ grp.count }})
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {% for link in doc_links %}
+                            {% for ver in link.document.versions.all %}
+                                {% for att in ver.attachments.all %}
+                                    <div class="flex flex-wrap items-center justify-between gap-2 bg-[#F8F9FA] px-3.5 py-2.5 rounded-[16px] border border-[#E1E3E1] text-xs">
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-[#202124] truncate">📎 {{ att.original_filename }}</div>
+                                            <div class="text-[11px] text-[#5F6368]">
+                                                <span>{{ link.document.doc_type.name }}</span> ·
+                                                <span class="mono-num">{{ att.file_size|filesizeformat }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 shrink-0 no-print">
+                                            <button
+                                                type="button"
+                                                onclick="openInlineAttachmentPreview('{{ att.id }}', '{{ att.original_filename|escapejs }}', '{{ att.preview_kind|escapejs }}', '{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream', '{% url 'documents:attachment_download' att.id %}', '{% url 'documents:attachment_preview' att.id %}')"
+                                                class="gm-ripple px-3 py-1 rounded-[20px] bg-[#E8F0FE] hover:bg-[#D3E3FD] text-[#1A73E8] font-bold text-xs"
+                                            >
+                                                👁 معاينة
+                                            </button>
+                                            <a href="{% url 'documents:attachment_download' att.id %}" class="px-3 py-1 rounded-[20px] bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#202124] font-bold text-xs">تنزيل</a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- 6. القرارات الإدارية والإغلاق -->
+                {% if decisions or perms.can_decide or closure_blockers %}
+                    <section id="closure-section" class="rounded-[16px] p-5 bg-white border border-[#E1E3E1] shadow-xs space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#ECEFF1] pb-2">
+                            <h3 class="text-sm font-bold text-[#202124]">القرارات الإدارية والإغلاق ({{ decisions|length }})</h3>
+                            {% if perms.can_decide and subject.status != "CLOSED" %}
+                                <a href="{% url 'decisions:decision_create' subject.id %}" class="gm-ripple px-3.5 py-1.5 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-[20px] font-bold text-xs no-print">
+                                    ⚖ إعداد مشروع قرار
+                                </a>
+                            {% endif %}
+                        </div>
+                        {% if decisions %}
+                            <div class="space-y-2">
+                                {% for dec in decisions %}
+                                    <div class="p-3.5 rounded-[16px] bg-[#F8F9FA] border border-[#E1E3E1] flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div>
+                                            <span class="mono-num font-bold text-[#1A73E8]">{{ dec.decision_number|default:"مسودة" }}</span>
+                                            <strong class="text-[#202124] mr-2">{{ dec.title }}</strong>
+                                            <span class="text-[#5F6368]">({{ dec.get_status_display }})</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 no-print">
+                                            <a href="{% url 'decisions:decision_detail' dec.id %}" class="gm-ripple px-3.5 py-1 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-[20px] font-bold text-xs">
+                                                إدارة القرار والتنفيذ →
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% elif subject.status != "CLOSED" %}
+                            <div class="text-xs text-[#5F6368]">لم يتم إصدار قرارات إدارية لهذا الموضوع بعد.</div>
+                        {% endif %}
+                        {% if closure_blockers and subject.status != "CLOSED" %}
+                            <div class="p-3 rounded-[14px] bg-[#FFF9F2] border border-[#F0DCB8] text-xs text-[#8B5014] space-y-1">
+                                <div class="font-bold">متطلبات متبقية قبل الإغلاق الرسمي:</div>
+                                {% for err in closure_blockers %}<div>• {{ err }}</div>{% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if subject.status == "CLOSED" %}
+                            <div class="text-xs text-[#137333] font-bold">
+                                ✓ تم إغلاق الموضوع وأرشفته بتاريخ <span class="mono-num">{{ subject.closed_at|date:"Y-m-d H:i"|default:"—" }}</span>
+                            </div>
+                        {% endif %}
+                    </section>
+                {% endif %}
+
+                <!-- 7. نوافذ النماذج المنبثقة / الأدراج (تُفتح فقط عند الضغط على الزر الخاص بها) -->
+                {% if perms.can_act and subject.status != "CLOSED" %}
+                    <div class="space-y-4 no-print">
+                        <!-- نموذج إعداد المذكرة -->
+                        {% if perms.can_memo %}
+                        <form id="reply-drawer" method="post" enctype="multipart/form-data" class="hidden rounded-[16px] p-5 bg-white shadow-md border border-[#E1E3E1] space-y-3 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_memo">
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#ECEFF1] pb-2">
+                                <div class="text-sm font-bold text-[#1A73E8]">↩ إعداد مذكرة رسمية أو رد تنفيذي</div>
+                                <button type="button" onclick="showDrawer('reply-drawer')" class="text-[#5F6368] hover:text-[#202124]">✕ إغلاق</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">نوع المذكرة *</label>
+                                    <select name="memo_type" class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                        {% for mt in memo_types %}
+                                            <option value="{{ mt.code }}">{{ mt.name }}</option>
+                                        {% empty %}
+                                            <option value="PRESENTATION">مذكرة عرض</option>
+                                            <option value="COMMITTEE">مذكرة للعرض على اللجنة</option>
+                                            <option value="OPINION">مذكرة إبداء رأي</option>
+                                            <option value="FULFILLMENT">مذكرة استيفاء</option>
+                                            <option value="EXECUTION">مذكرة تنفيذية</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">الجهة / المسؤول الموجهة إليه المذكرة *</label>
+                                    <select id="memo-directed-select" name="directed_to_select" onchange="toggleCustomMemoRecipient()" class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                        {% for tgt in memo_directed_targets %}
+                                            <option value="{{ tgt.name }}">{{ tgt.name }}</option>
+                                        {% endfor %}
+                                        <option value="__CUSTOM__">أخرى (كتابة يدوية)...</option>
+                                    </select>
+                                    <input id="memo-directed-custom" type="text" name="directed_to_custom" placeholder="اكتب اسم الجهة أو المسؤول الموجه إليه..." class="{% if memo_directed_targets %}hidden {% endif %}mt-2 w-full px-3 py-2 border border-[#1A73E8] rounded-[20px] text-xs bg-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">عنوان المذكرة *</label>
+                                    <input type="text" name="memo_title" placeholder="اكتب عنوان المذكرة..." required class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">نص المذكرة أو الرد التنفيذي *</label>
+                                    <textarea name="memo_body" rows="3" placeholder="اكتب نص المذكرة أو الرد التنفيذي هنا..." required class="w-full px-3 py-2 border border-[#DADCE0] rounded-[16px] text-xs bg-white"></textarea>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-end justify-between gap-3 pt-2">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">مرفق المذكرة (اختياري)</label>
+                                    <input type="file" name="memo_attachment" class="text-xs text-[#5F6368]">
+                                </div>
+                                <button type="submit" class="gm-ripple px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-[20px] text-xs font-bold">إرسال وحفظ المذكرة</button>
+                            </div>
+                        </form>
+                        {% endif %}
+
+                        <!-- نموذج رفع وإرفاق مستند -->
+                        <form id="attach-drawer" method="post" enctype="multipart/form-data" class="hidden rounded-[16px] p-5 bg-white shadow-md border border-[#E1E3E1] space-y-3 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="upload_attachment">
+                            <div class="flex items-center justify-between border-b border-[#ECEFF1] pb-2">
+                                <div class="text-sm font-bold text-[#202124]">📎 رفع وإرفاق مستند جديد بالموضوع</div>
+                                <button type="button" onclick="showDrawer('attach-drawer')" class="text-[#5F6368] hover:text-[#202124]">✕ إغلاق</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">نوع وتصنيف المستند *</label>
+                                    <select name="doc_type_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                        {% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">عنوان / وصف المستند</label>
+                                    <input type="text" name="doc_title" placeholder="يُستخدم اسم الملف إن تُرك فارغاً..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">اختيار الملف *</label>
+                                    <input type="file" name="attachment_file" required class="w-full px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-[#F8F9FA]">
+                                </div>
+                            </div>
+                            <button type="submit" class="gm-ripple px-5 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-[20px] text-xs font-bold">حفظ وإرفاق المستند</button>
+                        </form>
+
+                        <!-- نموذج إضافة تأشيرة قيادية (متاح للمستويات القيادية L1/L2) -->
+                        <form id="annotation-drawer" method="post" class="hidden rounded-[16px] p-5 bg-white shadow-md border border-[#E9D5FF] space-y-3 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_annotation">
+                            <div class="flex items-center justify-between border-b border-[#ECEFF1] pb-2">
+                                <div class="text-sm font-bold text-[#9333EA]">✍ إضافة تأشيرة وتوجيه قيادي ملزم</div>
+                                <button type="button" onclick="showDrawer('annotation-drawer')" class="text-[#5F6368] hover:text-[#202124]">✕ إغلاق</button>
+                            </div>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">نص التأشيرة القيادية *</label>
+                                    <textarea name="annotation_text" rows="2" placeholder="اكتب نص التأشيرة القيادية والتوجيهات..." required class="w-full px-3 py-2 border border-[#DADCE0] rounded-[16px] text-xs bg-white"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">الإجراء المطلوب بالتحديد</label>
+                                    <input type="text" name="required_action" placeholder="مثال: تنفيذ ما جاء بالمذكرة وموافاتنا بالتقرير خلال 48 ساعة..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="gm-ripple px-6 py-2 bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-[20px] text-xs font-bold">تثبيت التأشيرة القيادية</button>
+                            </div>
+                        </form>
+
+                        <!-- نموذج التعليق المؤقت للاستيفاء -->
+                        <form id="suspend-drawer" method="post" class="hidden border border-amber-200 rounded-[16px] p-5 bg-amber-50/40 shadow-sm space-y-3 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="suspend">
+                            <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+                                <div class="font-bold text-sm text-amber-900">⏸ تعليق الموضوع مؤقتاً لحين استيفاء مستند أو إجراء ناقص</div>
+                                <button type="button" onclick="showDrawer('suspend-drawer')" class="text-[#5F6368] hover:text-[#202124]">✕ إغلاق</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">سبب التعليق المرجعي</label>
+                                    <select name="reason_ref_id" onchange="var sel=this.options[this.selectedIndex]; var reqEl=document.getElementById('suspend-req-item'); if(reqEl && sel.value && !reqEl.value){reqEl.value=sel.text;}" class="w-full px-3 py-2 border border-amber-300 rounded-[20px] bg-white">
+                                        <option value="">-- اختر السبب المرجعي أو حدده بالأسفل --</option>
+                                        {% for sr in suspension_reasons %}<option value="{{ sr.id }}">{{ sr.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">المستند أو الإجراء الناقص المطلوب *</label>
+                                    <input id="suspend-req-item" type="text" name="required_item" placeholder="مثال: أصل شهادة تحليل معتمدة" required class="w-full px-3 py-2 border border-amber-300 rounded-[20px] bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">مطلوب من (الجهة / الشخص) *</label>
+                                    <input type="text" name="required_from" placeholder="مثال: صاحب الطلب / الشئون الطبية" required class="w-full px-3 py-2 border border-amber-300 rounded-[20px] bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">تاريخ المتابعة المتوقع (اختياري)</label>
+                                    <input type="date" name="expected_follow_up_date" class="w-full px-3 py-2 border border-amber-300 rounded-[20px] bg-white mono-num">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[11px] font-bold text-[#5F6368] mb-1">تفاصيل وشروط استئناف العمل عند زوال السبب *</label>
+                                    <input type="text" name="reason_details" placeholder="وضح متى وكيف يتم استئناف المعاملة فور تقديم المطلوب..." required class="w-full px-3 py-2 border border-amber-300 rounded-[20px] bg-white">
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="gm-ripple px-5 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-[20px] font-bold">تأكيد التعليق للاستيفاء</button>
+                            </div>
+                        </form>
+
+                        <!-- نموذج الإغلاق الرسمي والأرشفة -->
+                        <form id="close-drawer" method="post" class="hidden border border-[#F0DCB8] rounded-[16px] p-5 bg-[#FFF9F2] shadow-sm space-y-3 text-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="close_subject">
+                            <div class="flex items-center justify-between border-b border-[#F0DCB8] pb-2">
+                                <div class="font-bold text-sm text-[#8B5014]">إغلاق الموضوع وأرشفته رسمياً</div>
+                                <button type="button" onclick="showDrawer('close-drawer')" class="text-[#5F6368] hover:text-[#202124]">✕ إغلاق</button>
+                            </div>
+                            {% if closure_blockers %}
+                                <div class="text-[#8B5014] bg-white p-3 rounded-[16px] border border-[#F0DCB8] space-y-1">
+                                    <div class="font-bold">شروط غير مستوفاة للإغلاق الرسمي:</div>
+                                    {% for err in closure_blockers %}<div>• {{ err }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <label class="block text-[11px] font-bold text-[#5F6368] mb-1">ملاحظة أو مبرر الإغلاق والأرشفة</label>
+                                <input type="text" name="closure_notes" placeholder="اكتب ملاحظات الإغلاق الرسمي والأرشفة..." class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] bg-white">
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                {% if closure_blockers and perms.can_exceptional_close %}
+                                    <label class="inline-flex items-center gap-2 font-bold text-[#8B5014] cursor-pointer">
+                                        <input type="checkbox" name="exceptional">
+                                        <span>إغلاق استثنائي (يتجاوز الشروط المتبقية مع تسجيل المبرر)</span>
+                                    </label>
+                                {% else %}
+                                    <span></span>
+                                {% endif %}
+                                <button type="submit" class="gm-ripple px-5 py-2 bg-[#B26A00] hover:bg-[#8B5014] text-white rounded-[20px] font-bold">تأكيد الإغلاق والأرشفة</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif subject.status == "CLOSED" and perms.can_reopen %}
+                    <form method="post" class="flex flex-wrap items-end gap-2 bg-white p-4 rounded-[16px] border border-[#E1E3E1] shadow-xs no-print">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reopen_subject">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-[11px] font-bold text-[#5F6368] mb-1">سبب إعادة فتح الموضوع المغلق *</label>
+                            <input type="text" name="reopen_reason" placeholder="اكتب سبب إعادة الفتح..." required class="w-full px-3 py-2 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                        </div>
+                        <button type="submit" class="gm-ripple px-5 py-2 bg-[#1A73E8] text-white rounded-[20px] text-xs font-bold">إعادة فتح الموضوع</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 8. شريط الإجراءات اللاصق بأسفل شاشة القراءة (Scoped بدقة حسب المستوى الوظيفي) -->
+        {% if perms.can_act and subject.status != "CLOSED" %}
+            <div class="sticky bottom-0 z-20 bg-white/95 backdrop-blur-xs border-t border-[#ECEFF1] px-6 py-3 flex flex-wrap items-center justify-between gap-2.5 no-print shrink-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if user_level == "L5" or user_level == "L6" %}
+                        <!-- المستوى التنفيذي L5/L6: يظهر له فقط رد / إعداد مذكرة وإرفاق مستند -->
+                        {% if perms.can_memo %}
+                            <button type="button" onclick="showDrawer('reply-drawer'); document.getElementById('reply-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-5 py-2 rounded-[20px] bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[13px] font-bold shadow-sm">
+                                ↩ رد / إعداد مذكرة
+                            </button>
+                        {% endif %}
+                        <button type="button" onclick="showDrawer('attach-drawer'); document.getElementById('attach-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2 rounded-[20px] border border-[#DADCE0] text-[13px] font-bold text-[#5F6368] hover:bg-[#F1F3F4]">
+                            📎 إرفاق مستند
+                        </button>
+                    {% elif user_level == "L3" or user_level == "L4" %}
+                        <!-- المستوى الإشرافي L3/L4: يظهر له اعتماد المذكرة المرفوعة وإحالة للمختص وإرفاق مستند -->
+                        {% if draft_memo and perms.can_approve %}
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="approve_memo">
+                                <input type="hidden" name="memo_id" value="{{ draft_memo.id }}">
+                                <button type="submit" class="gm-ripple px-5 py-2 rounded-[20px] bg-[#1E8E3E] hover:bg-[#0D652D] text-white text-[13px] font-bold shadow-sm">
+                                    ✓ اعتماد المذكرة المرفوعة
+                                </button>
+                            </form>
+                        {% endif %}
+                        {% if perms.can_refer %}
+                            <a href="{% url 'workflow:referral_create' subject.id %}" class="gm-ripple px-5 py-2 rounded-[20px] bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[13px] font-bold shadow-sm">
+                                ↪ إحالة وتوجيه للمختص
+                            </a>
+                        {% endif %}
+                        <button type="button" onclick="showDrawer('attach-drawer'); document.getElementById('attach-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2 rounded-[20px] border border-[#DADCE0] text-[13px] font-bold text-[#5F6368] hover:bg-[#F1F3F4]">
+                            📎 إرفاق مستند
+                        </button>
+                    {% else %}
+                        <!-- المستوى القيادي L1/L2: يظهر له تأشيرة قيادية وإحالة للمستوى الأدنى وقرارات -->
+                        <button type="button" onclick="showDrawer('annotation-drawer'); document.getElementById('annotation-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-5 py-2 rounded-[20px] bg-[#9333EA] hover:bg-[#7E22CE] text-white text-[13px] font-bold shadow-sm">
+                            ✍ + تأشيرة قيادية
+                        </button>
+                        {% if perms.can_refer %}
+                            <a href="{% url 'workflow:referral_create' subject.id %}" class="gm-ripple px-4 py-2 rounded-[20px] border border-[#DADCE0] text-[13px] font-bold text-[#202124] hover:bg-[#F1F3F4]">
+                                ↪ إحالة للمستوى الأدنى
+                            </a>
+                        {% endif %}
+                        <button type="button" onclick="showDrawer('attach-drawer'); document.getElementById('attach-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="gm-ripple px-4 py-2 rounded-[20px] border border-[#DADCE0] text-[13px] font-bold text-[#5F6368] hover:bg-[#F1F3F4]">
+                            📎 إرفاق مستند
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- قائمة الخيارات الإضافية للمستويات المصرح لها فقط (L1–L4) -->
+                {% if user_level != "L5" and user_level != "L6" %}
+                    <div class="gm-overflow-wrap">
+                        <button type="button" onclick="toggleOverflowMenu('subject-more-actions')" class="gm-ripple px-4 py-2 rounded-[20px] border border-[#DADCE0] text-[13px] font-bold text-[#5F6368] hover:bg-[#F1F3F4] inline-flex items-center gap-1">
+                            <span>خيارات إضافية</span>
+                            <span>▾</span>
+                        </button>
+                        <div id="subject-more-actions" class="gm-overflow-menu is-up hidden space-y-1">
+                            {% if user_level == "L1" or user_level == "L2" or request.user.is_superuser %}
+                                {% if perms.can_decide %}
+                                    <a href="{% url 'decisions:decision_create' subject.id %}" class="block px-3 py-2 rounded-lg text-xs font-bold text-[#1A73E8] hover:bg-[#F1F3F4]">⚖ إعداد قرار إداري</a>
+                                {% endif %}
+                                {% if perms.can_close %}
+                                    <button type="button" onclick="showDrawer('close-drawer'); document.getElementById('close-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="w-full text-right px-3 py-2 rounded-lg text-xs font-bold text-[#8B5014] hover:bg-[#FFF9F2]">✓ إغلاق وأرشفة الموضوع</button>
+                                {% endif %}
+                            {% endif %}
+                            {% if perms.can_suspend %}
+                                <button type="button" onclick="showDrawer('suspend-drawer'); document.getElementById('suspend-drawer').scrollIntoView({behavior:'smooth', block:'center'});" class="w-full text-right px-3 py-2 rounded-lg text-xs font-bold text-amber-900 hover:bg-amber-50">⏸ تعليق للاستيفاء</button>
+                            {% endif %}
+                            <a href="{% url 'subjects:subject_export_pdf' subject.id %}" class="block px-3 py-2 rounded-lg text-xs font-bold text-[#5F6368] hover:bg-[#F1F3F4]">📄 تصدير PDF للموضوع</a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 9. سجل الحركة الجانبي (مخفي افتراضياً لصفحة قراءة واسعة وهادئة) -->
+    <aside id="timeline-box" class="hidden w-full lg:w-[380px] xl:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-r border-[#E1E3E1] bg-[#F6F8FC] flex flex-col overflow-hidden no-print">
+        <div class="p-4 border-b border-[#E1E3E1] bg-white space-y-2.5 shrink-0">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-8 h-8 rounded-full bg-[#E8F0FE] text-[#1A73E8] flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold text-[#202124] truncate">سير الحركة وسلسلة التوجيهات</div>
+                        <div class="text-[11px] text-[#5F6368] mono-num truncate">{{ subject.internal_number }}</div>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('timeline-box').classList.add('hidden')" data-tooltip="ضم اللوحة جانباً" data-tooltip-pos="bottom" class="p-1.5 rounded-full hover:bg-[#F1F3F4] text-[#5F6368]">✕</button>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-1.5 px-3 py-2 rounded-[14px] bg-[#F8F9FA] text-[11px] border border-[#E1E3E1]">
+                <span class="font-bold text-[#137333]">مكتمل: <span class="mono-num">{{ completed_stages_count }}</span> / <span class="mono-num">{{ workflow_stages|length }}</span> مرحلة</span>
+                <span class="text-[#8B5014] font-bold truncate max-w-[180px]">{{ active_stage_pending_text }}</span>
+            </div>
+
+            <!-- تبويبات الهامش الجانبي: مراحل السير مقابل التوجيهات مقابل السجل -->
+            <div class="grid grid-cols-3 gap-1 bg-[#F1F3F4] p-1 rounded-[20px] text-[11px] font-bold text-center">
+                <button type="button" id="tl-tab-stages" onclick="switchTimelineTab('stages')" class="py-1.5 px-1 rounded-[20px] bg-white text-[#1A73E8] shadow-xs">
+                    سير الحركة ({{ workflow_stages|length }})
+                </button>
+                <button type="button" id="tl-tab-referrals" onclick="switchTimelineTab('referrals')" class="py-1.5 px-1 rounded-[20px] text-[#5F6368] hover:text-[#202124]">
+                    التوجيهات ({{ referrals|length }})
+                </button>
+                <button type="button" id="tl-tab-logs" onclick="switchTimelineTab('logs')" class="py-1.5 px-1 rounded-[20px] text-[#5F6368] hover:text-[#202124]">
+                    السجل ({{ activity_logs|length }})
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
+            <!-- التبويب 1: مراحل السير الرأسية مع توضيح صريح لـ من ← إلى وأيقونات مناسبة الحجم -->
+            <div id="tl-panel-stages" class="gm-timeline-rail space-y-3.5">
+                {% for st in workflow_stages %}
+                    <div class="relative">
+                        <span class="gm-timeline-icon-badge {% if st.status == 'completed' %}bg-[#E6F4EA] border-[#137333] text-[#137333]{% elif st.status == 'waiting' %}bg-[#FFF9F2] border-[#F0DCB8] text-[#8B5014]{% else %}bg-[#E8F0FE] border-[#1A73E8] text-[#1A73E8]{% endif %}">
+                            {% if st.status == 'completed' %}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            {% elif st.status == 'waiting' %}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {% else %}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {% endif %}
+                        </span>
+
+                        <div class="p-3.5 rounded-[16px] bg-white border border-[#E1E3E1] shadow-xs space-y-2 text-xs">
+                            <div class="flex items-start justify-between gap-2 border-b border-[#ECEFF1] pb-1.5">
+                                <div class="font-bold text-[#202124]">
+                                    <span class="mono-num text-[#1A73E8] ml-1">#{{ st.stage_number }}</span>
+                                    {{ st.title }}
+                                </div>
+                                {% if st.date %}
+                                    <span class="mono-num text-[10px] text-[#5F6368] shrink-0">{{ st.date }}</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- بطاقة الاتجاه الواضحة: من ← إلى -->
+                            <div class="flex items-center justify-between gap-2 text-[11px] bg-[#F8F9FA] px-3 py-2 rounded-[14px] border border-[#E1E3E1]">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-[10px] text-[#5F6368]">من (المُرسِل):</div>
+                                    <strong class="text-[#202124] block truncate">{{ st.from_label }}</strong>
+                                </div>
+                                <div class="w-6 h-6 rounded-full bg-white border border-[#DADCE0] flex items-center justify-center text-[#1A73E8] font-bold shrink-0">
+                                    ←
+                                </div>
+                                <div class="min-w-0 flex-1 text-left">
+                                    <div class="text-[10px] text-[#5F6368]">إلى (المُستلِم):</div>
+                                    <strong class="text-[#1A73E8] block truncate">{{ st.to_label }}</strong>
+                                </div>
+                            </div>
+
+                            <div class="text-[11px] text-[#202124] leading-relaxed">
+                                <span class="font-bold text-[#5F6368]">ما تم: </span>
+                                <span>{{ st.what_happened }}</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-bold">
+                                <span class="px-2 py-0.5 rounded-[20px] bg-[#E6F4EA] text-[#137333]">✓ {{ st.completed_text }}</span>
+                                {% if st.pending_text %}
+                                    <span class="px-2 py-0.5 rounded-[20px] bg-[#FFF9F2] text-[#8B5014] border border-[#F0DCB8]">⏳ {{ st.pending_text }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- التبويب 2: سلسلة التوجيهات والإحالات التفصيلية -->
+            <div id="tl-panel-referrals" class="hidden space-y-3">
+                {% for ref in referrals %}
+                    <div class="rounded-[16px] bg-white border border-[#E1E3E1] p-3.5 space-y-2 text-xs shadow-xs">
+                        <div class="flex items-center justify-between gap-2 border-b border-[#ECEFF1] pb-1.5">
+                            <div class="font-bold text-[#202124] flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded-full bg-[#E8F0FE] text-[#1A73E8] flex items-center justify-center text-[10px]">{{ forloop.counter }}</span>
+                                <span>{{ ref.get_routing_mode_display }}</span>
+                                <span class="text-[10px] text-[#5F6368] px-2 py-0.5 bg-[#F1F3F4] rounded-[20px]">({{ ref.get_purpose_display }})</span>
+                            </div>
+                            <span class="mono-num text-[10px] text-[#5F6368]">{{ ref.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+
+                        <!-- من ← إلى -->
+                        <div class="bg-[#F8F9FA] p-2.5 rounded-[12px] border border-[#E1E3E1] flex items-center justify-between gap-2 text-[11px]">
+                            <div class="min-w-0 flex-1">
+                                <span class="text-[#5F6368] block text-[10px]">المُوجِّه:</span>
+                                <strong class="text-[#202124] block truncate">{{ ref.referred_by }}</strong>
+                            </div>
+                            <span class="text-[#1A73E8] font-bold">←</span>
+                            <div class="min-w-0 flex-1 text-left">
+                                <span class="text-[#5F6368] block text-[10px]">المُوجَّه إليه:</span>
+                                {% for rec in ref.recipients.all %}
+                                    <strong class="text-[#1A73E8] block truncate">{{ rec.target_user|default:rec.target_unit }}</strong>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% if ref.notes %}
+                            <div class="bg-[#FFFDF9] border border-[#F0DCB8] p-2 rounded-[12px] text-[11px] text-[#8B5014] leading-relaxed">
+                                <strong>التوجيه: </strong>«{{ ref.notes }}»
+                            </div>
+                        {% endif %}
+
+                        <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#5F6368]">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                {% if ref.due_date %}
+                                    <span class="mono-num px-2 py-0.5 rounded-[20px] bg-[#F1F3F4]">الاستحقاق: {{ ref.due_date|date:"Y-m-d" }}</span>
+                                {% endif %}
+                                {% if ref.is_withdrawn %}
+                                    <span class="px-2 py-0.5 rounded-[20px] bg-[#FCE8E6] text-[#A50E0E] font-bold">مسحوبة من المحيل</span>
+                                {% endif %}
+                            </div>
+                            {% if ref.can_withdraw %}
+                                {% if ref.referred_by_id == request.user.id or request.user.is_superuser %}
+                                    <form method="post" action="{% url 'workflow:referral_withdraw' ref.id %}" class="inline no-print">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-2.5 py-0.5 rounded-[20px] bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#A50E0E] font-bold">سحب الإحالة</button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        {% for rec in ref.recipients.all %}
+                            {% if not ref.is_completed and not ref.is_withdrawn %}
+                                {% if rec.is_active_step and rec.target_user_id == request.user.id or rec.is_active_step and not rec.target_user_id and request.user.current_unit and rec.target_unit_id == request.user.current_unit.id %}
+                                    <form method="post" action="{% url 'workflow:referral_respond' rec.id %}" class="pt-1 flex flex-wrap items-end gap-2 no-print">
+                                        {% csrf_token %}
+                                        <input type="text" name="response_notes" placeholder="ملاحظة الاستلام (اختياري)..." class="flex-1 px-3 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs bg-white">
+                                        <button type="submit" name="action" value="complete" class="gm-ripple px-4 py-1.5 bg-[#1A73E8] text-white rounded-[20px] text-xs font-bold">تأكيد الاستلام</button>
+                                    </form>
+                                    {% if ref.purpose != 'FOR_INFO' %}
+                                        <form method="post" action="{% url 'workflow:referral_reject' rec.id %}" class="pt-1 flex flex-wrap items-end gap-2 no-print">
+                                            {% csrf_token %}
+                                            <input type="text" name="reason" required placeholder="سبب الرفض أو الإرجاع (إجباري)..." class="flex-1 px-3 py-1.5 border border-[#F28B82] rounded-[20px] text-xs bg-white">
+                                            <button type="submit" class="gm-ripple px-3.5 py-1.5 bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#A50E0E] rounded-[20px] text-xs font-bold">↩ رفض / إرجاع</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                                {% if rec.status == 'PENDING' or rec.status == 'WAITING_TURN' %}
+                                    {% if ref.referred_by_id == request.user.id or request.user.is_superuser or perms.can_refer %}
+                                        <form method="post" action="{% url 'workflow:referral_reassign' rec.id %}" class="pt-1 flex flex-wrap items-center gap-1.5 no-print">
+                                            {% csrf_token %}
+                                            <select name="new_user_id" required class="flex-1 px-2.5 py-1 border border-[#DADCE0] rounded-[20px] text-[11px] bg-white">
+                                                <option value="">-- إعادة إسناد ({{ rec.target_user|default:rec.target_unit }}) إلى --</option>
+                                                {% for cand in reassign_candidates %}
+                                                    <option value="{{ cand.id }}">{{ cand }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="px-3 py-1 rounded-[20px] border border-[#DADCE0] bg-white hover:bg-[#E8F0FE] text-[#1A73E8] font-bold text-[11px]">إعادة إسناد</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% empty %}
+                    <div class="p-6 text-center text-xs text-[#5F6368] bg-white rounded-[16px] border border-[#E1E3E1]">
+                        لا توجد إحالات مسجلة بعد — المعاملة لا تزال لدى جهة القيد.
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- التبويب 3: السجل الرقابي والتاريخي -->
+            <div id="tl-panel-logs" class="hidden gm-timeline-rail space-y-3">
+                {% for log in activity_logs %}
+                    <div class="relative">
+                        <span class="gm-timeline-icon-badge bg-white border-[#DADCE0] text-[#1A73E8]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </span>
+                        <div class="p-3 rounded-[16px] bg-white border border-[#E1E3E1] shadow-xs text-xs space-y-1">
+                            <div class="flex flex-wrap justify-between font-bold text-[#202124]">
+                                <span>{{ log.action_type }}</span>
+                                <span class="mono-num text-[10px] text-[#5F6368] font-normal">{{ log.created_at|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <div class="text-[11px] text-[#1A73E8] font-bold">بواسطة: {{ log.actor_user }}</div>
+                            <p class="text-[11px] text-[#5F6368] leading-relaxed">{{ log.description }}</p>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="p-6 text-center text-xs text-[#5F6368] bg-white rounded-[16px] border border-[#E1E3E1]">لا توجد أحداث إضافية مسجلة.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+function showDrawer(id) {
+    ['reply-drawer', 'attach-drawer', 'annotation-drawer', 'suspend-drawer', 'close-drawer'].forEach(function(k) {
+        var el = document.getElementById(k);
+        if (el && k !== id) el.classList.add('hidden');
+    });
+    var target = document.getElementById(id);
+    if (target) {
+        target.classList.toggle('hidden');
+        if (!target.classList.contains('hidden')) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+}
+
+function switchTimelineTab(tab) {
+    var stagesPanel = document.getElementById('tl-panel-stages');
+    var referralsPanel = document.getElementById('tl-panel-referrals');
+    var logsPanel = document.getElementById('tl-panel-logs');
+    var btnStages = document.getElementById('tl-tab-stages');
+    var btnReferrals = document.getElementById('tl-tab-referrals');
+    var btnLogs = document.getElementById('tl-tab-logs');
+
+    if (stagesPanel) stagesPanel.classList.add('hidden');
+    if (referralsPanel) referralsPanel.classList.add('hidden');
+    if (logsPanel) logsPanel.classList.add('hidden');
+
+    [btnStages, btnReferrals, btnLogs].forEach(function(b) {
+        if (b) {
+            b.classList.remove('bg-white', 'text-[#1A73E8]', 'shadow-xs');
+            b.classList.add('text-[#5F6368]');
+        }
+    });
+
+    if (tab === 'referrals') {
+        if (referralsPanel) referralsPanel.classList.remove('hidden');
+        if (btnReferrals) {
+            btnReferrals.classList.add('bg-white', 'text-[#1A73E8]', 'shadow-xs');
+            btnReferrals.classList.remove('text-[#5F6368]');
+        }
+    } else if (tab === 'logs') {
+        if (logsPanel) logsPanel.classList.remove('hidden');
+        if (btnLogs) {
+            btnLogs.classList.add('bg-white', 'text-[#1A73E8]', 'shadow-xs');
+            btnLogs.classList.remove('text-[#5F6368]');
+        }
+    } else {
+        if (stagesPanel) stagesPanel.classList.remove('hidden');
+        if (btnStages) {
+            btnStages.classList.add('bg-white', 'text-[#1A73E8]', 'shadow-xs');
+            btnStages.classList.remove('text-[#5F6368]');
+        }
+    }
+}
+
+function toggleCustomMemoRecipient() {
+    var sel = document.getElementById('memo-directed-select');
+    var cust = document.getElementById('memo-directed-custom');
+    if (sel && cust) {
+        if (sel.value === '__CUSTOM__') {
+            cust.classList.remove('hidden');
+            cust.focus();
+        } else {
+            cust.classList.add('hidden');
+            cust.value = '';
+        }
+    }
+}
+</script>
+{% endblock %}

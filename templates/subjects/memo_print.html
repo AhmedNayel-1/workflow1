@@ -1,0 +1,10 @@
+{% extends "base_print.html" %}
+{% block title %}طباعة المذكرة {{ memo.memo_number }}{% endblock %}
+{% block content %}
+<p style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
+<h1>{{ memo.get_memo_type_display }}</h1>
+<table><tr><th>رقم المذكرة</th><td>{{ memo.memo_number }}</td></tr><tr><th>الموضوع</th><td>{{ memo.subject.internal_number }} — {{ memo.subject.title }}</td></tr><tr><th>موجهة إلى</th><td>{{ memo.directed_to }}</td></tr><tr><th>التاريخ</th><td>{{ memo.created_at|date:"Y-m-d" }}</td></tr></table>
+<h3 style="margin:18px 0 6px">{{ memo.title }}</h3>
+<div style="white-space:pre-wrap;line-height:2;font-size:15px">{{ memo.body }}</div>
+<div class="sign"><div>{{ memo.author.get_full_name|default:memo.author.username }}<br>معدّ المذكرة</div><div>{{ memo.approved_by.get_full_name|default:memo.approved_by.username|default:"—" }}<br>المعتمِد</div></div>
+{% endblock %}

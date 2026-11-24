@@ -1,0 +1,91 @@
+<!-- اللوحة الجانبية المنزلقة للتنبيهات والمحادثات الفورية (تُفتح من الشريط العلوي بدون شريط أيقونات إضافي) -->
+<aside id="gmail-utility-drawer" class="gm-rail-drawer hidden no-print" aria-label="اللوحة الجانبية السريعة">
+    <div class="px-4 py-3 border-b border-[#ECEFF1] flex items-center justify-between bg-[#F6F8FC] shrink-0">
+        <div id="utility-drawer-title" class="text-sm font-bold text-[#1F1F1F] truncate">التنبيهات والمتابعة</div>
+        <div class="flex items-center gap-1 shrink-0">
+            <button id="chat-expand-btn" type="button" onclick="toggleChatDrawerExpand()" title="توسيع / تصغير اللوحة" class="hidden p-1.5 rounded-full hover:bg-[#E1E5EA] text-[#5F6368] text-xs font-bold">⤢</button>
+            <button type="button" onclick="closeUtilityDrawer()" title="إغلاق اللوحة" class="p-1.5 rounded-full hover:bg-[#E1E5EA] text-[#5F6368]">✕</button>
+        </div>
+    </div>
+
+    <div id="utility-drawer-scroll" class="flex-1 overflow-y-auto p-4 text-sm space-y-3 min-h-0 flex flex-col">
+        <!-- 1. لوحة التنبيهات -->
+        <div data-drawer-panel="alerts" class="hidden space-y-3 flex-1 flex flex-col min-h-0">
+            <div class="flex items-center justify-between gap-2 shrink-0">
+                <strong class="text-[#1F1F1F] text-sm">التنبيهات الأخيرة</strong>
+                <a href="{% url 'notifications:center' %}" class="text-xs text-[#0B57D0] font-bold hover:underline shrink-0">عرض الكل ↗</a>
+            </div>
+            <div class="flex flex-wrap items-center gap-1 border-b border-[#ECEFF1] pb-2 shrink-0" id="smart-notif-filters">
+                <button type="button" data-notif-filter="ALL" onclick="filterSmartNotifications('ALL')" class="px-3 py-1 rounded-full text-xs font-bold bg-[#D3E3FD] text-[#001D35]">الكل</button>
+                <button type="button" data-notif-filter="INCOMING_REFERRAL" onclick="filterSmartNotifications('INCOMING_REFERRAL')" class="px-3 py-1 rounded-full text-xs font-bold text-[#5F6368] hover:bg-[#F2F6FC]">إحالات</button>
+                <button type="button" data-notif-filter="REPLY_MEMO" onclick="filterSmartNotifications('REPLY_MEMO')" class="px-3 py-1 rounded-full text-xs font-bold text-[#5F6368] hover:bg-[#F2F6FC]">ردود</button>
+                <button type="button" data-notif-filter="ESCALATION_OVERDUE" onclick="filterSmartNotifications('ESCALATION_OVERDUE')" class="px-3 py-1 rounded-full text-xs font-bold text-[#5F6368] hover:bg-[#F2F6FC]">متأخرة</button>
+                <button type="button" onclick="markSmartNotificationRead(null, true)" class="mr-auto text-xs font-bold text-[#0B57D0] hover:underline px-1">✓ قراءة الكل</button>
+            </div>
+            <div id="smart-notif-list" class="flex-1 overflow-y-auto divide-y divide-[#ECEFF1] space-y-1">
+                <div class="py-8 text-center text-sm text-[#5F6368]">جاري تحميل التنبيهات...</div>
+            </div>
+        </div>
+
+        <!-- 2. لوحة المحادثة الفورية -->
+        <div data-drawer-panel="chat" class="hidden flex-1 flex flex-col min-h-0" id="chat-drawer-root">
+            <div class="flex items-center justify-between gap-2 pb-2 border-b border-[#ECEFF1] shrink-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <button id="chat-back-btn" type="button" onclick="switchChatView('list')" class="hidden px-2.5 py-1 rounded-full hover:bg-[#EAF1FB] text-[#444746] font-bold">←</button>
+                    <div class="min-w-0">
+                        <div id="chat-header-title" class="font-bold text-[#1F1F1F] text-sm truncate">المحادثات الفورية</div>
+                        <div id="chat-header-sub" class="text-xs text-[#137333] font-medium truncate">متصل الآن</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chat-error-banner" class="hidden my-2 px-3 py-2 rounded-xl bg-[#FCE8E6] border border-[#F6AEA9] text-[#A50E0E] text-xs font-bold shrink-0"></div>
+
+            <div id="chat-view-list" class="flex-1 flex flex-col min-h-0 pt-2 space-y-2.5">
+                <div class="flex items-center gap-2 bg-[#EAF1FB] rounded-full px-3.5 py-2 shrink-0">
+                    <input id="chat-conv-search" type="text" oninput="renderChatConversations()" placeholder="ابحث عن زميل أو مجموعة..." class="w-full bg-transparent text-sm focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2 shrink-0">
+                    <button type="button" onclick="switchChatView('new_dm')" class="px-3 py-2 rounded-full bg-[#C2E7FF] hover:bg-[#B0DCFA] text-[#001D35] font-bold text-xs">+ محادثة جديدة</button>
+                    <button type="button" onclick="switchChatView('new_group')" class="px-3 py-2 rounded-full bg-[#EAF1FB] hover:bg-[#D3E3FD] text-[#0B57D0] font-bold text-xs">مجموعة عمل</button>
+                </div>
+                <div id="chat-conversations-list" class="flex-1 overflow-y-auto divide-y divide-[#ECEFF1]"></div>
+            </div>
+
+            <div id="chat-view-new_dm" class="hidden flex-1 flex flex-col min-h-0 pt-2 space-y-2">
+                <input id="chat-dm-user-search" type="text" oninput="renderChatDirectory('dm')" placeholder="ابحث بالاسم أو القسم..." class="w-full px-3.5 py-2 bg-[#EAF1FB] rounded-full text-sm focus:outline-none shrink-0">
+                <div id="chat-dm-users-list" class="flex-1 overflow-y-auto divide-y divide-[#ECEFF1]"></div>
+            </div>
+
+            <form id="chat-view-new_group" onsubmit="event.preventDefault(); createGroupChat();" class="hidden flex-1 flex flex-col min-h-0 pt-2 space-y-2">
+                <input id="chat-group-name" type="text" required placeholder="اسم المجموعة *" class="w-full px-3.5 py-2 border border-[#DADCE0] rounded-xl text-sm bg-white shrink-0">
+                <input id="chat-group-user-search" type="text" oninput="renderChatDirectory('group')" placeholder="تصفية الأسماء..." class="w-full px-3.5 py-2 bg-[#EAF1FB] rounded-full text-sm focus:outline-none shrink-0">
+                <div id="chat-group-users-list" class="flex-1 overflow-y-auto divide-y divide-[#ECEFF1]"></div>
+                <div class="pt-2 border-t border-[#ECEFF1] flex items-center justify-between shrink-0">
+                    <span id="chat-group-selected-count" class="text-xs text-[#5F6368]">0 أعضاء محددون</span>
+                    <button type="submit" class="px-4 py-2 rounded-full bg-[#0B57D0] text-white font-bold text-xs">إنشاء المجموعة</button>
+                </div>
+            </form>
+
+            <div id="chat-view-thread" class="hidden flex-1 flex flex-col min-h-0 pt-2">
+                <div id="chat-thread-members-bar" class="hidden px-3 py-1.5 mb-2 rounded-xl bg-[#F2F6FC] text-xs text-[#444746] truncate shrink-0"></div>
+                <div id="chat-messages-list" class="flex-1 overflow-y-auto space-y-2.5 p-3 bg-[#F6F8FC] rounded-2xl border border-[#ECEFF1]"></div>
+
+                <div id="chat-draft-att-bar" class="hidden mt-2 px-3 py-2 rounded-xl bg-[#EAF1FB] border border-[#C2E7FF] flex items-center justify-between gap-2 text-xs shrink-0">
+                    <span id="chat-draft-att-name" class="font-bold text-[#001D35] truncate"></span>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick="previewDraftChatAttachment()" class="px-2.5 py-1 rounded-full bg-white text-[#0B57D0] font-bold">معاينة</button>
+                        <button type="button" onclick="clearDraftChatAttachment()" class="px-1.5 text-[#5F6368]">✕</button>
+                    </div>
+                </div>
+
+                <form onsubmit="event.preventDefault(); sendChatMessage();" class="pt-2.5 flex items-center gap-2 shrink-0">
+                    <input id="chat-file-input" type="file" onchange="handleChatFilePicked(this)" class="hidden">
+                    <button type="button" onclick="document.getElementById('chat-file-input').click()" title="إرفاق ملف" class="p-2 rounded-full bg-[#F2F6FC] hover:bg-[#D3E3FD] text-[#444746] shrink-0">📎</button>
+                    <input id="chat-message-input" type="text" placeholder="اكتب رسالة..." class="flex-1 px-3.5 py-2 bg-[#EAF1FB] focus:bg-white border border-transparent focus:border-[#DADCE0] rounded-full text-sm focus:outline-none">
+                    <button type="submit" id="chat-send-btn" class="px-4 py-2 rounded-full bg-[#0B57D0] hover:bg-[#0842A0] text-white font-bold text-xs shrink-0">إرسال</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</aside>

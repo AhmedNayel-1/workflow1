@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}مركز الإشعارات والتنبيهات{% endblock %}
+{% block page_title %}مركز الإشعارات والتنبيهات ومواعيد الاستحقاق{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <!-- أزرار التصفية الذكية حسب الفئة والمستوى -->
+    <div class="flex flex-wrap items-center justify-between gap-2 bg-white border border-[#ECEFF1] rounded-2xl p-3">
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <a href="?cat=ALL" class="px-3 py-1.5 rounded-full font-bold {% if cat_filter == 'ALL' or not cat_filter %}bg-[#D3E3FD] text-[#001D35]{% else %}bg-[#F6F8FC] text-[#5F6368] hover:bg-[#EAF1FB]{% endif %}">الكل</a>
+            <a href="?cat=INCOMING_REFERRAL" class="px-3 py-1.5 rounded-full font-bold {% if cat_filter == 'INCOMING_REFERRAL' %}bg-[#D3E3FD] text-[#001D35]{% else %}bg-[#F6F8FC] text-[#5F6368] hover:bg-[#EAF1FB]{% endif %}">إحالات واردة</a>
+            <a href="?cat=REPLY_MEMO" class="px-3 py-1.5 rounded-full font-bold {% if cat_filter == 'REPLY_MEMO' %}bg-[#D3E3FD] text-[#001D35]{% else %}bg-[#F6F8FC] text-[#5F6368] hover:bg-[#EAF1FB]{% endif %}">ردود ومذكرات</a>
+            <a href="?cat=DECISION_TASK" class="px-3 py-1.5 rounded-full font-bold {% if cat_filter == 'DECISION_TASK' %}bg-[#D3E3FD] text-[#001D35]{% else %}bg-[#F6F8FC] text-[#5F6368] hover:bg-[#EAF1FB]{% endif %}">اعتماد وقرارات ومهام</a>
+            <a href="?cat=ESCALATION_OVERDUE" class="px-3 py-1.5 rounded-full font-bold {% if cat_filter == 'ESCALATION_OVERDUE' %}bg-[#FCE8E6] text-[#A50E0E]{% else %}bg-[#F6F8FC] text-[#5F6368] hover:bg-[#FCE8E6]/60{% endif %}">تصعيد تأخير</a>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_all_read">
+            <button type="submit" class="px-4 py-1.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">✓ تحديد الكل كمقروء</button>
+        </form>
+    </div>
+
+    <!-- قسم المعاملات والمراسلات المتجاوزة لتاريخ الاستحقاق -->
+    <section id="overdue-alerts" class="bg-white border border-[#F6AEA9] rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 bg-[#FCE8E6] border-b border-[#F6AEA9] flex items-center justify-between">
+            <div>
+                <h2 class="font-bold text-sm text-[#A50E0E]">تصعيدات وتنبيهات تجاوز تاريخ الاستحقاق</h2>
+                <p class="text-xs text-[#A50E0E] mt-0.5">جميع المعاملات والمراسلات والمهام المصرح لك بها والتي تخطت موعد استحقاقها المحدد.</p>
+            </div>
+            <span class="mono-num text-xs font-bold px-3 py-1 bg-[#C5221F] text-white rounded-full">{{ overdue_alerts_count }} تنبيه</span>
+        </div>
+        <div class="divide-y divide-[#ECEFF1]">
+            {% for al in overdue_alerts %}
+                <div class="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-[#FCE8E6]/30">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="px-2.5 py-0.5 rounded-full bg-[#FCE8E6] text-[#A50E0E] font-bold">{{ al.kind_label }}</span>
+                            <span class="mono-num font-bold text-[#0B57D0]">{{ al.internal_number }}</span>
+                            <span class="font-bold text-[#C5221F]">تجاوز الاستحقاق منذ {{ al.overdue_days }} يوم</span>
+                            <span class="text-[#5F6368]">· الاستحقاق: <span class="mono-num font-bold">{{ al.due_date|date:"Y-m-d" }}</span></span>
+                        </div>
+                        <div class="text-sm font-bold text-[#1F1F1F] mt-1">{{ al.title }}</div>
+                        <div class="text-xs text-[#5F6368] mt-0.5">المسؤول: {{ al.owner_name }} · السرية: {{ al.confidentiality }}</div>
+                    </div>
+                    <a href="{{ al.url }}" class="px-4 py-2 bg-[#C5221F] hover:bg-[#A50E0E] text-white rounded-full text-xs font-bold shrink-0">
+                        فتح ومعالجة الآن
+                    </a>
+                </div>
+            {% empty %}
+                <div class="p-6 text-center text-xs text-[#137333] font-bold">
+                    لا توجد أي معاملات أو مراسلات متأخرة عن تاريخ الاستحقاق في نطاق صلاحياتك.
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- سجل الإشعارات الذكية المخصصة بالمستوى -->
+    <div class="bg-white border border-[#ECEFF1] rounded-2xl divide-y divide-[#ECEFF1]">
+        {% for n in notifications_list %}
+            <div class="p-4 flex flex-wrap items-center justify-between gap-4 {% if not n.is_read %}bg-[#E8F0FE]/40{% endif %}">
+                <div class="min-w-0 flex-1 space-y-1">
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <span class="px-2.5 py-0.5 rounded-full bg-[#D3E3FD] text-[#001D35] font-bold">{{ n.get_category_display }}</span>
+                        <span class="text-[#5F6368] mono-num">{{ n.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="text-sm font-bold text-[#1F1F1F]">{{ n.title }}</div>
+                    <div class="text-xs text-[#444746]">{{ n.message }}</div>
+                    {% if n.reason_for_level %}
+                        <div class="inline-block text-[11px] bg-[#EAF1FB] text-[#001D35] px-2.5 py-0.5 rounded-md font-medium">{{ n.reason_for_level }}</div>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    {% if n.link_url %}<a href="{{ n.link_url }}" class="px-3 py-1 bg-white border border-[#DADCE0] hover:bg-[#F2F6FC] rounded-full text-xs font-bold">فتح</a>{% endif %}
+                    {% if not n.is_read %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="mark_read">
+                            <input type="hidden" name="notification_id" value="{{ n.id }}">
+                            <button type="submit" class="px-3 py-1 bg-[#0B57D0] text-white rounded-full text-xs font-bold">تمت القراءة</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="p-8 text-center text-sm text-[#5F6368]">لا توجد إشعارات ضمن هذا التصنيف حالياً.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

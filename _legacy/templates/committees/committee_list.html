@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}اللجان ومحاضر الاجتماعات{% endblock %}
+{% block page_title %}إدارة اللجان والاجتماعات{% endblock %}
+
+{% block content %}
+{% if can_manage %}
+<form method="post" class="bg-white border border-[#ECEFF1] rounded-2xl p-5 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+    {% csrf_token %}
+    <select name="committee_id" required class="px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+        {% for c in committees %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+    </select>
+    <input type="text" name="meeting_number" placeholder="رقم الجلسة (مثلاً 16/2026)" required class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+    <input type="date" name="meeting_date" required class="px-3 py-2 border border-[#DADCE0] rounded-xl font-mono">
+    <input type="text" name="location" placeholder="المكان" class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+    <button type="submit" class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">+ فتح محضر جلسة</button>
+</form>
+{% endif %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    {% for c in committees %}
+        <div class="bg-white border border-[#ECEFF1] rounded-2xl p-5">
+            <h2 class="font-bold text-sm text-[#1F1F1F]">{{ c.name }}</h2>
+            <div class="text-xs text-[#5F6368] mt-0.5">رئيس اللجنة: {{ c.chair }}</div>
+            <div class="mt-4 space-y-2">
+                <div class="text-xs font-bold text-[#444746]">الاجتماعات المسجلة:</div>
+                {% for m in c.meetings.all %}
+                    <div class="flex justify-between items-center text-xs bg-[#F6F8FC] px-3.5 py-2.5 rounded-xl border border-[#ECEFF1]">
+                        <a href="{% url 'committees:meeting_detail' m.id %}" class="font-bold text-[#0B57D0] hover:underline">جلسة {{ m.meeting_number }} ({{ m.meeting_date|date:"Y-m-d" }})</a>
+                        <a href="{% url 'committees:minutes_print' m.id %}" target="_blank" class="text-[#5F6368] hover:underline">طباعة المحضر</a>
+                    </div>
+                {% empty %}
+                    <div class="text-xs text-[#5F6368]">لا توجد جلسات مسجلة بعد.</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}البريد الوارد والموضوعات{% endblock %}
+{% block page_title %}الموضوعات والمراسلات المتاحة حسب صلاحياتك{% endblock %}
+
+{% block content %}
+<!-- شريط التصفية العلوي داخل البطاقة -->
+<div class="pb-3 mb-3 border-b border-[#ECEFF1] flex flex-wrap items-center justify-between gap-3">
+    <form method="get" class="flex flex-wrap items-center gap-2">
+        <select name="status" class="px-3 py-1.5 border border-[#DADCE0] rounded-full text-xs bg-white text-[#444746]">
+            <option value="">كل الحالات</option>
+            {% for val, label in status_choices %}
+                <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="sector" class="px-3 py-1.5 border border-[#DADCE0] rounded-full text-xs bg-white text-[#444746]">
+            <option value="">كل القطاعات</option>
+            {% for s in sectors %}
+                <option value="{{ s.id }}" {% if sector_filter == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="px-4 py-1.5 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">تصفية</button>
+    </form>
+    <div class="text-xs text-[#5F6368] mono-num">
+        {% if page_obj and page_obj.paginator.count > 0 %}
+            عرض {{ page_obj.start_index }}–{{ page_obj.end_index }} من إجمالي {{ page_obj.paginator.count }}
+        {% else %}
+            إجمالي المتاح: {{ subjects|length }}
+        {% endif %}
+    </div>
+</div>
+
+<!-- تبويبات مثل Gmail أعلى الصفوف -->
+<div class="flex items-center border-b border-[#ECEFF1] text-[13px] mb-1">
+    <span class="px-5 py-3 border-b-[3px] border-[#0B57D0] text-[#0B57D0] font-bold">الرسائل الأساسية (الموضوعات المتاحة)</span>
+</div>
+
+<!-- صفوف المراسلات على نمط Gmail -->
+<div class="divide-y divide-[#ECEFF1]">
+    {% for s in subjects %}
+        <a href="{% url 'subjects:subject_detail' s.id %}" class="flex items-center gap-3 px-4 py-2.5 text-[13px] transition-shadow hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_rgba(60,64,67,0.2)] {% if s.current_owner_id == request.user.id %}bg-white font-bold text-[#1F1F1F]{% else %}bg-[#F2F6FC]/70 font-normal text-[#444746]{% endif %}">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0 {% if s.is_overdue %}bg-[#B26A00]{% elif s.current_owner_id == request.user.id %}bg-[#0B57D0]{% else %}bg-[#DADCE0]{% endif %}"></span>
+            <span class="w-44 shrink-0 truncate">{{ s.current_owner }}</span>
+            <span class="flex-1 min-w-0 truncate">
+                {% if s.confidentiality.rank >= 3 %}
+                    <span class="inline-block px-2 py-0.5 bg-[#FFF9F2] border border-[#F0DCB8] text-[#8B5014] rounded text-[11px] font-bold ml-1">{{ s.confidentiality.name }}</span>
+                {% endif %}
+                {% if s.is_overdue %}
+                    <span class="inline-block px-2 py-0.5 bg-[#FFF9F2] border border-[#F0DCB8] text-[#8B5014] rounded text-[11px] font-bold ml-1">متأخر {{ s.overdue_days }} يوم</span>
+                {% endif %}
+                <span>{{ s.title }}</span>
+                <span class="text-[#5F6368] font-normal"> - {{ s.internal_number }} · {{ s.org_unit.name }} · {{ s.get_status_display }}</span>
+            </span>
+            <span class="w-24 text-left shrink-0 text-xs mono-num {% if s.is_overdue %}text-[#8B5014] font-bold{% else %}text-[#5F6368]{% endif %}">
+                {% if s.due_date %}{{ s.due_date|date:"Y-m-d" }}{% else %}{{ s.created_at|date:"Y-m-d" }}{% endif %}
+            </span>
+        </a>
+    {% empty %}
+        <div class="py-12 text-center text-sm text-[#5F6368]">لا توجد موضوعات متاحة في نطاق صلاحياتك حالياً.</div>
+    {% endfor %}
+</div>
+
+{% if page_obj and page_obj.has_other_pages %}
+<div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#F8F9FA] border-t border-[#ECEFF1] text-xs text-[#5F6368] mt-3">
+    <div class="font-medium">
+        عرض <span class="mono-num font-bold text-[#202124]">{{ page_obj.start_index }}–{{ page_obj.end_index }}</span> من إجمالي <span class="mono-num font-bold text-[#202124]">{{ page_obj.paginator.count }}</span> موضوع
+    </div>
+    <div class="flex items-center gap-1.5 mono-num">
+        {% if page_obj.has_previous %}
+            <a href="?status={{ status_filter }}&sector={{ sector_filter }}&page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#202124] rounded-[16px] font-bold text-xs transition">السابق</a>
+        {% endif %}
+        <span class="px-2 text-xs font-bold text-[#202124]">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?status={{ status_filter }}&sector={{ sector_filter }}&page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-white border border-[#DADCE0] hover:bg-[#F1F3F4] text-[#202124] rounded-[16px] font-bold text-xs transition">التالي</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

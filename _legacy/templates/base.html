@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="executive" data-mode="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}لوحة القيادة التنفيذية والمراسلات — غرب الدلتا لإنتاج الكهرباء{% endblock %}</title>
+    <script>
+    (function () {
+        try {
+            var m = localStorage.getItem('correspondence_color_mode') === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', 'executive');
+            document.documentElement.setAttribute('data-mode', m);
+            if (m === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {}
+    })();
+    </script>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] h-screen flex flex-col overflow-hidden">
+
+{% include "partials/topbar.html" %}
+
+<!-- Executive Command Navigation Strip -->
+<nav class="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0 shadow-xs z-20 no-print">
+    <a href="{% url 'core:dashboard' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if request.resolver_match.url_name == 'dashboard' %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        📊 لوحة القيادة والمعاملات
+    </a>
+    <a href="{% url 'workflow:task_list' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'tasks' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        ⚡ المهام والتأشيرات
+    </a>
+    <a href="{% url 'decisions:decision_list' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'decisions' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        📋 القرارات الإدارية
+    </a>
+    <a href="{% url 'documents:document_list' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'documents' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        🗄️ خزينة المستندات
+    </a>
+    <a href="{% url 'organization:org_tree' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'org' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        🏢 الهيكل التنظيمي
+    </a>
+    <a href="{% url 'reports:dashboard' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'reports' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        📈 التقارير والمؤشرات
+    </a>
+    <a href="{% url 'core:archive_search' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if 'archive-search' in request.path %}bg-blue-600 text-white shadow-xs{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+        🔍 البحث المتقدم والأرشيف
+    </a>
+</nav>
+
+<!-- Main Workspace Container -->
+<main class="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col min-h-0 overflow-y-auto">
+    {% include "partials/flash_messages.html" %}
+    
+    {% block card_header %}
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">{% block page_title %}صندوق العمل التنفيذي{% endblock %}</h1>
+            <p class="text-sm text-slate-500 mt-1">إدارة ومتابعة المراسلات والدورة المستندية لشركة غرب الدلتا لإنتاج الكهرباء</p>
+        </div>
+        <button type="button" onclick="openComposeModal()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition-all flex items-center gap-2">
+            <span>+ معاملة جديدة</span>
+        </button>
+    </div>
+    {% endblock %}
+
+    <div class="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+{% include "partials/compose_modal.html" %}
+{% include "partials/attachment_preview_modal.html" %}
+
+<script src="{% static 'js/gmail_ui.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

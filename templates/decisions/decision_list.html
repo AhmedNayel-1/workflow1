@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}القرارات الإدارية{% endblock %}
+{% block heading %}القرارات الإدارية{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>القرارات الإدارية</h2><p>القرارات المرتبطة بالموضوعات المتاحة لك.</p></div></div>
+<section class="panel" data-table><div class="toolbar"><div class="search-in" style="min-width:260px">{% icon 'search' 'sm' %}<input class="in sm" data-filter placeholder="تصفية سريعة…" type="search"></div><span class="spacer"></span><span class="muted sm">{{ decisions|length }} قرار</span></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>رقم القرار</th><th>العنوان</th><th>النوع</th><th>الموضوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>
+    {% for d in decisions %}<tr><td><a class="title num" href="{% url 'decisions:decision_detail' d.id %}">{{ d.decision_number }}</a></td><td style="max-width:320px">{{ d.title|short:70 }}</td><td><span class="tag">{{ d.get_decision_type_display }}</span></td><td><a href="{% url 'subjects:subject_detail' d.subject_id %}"><span class="tag code">{{ d.subject.internal_number }}</span></a></td><td><span class="pill {{ d.status|tone }}">{{ d.get_status_display }}</span></td><td class="num">{{ d.created_at|date:"Y-m-d" }}</td></tr>
+    {% empty %}<tr><td colspan="6">{% include "partials/empty.html" with title="لا توجد قرارات" icon_name="gavel" %}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endblock %}

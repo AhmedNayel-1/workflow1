@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}إدارة الصلاحيات والأدوار — مدير النظام فقط{% endblock %}
+{% block page_title %}إدارة الصلاحيات وضوابط السرية ونطاقات الرؤية (مدير النظام فقط){% endblock %}
+
+{% block content %}
+<div class="bg-[#F2F6FC] border border-[#DADCE0] rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+        <div class="text-sm font-bold text-[#1F1F1F]">مصفوفة الصلاحيات وضوابط الرؤية</div>
+        <div class="text-xs text-[#5F6368] mt-0.5">متاح حصرياً لمدير النظام فقط. المديرون يرون جميع المراسلات (عدا السري للغاية غير الموجه لهم)، والموظف العادي يرى الموجهة له أو لقسمه فقط.</div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'accounts:users_list' %}" class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">جدول المستخدمين ونطاق الرؤية</a>
+        <a href="{% url 'organization:org_tree' %}" class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F6F8FC] text-[#444746] rounded-full text-xs font-bold">جداول الهيكل التنظيمي</a>
+        <a href="{% url 'core:db_admin' %}" class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F6F8FC] text-[#444746] rounded-full text-xs font-bold">قواعد البيانات</a>
+    </div>
+</div>
+
+<!-- الجدول الأول: ضوابط السرية والطبقة المنطقية لكل دور -->
+<section class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden mb-6">
+    <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] font-bold text-sm text-[#1F1F1F]">
+        الجدول 1: ضوابط السرية الفائقة والطبقة المنطقية للأدوار الوظيفية
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F9FBFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">الدور الوظيفي</th>
+                    <th class="px-4 py-3 text-center">الطبقة المنطقية للرؤية</th>
+                    <th class="px-4 py-3 text-center">اطلاع هرمي (العادي)</th>
+                    <th class="px-4 py-3 text-center">الاطلاع على «سري»</th>
+                    <th class="px-4 py-3 text-center">الاطلاع على «سري للغاية»</th>
+                    <th class="px-4 py-3 text-center">تنزيل مرفقات السري للغاية</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for r in roles %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-3 font-bold text-[#1F1F1F]">{{ r.name }} <span class="mono-num text-[#5F6368]">({{ r.code }})</span></td>
+                        <td class="px-4 py-3 text-center">
+                            {% if r.code in manager_role_codes %}
+                                <span class="px-2.5 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0] font-bold">مدير (يرى جميع المراسلات)</span>
+                            {% else %}
+                                <span class="px-2.5 py-0.5 rounded-full bg-[#F2F6FC] text-[#444746] font-bold">موظف / قسم (الموجه له أو لقسمه)</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="op" value="toggle_role_flag">
+                                <input type="hidden" name="role_id" value="{{ r.id }}">
+                                <input type="hidden" name="flag_name" value="allow_hierarchical_view">
+                                <button type="submit" class="px-3 py-1 rounded-full font-bold {% if r.allow_hierarchical_view %}bg-[#E6F4EA] text-[#137333]{% else %}bg-[#F2F6FC] text-[#5F6368]{% endif %}">
+                                    {% if r.allow_hierarchical_view %}مفعل{% else %}معطل{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="op" value="toggle_role_flag">
+                                <input type="hidden" name="role_id" value="{{ r.id }}">
+                                <input type="hidden" name="flag_name" value="can_view_confidential">
+                                <button type="submit" class="px-3 py-1 rounded-full font-bold {% if r.can_view_confidential %}bg-[#E6F4EA] text-[#137333]{% else %}bg-[#F2F6FC] text-[#5F6368]{% endif %}">
+                                    {% if r.can_view_confidential %}مسموح{% else %}ممنوع{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="op" value="toggle_role_flag">
+                                <input type="hidden" name="role_id" value="{{ r.id }}">
+                                <input type="hidden" name="flag_name" value="can_view_top_secret">
+                                <button type="submit" class="px-3 py-1 rounded-full font-bold {% if r.can_view_top_secret %}bg-amber-100 text-amber-900{% else %}bg-[#F2F6FC] text-[#5F6368]{% endif %}">
+                                    {% if r.can_view_top_secret %}مسموح عند التكليف{% else %}محجوب{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="op" value="toggle_role_flag">
+                                <input type="hidden" name="role_id" value="{{ r.id }}">
+                                <input type="hidden" name="flag_name" value="can_download_secret_attachments">
+                                <button type="submit" class="px-3 py-1 rounded-full font-bold {% if r.can_download_secret_attachments %}bg-[#E6F4EA] text-[#137333]{% else %}bg-[#F2F6FC] text-[#5F6368]{% endif %}">
+                                    {% if r.can_download_secret_attachments %}مسموح{% else %}ممنوع{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- الجدول الثاني: مصفوفة الصلاحيات الإجرائية -->
+<div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+    <div class="px-5 py-3.5 bg-[#F6F8FC] border-b border-[#ECEFF1] font-bold text-sm text-[#1F1F1F]">
+        الجدول 2: مصفوفة الصلاحيات الإجرائية (اضغط على أي زر للتبديل بين المنح والسحب)
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F9FBFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">الصلاحية</th>
+                    {% for r in roles %}
+                        <th class="px-3 py-3 text-center">{{ r.name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for p in permissions %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ p.name }} <span class="mono-num text-[#5F6368] font-normal">({{ p.code }})</span></td>
+                        {% for r in roles %}
+                            <td class="px-3 py-2.5 text-center">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="op" value="toggle">
+                                    <input type="hidden" name="role_id" value="{{ r.id }}">
+                                    <input type="hidden" name="permission_id" value="{{ p.id }}">
+                                    {% if p in r.permissions.all %}
+                                        <button type="submit" class="px-3 py-1 bg-[#E6F4EA] text-[#137333] rounded-full font-bold">ممنوحة</button>
+                                    {% else %}
+                                        <button type="submit" class="px-3 py-1 bg-[#F2F6FC] text-[#747775] rounded-full">—</button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

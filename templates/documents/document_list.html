@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}سجل المستندات{% endblock %}
+{% block heading %}سجل المستندات{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>سجل المستندات</h2><p>كل المستندات المتاحة لك. اضغط على بطاقة لمعاينة مرفقها فوراً.</p></div><a class="btn primary" href="{% url 'documents:document_create' %}">{% icon 'plus' %}مستند جديد</a></div>
+<section class="panel docs-split no-preview" data-docs>
+  <div class="col" style="min-width:0;overflow:hidden;gap:0">
+    <form class="toolbar" method="get"><div class="search-in grow">{% icon 'search' 'sm' %}<input class="in sm" name="q" value="{{ q }}" placeholder="عنوان المستند أو رقمه أو الرقم الخارجي…"></div><button class="btn sm primary" type="submit">بحث</button>{% if q %}<a class="btn sm" href="{% url 'documents:document_list' %}">مسح</a>{% endif %}<span class="muted sm">{{ total_count }} مستند</span></form>
+    <div class="docs-scroll" style="flex:1"><div class="cards">
+      {% for d in documents %}{% with att=d.primary_attachment %}
+      <div class="dcard" {% if att %}data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}"{% endif %}>
+        <div class="row between"><span class="ficon {% if att.preview_kind == 'pdf' %}pdf{% elif att.preview_kind == 'image' %}img{% endif %}">{% icon 'file' %}</span><span class="tag code">{{ d.internal_number }}</span></div>
+        <h5>{{ d.title|short:70 }}</h5>
+        <div class="row wrap gap-s"><span class="pill info nodot">{{ d.doc_type.name }}</span>{% if d.confidentiality.overrides_hierarchy %}<span class="pill bad nodot">{{ d.confidentiality.name }}</span>{% endif %}<span class="muted xs num">{{ d.document_date|date:"Y-m-d" }}</span></div>
+        <div class="row between"><span class="muted xs">{% for s in d.subjects.all|slice:":1" %}{{ s.internal_number }}{% endfor %}</span><a class="btn sm" href="{% url 'documents:document_detail' d.id %}">التفاصيل</a></div>
+      </div>{% endwith %}
+      {% empty %}<div style="grid-column:1/-1">{% include "partials/empty.html" with title="لا توجد مستندات" icon_name="file" %}</div>{% endfor %}
+    </div></div>
+    {% include "partials/pager.html" %}
+  </div>
+  <div class="pv" style="border-inline-start:1px solid var(--line)"><div class="pv-tools"><b id="pvs-name" class="trunc grow"></b><a class="btn sm" id="pvs-page" href="#">{% icon 'ext' 'sm' %}الصفحة الكاملة</a><a class="btn sm primary" id="pvs-dl" href="#">{% icon 'download' 'sm' %}تنزيل</a></div><div class="pv-b"></div></div>
+</section>
+{% endblock %}

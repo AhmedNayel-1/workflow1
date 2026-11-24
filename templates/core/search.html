@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}البحث المتقدم{% endblock %}
+{% block heading %}البحث المتقدم{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>البحث المتقدم</h2><p>ركّب مرشحات متعددة على الموضوعات.</p></div><a class="btn" href="{% url 'core:archive_search' %}">{% icon 'search' 'sm' %}البحث السريع</a></div>
+<div class="layout-3" style="grid-template-columns:300px minmax(0,1fr)">
+  <form method="get" class="panel sticky"><div class="panel-h"><h3>{% icon 'filter' %} المرشحات</h3><a class="btn sm ghost" href="{% url 'core:search' %}">مسح</a></div><div class="panel-b col" style="gap:12px">
+    <label class="fld"><span>كلمات البحث</span><input class="in" name="q" value="{{ q_text }}" placeholder="عنوان، وصف، رقم…"></label>
+    <label class="fld"><span>الحالة</span><select class="in" name="status"><option value="">الكل</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if filters.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>نوع المعاملة</span><select class="in" name="transaction_type"><option value="">الكل</option>{% for t in transaction_types %}<option value="{{ t.id }}" {% if filters.transaction_type == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>القطاع</span><select class="in" name="sector"><option value="">الكل</option>{% for s in sectors %}<option value="{{ s.id }}" {% if filters.sector == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>الإدارة / الوحدة</span><select class="in" name="org_unit"><option value="">الكل</option>{% for o in org_units %}<option value="{{ o.id }}" {% if filters.org_unit == o.id|stringformat:'s' %}selected{% endif %}>{{ o.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>السرية</span><select class="in" name="confidentiality"><option value="">الكل</option>{% for c in confidentialities %}<option value="{{ c.id }}" {% if filters.confidentiality == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>نوع المستند</span><select class="in" name="doc_type"><option value="">الكل</option>{% for d in doc_types %}<option value="{{ d.id }}" {% if filters.doc_type == d.id|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>المصدر</span><select class="in" name="source"><option value="">الكل</option><option value="INCOMING" {% if filters.source == 'INCOMING' %}selected{% endif %}>وارد</option><option value="OUTGOING" {% if filters.source == 'OUTGOING' %}selected{% endif %}>صادر</option><option value="INTERNAL" {% if filters.source == 'INTERNAL' %}selected{% endif %}>داخلي</option></select></label>
+    <div class="grid g2" style="gap:8px"><label class="fld"><span>من</span><input class="in sm" type="date" name="date_from" value="{{ filters.date_from }}"></label><label class="fld"><span>إلى</span><input class="in sm" type="date" name="date_to" value="{{ filters.date_to }}"></label></div>
+    <button class="btn primary block" type="submit">تطبيق البحث</button></div></form>
+  <section class="panel" data-table style="min-width:0"><div class="toolbar"><b>{{ total_count }} نتيجة</b><span class="spacer"></span><div class="search-in" style="min-width:220px">{% icon 'search' 'sm' %}<input class="in sm" data-filter placeholder="تصفية النتائج…" type="search"></div></div>
+    <div class="bulk"><span><b data-count>0</b> محدد</span><button class="btn sm" type="button" data-export>{% icon 'download' 'sm' %}تصدير CSV</button><button class="btn sm ghost" type="button" data-clear>مسح</button></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="w-chk"><input type="checkbox" data-all aria-label="الكل"></th><th>الرقم</th><th>العنوان</th><th>النوع</th><th>الحالة</th><th>السرية</th><th>التاريخ</th></tr></thead><tbody>
+      {% for s in results %}<tr><td class="w-chk"><input type="checkbox" class="row-chk"></td><td><span class="tag code">{{ s.internal_number }}</span></td><td style="max-width:340px"><a class="title" href="{% url 'subjects:subject_detail' s.id %}">{{ s.title|short:80 }}</a></td><td class="sm">{{ s.transaction_type.name }}</td><td><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span></td><td class="sm">{{ s.confidentiality.name }}</td><td class="num sm">{{ s.created_at|date:"Y-m-d" }}</td></tr>
+      {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with title="لا توجد نتائج" text="جرّب تخفيف المرشحات." icon_name="search" %}</td></tr>{% endfor %}</tbody></table></div>
+    {% include "partials/pager.html" %}</section></div>
+{% endblock %}

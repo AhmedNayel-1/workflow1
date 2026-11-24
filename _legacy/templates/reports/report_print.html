@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طباعة تقرير — {{ definition.title }}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="bg-white p-8 max-w-6xl mx-auto text-[#1F1F1F]">
+<div class="no-print mb-6 flex items-center justify-between border-b border-[#DADCE0] pb-3">
+    <span class="text-xs text-[#5F6368]">معاينة الطباعة الرسمية A4 — يعمل دون إنترنت بالكامل</span>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'reports:report_detail' definition.slug %}?date_from={{ query_params.date_from }}&date_to={{ query_params.date_to }}&sector={{ query_params.sector }}&transaction_type={{ query_params.transaction_type }}" class="px-4 py-1.5 border border-[#DADCE0] rounded-[20px] text-xs font-bold text-[#5F6368]">العودة للتقرير</a>
+        <button onclick="window.print()" class="px-4 py-1.5 bg-[#1A73E8] text-white rounded-[20px] text-xs font-bold">طباعة A4</button>
+    </div>
+</div>
+
+<div class="border-b-2 border-slate-900 pb-4 mb-5 flex flex-wrap items-start justify-between gap-4">
+    <div>
+        <div class="text-xs text-[#5F6368]">منظومة السكرتارية والمراسلات والأرشفة — قطاع التقارير الإدارية</div>
+        <h1 class="text-xl font-bold mt-1 text-[#202124]">{{ definition.number }}. {{ definition.title }}</h1>
+        <p class="text-xs text-[#5F6368] mt-1">{{ definition.subtitle }}</p>
+    </div>
+    <div class="text-xs text-left space-y-0.5">
+        <div>تاريخ الاستخراج: <strong class="mono-num">{{ report.generated_at|date:"Y-m-d H:i" }}</strong></div>
+        <div>المستخدم: <strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
+        <div>نطاق القطاع: <strong>{% if report.filters.sector %}{{ report.filters.sector.name }}{% else %}كامل المتاح بصلاحياته{% endif %}</strong></div>
+        {% if report.filters.date_from or report.filters.date_to %}
+            <div>الفترة: <span class="mono-num">{{ report.filters.date_from|date:"Y-m-d"|default:"البداية" }} ← {{ report.filters.date_to|date:"Y-m-d"|default:"الآن" }}</span></div>
+        {% endif %}
+    </div>
+</div>
+
+{% if report.kpis %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {% for kpi in report.kpis %}
+            <div class="border border-[#DADCE0] rounded-[16px] p-3 bg-[#F8F9FA]">
+                <div class="text-[11px] text-[#5F6368]">{{ kpi.label }}</div>
+                <div class="text-lg font-bold mono-num text-[#202124] mt-0.5">{{ kpi.value }}</div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if report.method_note %}
+    <div class="mb-4 p-3 border border-[#D3E3FD] bg-[#E8F0FE] rounded-[16px] text-[11px] text-[#041E49]">
+        <strong>الضوابط والمنهجية:</strong> {{ report.method_note }}
+    </div>
+{% endif %}
+
+<table class="w-full border border-slate-300 text-xs text-right">
+    <thead class="bg-slate-100">
+        <tr>
+            <th class="border p-2">#</th>
+            {% for col in report.columns %}
+                <th class="border p-2">{{ col.label }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in report.rows %}
+            <tr>
+                <td class="border p-2 mono-num">{{ forloop.counter }}</td>
+                {% for col in report.columns %}
+                    <td class="border p-2 {% if col.type == 'number' or col.type == 'date' or col.type == 'link' %}mono-num{% endif %}">
+                        {% for k, v in row.items %}
+                            {% if k == col.key %}{{ v }}{% endif %}
+                        {% endfor %}
+                    </td>
+                {% endfor %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="{{ report.columns|length|add:'1' }}" class="border p-6 text-center text-[#5F6368]">لا توجد بيانات مطابقة في هذا النطاق.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr class="bg-slate-100 font-bold text-[#202124]">
+            <td class="border p-2">صف الإجمالي</td>
+            <td colspan="{{ report.columns|length }}" class="border p-2">إجمالي السجلات المطبوعة: <span class="mono-num">{{ report.rows|length }}</span></td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="mt-6 pt-3 border-t border-slate-300 flex justify-between text-[11px] text-[#5F6368]">
+    <span>عدد السجلات المطبوعة: <strong class="mono-num">{{ report.rows|length }}</strong></span>
+    <span>تُطبع ضمن ضوابط العزل التنظيمي والسرية المعتمدة</span>
+</div>
+</body>
+</html>

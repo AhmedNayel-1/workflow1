@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}تسجيل مستند{% endblock %}
+{% block heading %}تسجيل مستند جديد{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>تسجيل مستند جديد</h2><p>يُسجَّل المستند برقم داخلي ويُحفظ مرفقه في الخزينة مع بصمة SHA-256.</p></div><a class="btn" href="{% url 'documents:document_list' %}">إلغاء</a></div>
+<form method="post" enctype="multipart/form-data" class="col" style="gap:16px">{% csrf_token %}
+  <section class="panel"><div class="panel-h"><h3>بيانات المستند</h3></div><div class="panel-b form">
+    <label class="fld full"><span>عنوان المستند</span><input class="in" name="title" required></label>
+    <label class="fld"><span>التصنيف</span><select class="in" name="doc_type_id" required>{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>درجة السرية</span><select class="in" name="confidentiality_id" required>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>المصدر</span><select class="in" name="source_type"><option value="INCOMING">وارد</option><option value="OUTGOING">صادر</option><option value="INTERNAL">مستند داخلي</option></select></label>
+    <label class="fld"><span>الرقم الخارجي (وارد/صادر)</span><input class="in" name="external_in_out_number"></label>
+    <label class="fld"><span>الجهة المرسلة</span><input class="in" name="sender_entity"></label>
+    <label class="fld"><span>الجهة المستلمة</span><input class="in" name="receiver_entity"></label>
+    <label class="fld"><span>تاريخ المستند</span><input class="in" type="date" name="document_date" required></label>
+    <label class="fld"><span>تاريخ الاستلام</span><input class="in" type="date" name="received_date"></label>
+    <label class="fld full"><span>الملخص</span><textarea class="in" name="summary" rows="3" required></textarea></label>
+  </div></section>
+  <section class="panel"><div class="panel-h"><h3>الربط بموضوع والمرفق</h3></div><div class="panel-b form">
+    <label class="fld"><span>الموضوع المرتبط</span><select class="in" name="subject_id"><option value="">— بدون ربط —</option>{% for s in subjects %}<option value="{{ s.id }}" {% if selected_subject and selected_subject.id == s.id %}selected{% endif %}>{{ s.internal_number }} — {{ s.title|short:60 }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>طبيعة العلاقة</span><select class="in" name="relation_type"><option value="SUPPORTING">مستند داعم / مرفق</option><option value="PRIMARY">مستند أساسي للموضوع</option><option value="GENERAL_DECISION">قرار إداري عام مرتبط</option><option value="OUTPUT">مخرج تنفيذي</option></select></label>
+    <label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" required></label>
+    <label class="fld"><span>وصف المرفق</span><input class="in" name="attachment_description"></label>
+  </div></section>
+  <div class="row end"><a class="btn" href="{% url 'documents:document_list' %}">إلغاء</a><button class="btn primary lg" type="submit">حفظ وتسجيل</button></div>
+</form>
+{% endblock %}

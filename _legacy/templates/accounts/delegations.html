@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}السكرتارية والإنابة{% endblock %}
+{% block page_title %}إدارة تفويضات السكرتارية والإنابة المؤقتة{% endblock %}
+
+{% block content %}
+<form method="post" class="bg-white border border-[#ECEFF1] rounded-2xl p-5 mb-6 space-y-4 text-xs">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_delegation">
+    <h2 class="font-bold text-sm text-[#1F1F1F]">إنشاء تفويض محدد الصلاحيات والمدة</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <select name="delegator_id" class="px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            {% for u in users %}<option value="{{ u.id }}" {% if u.id == request.user.id %}selected{% endif %}>المفوِّض: {{ u }}</option>{% endfor %}
+        </select>
+        <select name="delegate_id" required class="px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            {% for u in users %}<option value="{{ u.id }}">المفوَّض: {{ u }}</option>{% endfor %}
+        </select>
+        <select name="delegation_type" class="px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            <option value="SECRETARIAT">تفويض سكرتارية</option>
+            <option value="ACTING">إنابة مسؤول</option>
+        </select>
+        <select name="scope_unit_id" class="px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+            <option value="">-- نطاق الوحدة --</option>
+            {% for unit in org_units %}<option value="{{ unit.id }}">{{ unit.name }}</option>{% endfor %}
+        </select>
+        <input type="datetime-local" name="valid_from" class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+        <input type="datetime-local" name="valid_to" class="px-3 py-2 border border-[#DADCE0] rounded-xl">
+        <label class="flex items-center gap-2"><input type="checkbox" name="allow_confidential"> يشمل السرية</label>
+        <button type="submit" class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">حفظ التفويض</button>
+    </div>
+    <div>
+        <label class="block font-bold text-[#5F6368] mb-1.5">الإجراءات المسموح تنفيذها بالنيابة:</label>
+        <div class="flex flex-wrap gap-3">
+            {% for pc in permission_codes %}
+                <label class="flex items-center gap-1.5 bg-[#F6F8FC] px-3 py-1 rounded-full border border-[#ECEFF1]"><input type="checkbox" name="allowed_actions" value="{{ pc.code }}"> {{ pc.name }}</label>
+            {% endfor %}
+        </div>
+    </div>
+</form>
+
+<div class="bg-white border border-[#ECEFF1] rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F6F8FC] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3">المفوِّض</th>
+                    <th class="px-4 py-3">المفوَّض</th>
+                    <th class="px-4 py-3">النوع</th>
+                    <th class="px-4 py-3">الفترة</th>
+                    <th class="px-4 py-3">الحالة</th>
+                    <th class="px-4 py-3">إلغاء</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% for d in delegations %}
+                    <tr class="hover:bg-[#F6F8FC]">
+                        <td class="px-4 py-3 font-bold text-[#1F1F1F]">{{ d.delegator }}</td>
+                        <td class="px-4 py-3">{{ d.delegate }}</td>
+                        <td class="px-4 py-3">{{ d.get_delegation_type_display }}</td>
+                        <td class="px-4 py-3 mono-num text-[#5F6368]">{{ d.valid_from|date:"Y-m-d" }} ← {{ d.valid_to|date:"Y-m-d" }}</td>
+                        <td class="px-4 py-3 font-bold {% if d.is_currently_valid %}text-[#137333]{% else %}text-[#5F6368]{% endif %}">{% if d.is_currently_valid %}ساري{% else %}منتهي / ملغى{% endif %}</td>
+                        <td class="px-4 py-3">
+                            {% if d.is_active %}
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="revoke">
+                                    <input type="hidden" name="delegation_id" value="{{ d.id }}">
+                                    <button type="submit" class="px-3 py-1 bg-[#FCE8E6] text-[#A50E0E] rounded-full font-bold">إلغاء</button>
+                                </form>
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base_print.html" %}
+{% block title %}محضر جلسة {{ meeting.meeting_number }}{% endblock %}
+{% block content %}
+<p style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
+<h1>محضر اجتماع {{ meeting.committee.name }}</h1>
+<table><tr><th>رقم الجلسة</th><td>{{ meeting.meeting_number }}</td></tr><tr><th>التاريخ</th><td>{{ meeting.meeting_date|date:"Y-m-d" }}</td></tr><tr><th>المكان</th><td>{{ meeting.location|default:"—" }}</td></tr><tr><th>رئيس اللجنة</th><td>{{ meeting.committee.chair|default:"—" }}</td></tr></table>
+{% if meeting.minutes_summary %}<p style="line-height:2">{{ meeting.minutes_summary }}</p>{% endif %}
+<table><thead><tr><th style="width:40px">#</th><th>الموضوع</th><th>التوصية</th><th>قرار اللجنة</th></tr></thead><tbody>{% for it in items %}<tr><td>{{ forloop.counter }}</td><td>{{ it.subject.internal_number }}<br>{{ it.subject.title }}</td><td>{{ it.recommendation|default:"—" }}</td><td><b>{{ it.get_resolution_type_display }}</b><br>{{ it.resolution_text }}</td></tr>{% endfor %}</tbody></table>
+<div class="sign"><div>رئيس اللجنة</div><div>مقرر اللجنة</div></div>
+{% endblock %}

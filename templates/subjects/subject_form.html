@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}موضوع جديد{% endblock %}
+{% block heading %}موضوع جديد{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>تسجيل موضوع جديد</h2><p>النموذج الكامل بجميع الحقول. للتسجيل السريع استخدم زر «جديد» في أعلى الصفحة.</p></div><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a></div>
+<form method="post" enctype="multipart/form-data" class="col" style="gap:16px">{% csrf_token %}<input type="hidden" name="compose_mode" value="document">
+  <section class="panel"><div class="panel-h"><h3>1 · البيانات الأساسية</h3></div><div class="panel-b form">
+    <label class="fld full"><span>عنوان الموضوع</span><input class="in" name="title" required></label>
+    <label class="fld"><span>نوع المعاملة</span><select class="in" name="transaction_type_id" required>{% for t in transaction_types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>الأولوية</span><select class="in" name="priority_id" required>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+    <label class="fld full"><span>الوصف</span><textarea class="in" name="description" rows="4"></textarea></label>
+    <label class="fld"><span>الجهة الوارد منها</span><input class="in" name="external_source"></label>
+    <label class="fld"><span>مقدم الطلب / المعني</span><input class="in" name="applicant_name"></label>
+    <label class="fld"><span>تاريخ الاستحقاق</span><input class="in" type="date" name="due_date"></label>
+    <label class="fld"><span>كلمات مفتاحية</span><input class="in" name="keywords"></label>
+  </div></section>
+  <section class="panel"><div class="panel-h"><h3>2 · التوجيه والسرية</h3></div><div class="panel-b form">
+    <label class="fld"><span>القطاع</span><select class="in" name="sector_id" id="f-sector" required>{% for s in sectors %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>الإدارة / الوحدة</span><select class="in" name="org_unit_id" id="f-unit" required>{% for u in org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>درجة السرية</span><select class="in" name="confidentiality_id" required>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>المسؤول الحالي</span><select class="in" name="current_owner_id"><option value="">أنا</option>{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
+    <label class="fld full"><span>توجيه القطاع <small>(اختياري)</small></span><textarea class="in" name="sector_directive" rows="2"></textarea></label>
+    {% if template_versions %}<label class="fld full"><span>قالب مسار العمل <small>(اختياري)</small></span><select class="in" name="workflow_template_version_id"><option value="">— بدون قالب —</option>{% for tv in template_versions %}<option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }})</option>{% endfor %}</select></label>{% endif %}
+  </div></section>
+  <section class="panel"><div class="panel-h"><h3>3 · المرفق الأولي</h3></div><div class="panel-b form">
+    <label class="fld"><span>الملف</span><input class="in" type="file" name="initial_attachment" multiple></label>
+    <label class="fld"><span>تصنيف المستند</span><select class="in" name="initial_doc_type_id">{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
+    <label class="fld full"><span>عنوان المستند <small>(اختياري)</small></span><input class="in" name="initial_doc_title"></label>
+  </div></section>
+  <div class="row end"><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a><button class="btn primary lg" type="submit">حفظ وتسجيل الموضوع</button></div>
+</form>
+{% endblock %}
+{% block extra_js %}<script>(function(){var s=document.getElementById("f-sector"),u=document.getElementById("f-unit");function f(){var v=s.value,first=null;Array.prototype.forEach.call(u.options,function(o){o.hidden=!!(v&&o.dataset.sector&&o.dataset.sector!==v);if(!o.hidden&&!first)first=o});if(u.selectedOptions[0]&&u.selectedOptions[0].hidden&&first)u.value=first.value}s.addEventListener("change",f);f()})()</script>{% endblock %}

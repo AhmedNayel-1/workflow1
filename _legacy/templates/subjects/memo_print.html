@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>طباعة مذكرة — {{ memo.memo_number }}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="bg-white p-10 max-w-3xl mx-auto text-slate-900">
+<div class="no-print mb-6 flex justify-between items-center border-b pb-3">
+    <span class="text-xs text-slate-500">نموذج طباعة رسمي — منظومة السكرتارية والدورة المستندية</span>
+    <button onclick="window.print()" class="px-4 py-1.5 bg-slate-900 text-white rounded text-sm">طباعة المذكرة</button>
+</div>
+<div class="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
+    <div>
+        <div class="text-lg font-bold">{{ memo.get_memo_type_display }}</div>
+        <div class="text-sm text-slate-600 mt-1">الموضوع المرجعي: {{ memo.subject.internal_number }}</div>
+    </div>
+    <div class="text-left text-sm">
+        <div>رقم المذكرة: <strong>{{ memo.memo_number }}</strong></div>
+        <div>التاريخ: {{ memo.created_at|date:"Y-m-d" }}</div>
+    </div>
+</div>
+<div class="mb-4 text-sm"><strong>السيد / {{ memo.directed_to }}</strong></div>
+<div class="mb-4 text-base font-bold">الموضوع: {{ memo.title }}</div>
+<div class="text-sm leading-loose whitespace-pre-line mb-10">{{ memo.body }}</div>
+<div class="flex justify-between pt-8 border-t border-slate-300 text-sm">
+    <div>معد المذكرة:<br><strong>{{ memo.author }}</strong></div>
+    {% if memo.approved_by %}<div>الاعتماد:<br><strong>{{ memo.approved_by }}</strong></div>{% endif %}
+</div>
+</body>
+</html>

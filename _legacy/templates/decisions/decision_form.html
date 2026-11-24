@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}إعداد مشروع قرار{% endblock %}
+{% block page_title %}إعداد مشروع قرار للموضوع {{ subject.internal_number }}{% endblock %}
+
+{% block content %}
+<form method="post" class="max-w-3xl bg-white border border-[#ECEFF1] rounded-2xl p-6 space-y-4 text-xs">
+    {% csrf_token %}
+    <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">نوع القرار</label>
+            <select name="decision_type" class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl bg-white">
+                {% for val, label in decision_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">عنوان القرار *</label>
+            <input type="text" name="title" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl">
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">جهة الإصدار *</label>
+            <input type="text" name="issuing_authority" value="رئيس مجلس الإدارة" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl">
+        </div>
+        <div>
+            <label class="block font-bold text-[#444746] mb-1">جهة الاعتماد *</label>
+            <input type="text" name="approving_authority" value="رئيس مجلس الإدارة" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl">
+        </div>
+    </div>
+    <div>
+        <label class="block font-bold text-[#444746] mb-1">نص ومواد القرار *</label>
+        <textarea name="body" rows="6" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-xl"></textarea>
+    </div>
+    <button type="submit" class="px-6 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full font-bold">حفظ مشروع القرار (مسودة)</button>
+</form>
+{% endblock %}

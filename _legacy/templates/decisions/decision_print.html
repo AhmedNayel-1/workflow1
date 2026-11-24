@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>قرار إداري رقم {{ decision.decision_number }}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="bg-white p-12 max-w-3xl mx-auto text-slate-900">
+<div class="no-print mb-6 flex justify-end"><button onclick="window.print()" class="px-4 py-1.5 bg-slate-900 text-white rounded text-sm">طباعة القرار</button></div>
+<div class="text-center border-b-2 border-slate-900 pb-4 mb-6">
+    <div class="text-sm text-slate-600">{{ decision.issuing_authority }}</div>
+    <h1 class="text-2xl font-bold mt-1">قرار إداري رقم ({{ decision.decision_number }})</h1>
+    <div class="text-sm mt-1">تاريخ الإصدار: {{ decision.issued_date|date:"Y-m-d"|default:"مسودة" }}</div>
+</div>
+<h2 class="text-lg font-bold mb-4">{{ decision.title }}</h2>
+<div class="text-sm leading-loose whitespace-pre-line mb-12">{{ decision.body }}</div>
+<div class="flex justify-between pt-8 border-t border-slate-300 text-sm">
+    <div>جهة الاعتماد:<br><strong>{{ decision.approving_authority }}</strong></div>
+    <div>الموضوع المرجعي:<br><strong>{{ decision.subject.internal_number }}</strong></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+{% block title %}سجل التدقيق والمتابعة الموحد{% endblock %}
+{% block page_title %}سجل التدقيق الأمني، التعديلات، المشكلات والأخطاء، وتتبع مسار الموضوعات{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-5">
+    <!-- Header & Navigation Tabs -->
+    <div class="bg-white border border-[#E0E2E6] rounded-2xl p-4 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#F0F2F5]">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-full bg-[#E8F0FE] text-[#0B57D0] flex items-center justify-center font-bold text-sm">📜</span>
+                <div>
+                    <h2 class="text-sm font-bold text-[#1F1F1F]">سجل النظام الموحد وتتبع الأحداث</h2>
+                    <p class="text-xs text-[#5F6368]">رصد شامل للتعديلات الإدارية، المشكلات الفنية، والأحداث، ومسار الموضوعات للمستخدمين</p>
+                </div>
+            </div>
+
+            <!-- PDF Export Button -->
+            <button
+                type="button"
+                onclick="exportAuditLogPdf()"
+                class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F8FAFD] text-[#0B57D0] hover:border-[#0B57D0] rounded-full text-xs font-bold transition-colors flex items-center gap-1.5 self-start md:self-auto"
+            >
+                <span>📄</span> تصدير السجل PDF للطباعة
+            </button>
+        </div>
+
+        <!-- 5 Tabs -->
+        <div class="flex flex-wrap gap-2 pt-3">
+            <a
+                href="{% url 'audit:audit_log' %}?tab=all{% if q %}&q={{ q }}{% endif %}"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {% if log_tab == 'all' %}bg-[#0B57D0] text-white shadow-xs{% else %}bg-[#F1F3F4] text-[#444746] hover:bg-[#E8EAED]{% endif %}"
+            >
+                الكل (التدقيق العام)
+            </a>
+            <a
+                href="{% url 'audit:audit_log' %}?tab=edits{% if q %}&q={{ q }}{% endif %}"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {% if log_tab == 'edits' %}bg-[#0B57D0] text-white shadow-xs{% else %}bg-[#F1F3F4] text-[#444746] hover:bg-[#E8EAED]{% endif %}"
+            >
+                التعديلات والإجراءات
+            </a>
+            <a
+                href="{% url 'audit:audit_log' %}?tab=errors{% if q %}&q={{ q }}{% endif %}"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {% if log_tab == 'errors' %}bg-[#B3261E] text-white shadow-xs{% else %}bg-[#FCE8E6] text-[#B3261E] hover:bg-[#FAD2CF]{% endif %}"
+            >
+                المشكلات والأخطاء
+                {% if error_logs or denied_audit_logs %}
+                    <span class="mr-1 px-1.5 py-0.2 rounded-full text-[10px] {% if log_tab == 'errors' %}bg-white text-[#B3261E]{% else %}bg-[#B3261E] text-white{% endif %} mono-num">
+                        {{ error_logs|length|add:denied_audit_logs|length }}
+                    </span>
+                {% endif %}
+            </a>
+            <a
+                href="{% url 'audit:audit_log' %}?tab=events{% if q %}&q={{ q }}{% endif %}"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {% if log_tab == 'events' %}bg-[#0B57D0] text-white shadow-xs{% else %}bg-[#F1F3F4] text-[#444746] hover:bg-[#E8EAED]{% endif %}"
+            >
+                الأحداث والتنقلات
+            </a>
+            <a
+                href="{% url 'audit:audit_log' %}?tab=tracer{% if trace_subject_id %}&trace_subject_id={{ trace_subject_id }}{% endif %}{% if trace_user_id %}&trace_user_id={{ trace_user_id }}{% endif %}"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {% if log_tab == 'tracer' %}bg-[#0B57D0] text-white shadow-xs{% else %}bg-[#E8F0FE] text-[#0B57D0] hover:bg-[#D3E3FD]{% endif %}"
+            >
+                🎯 تتبع مسار موضوع لمستخدم
+            </a>
+        </div>
+    </div>
+
+    <!-- Tab 5: Subject-by-User Path Tracer -->
+    {% if log_tab == 'tracer' %}
+        <div class="bg-white border border-[#E0E2E6] rounded-2xl p-5 shadow-sm space-y-5">
+            <div>
+                <h3 class="text-sm font-bold text-[#1F1F1F] flex items-center gap-2">
+                    <span>🧭</span>
+                    <span>تتبع مسار موضوع معين لمستخدم معين (Subject-by-User Path Tracer)</span>
+                </h3>
+                <p class="text-xs text-[#5F6368] mt-1">
+                    اختر الموضوع والمستخدم لبيان كيف مر الموضوع على هذا المستخدم: متى أنشئ، متى أُحيل له، متى استلمه، ما هي المذكرات والتأشيرات والمهام والقرارات المتصلة به، مع سجل التدقيق الكامل.
+                </p>
+            </div>
+
+            <form method="get" action="{% url 'audit:audit_log' %}" class="bg-[#F8FAFD] border border-[#DADCE0] rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <input type="hidden" name="tab" value="tracer">
+                <div>
+                    <label class="block font-semibold text-[#444746] mb-1">اختر الموضوع *</label>
+                    <select name="trace_subject_id" required class="w-full px-3 py-2 border border-[#DADCE0] rounded-lg bg-white">
+                        <option value="">-- اختر ملف موضوع --</option>
+                        {% for s in all_subjects %}
+                            <option value="{{ s.id }}" {% if trace_subject_id == s.id|stringformat:"s" %}selected{% endif %}>
+                                {{ s.internal_number }} — {{ s.title|truncatechars:45 }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-[#444746] mb-1">اختر المستخدم (اختياري للفلترة المباشرة)</label>
+                    <select name="trace_user_id" class="w-full px-3 py-2 border border-[#DADCE0] rounded-lg bg-white">
+                        <option value="">(كل المتعاملين مع الموضوع)</option>
+                        {% for u in all_users %}
+                            <option value="{{ u.id }}" {% if trace_user_id == u.id|stringformat:"s" %}selected{% endif %}>
+                                {{ u.username }} — {{ u.get_full_name|default:u.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-lg font-bold transition-colors">
+                        عرض مسار الموضوع
+                    </button>
+                </div>
+            </form>
+
+            {% if selected_subject %}
+                <div class="bg-[#F1F3F4] p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div>
+                        <span class="text-[#5F6368]">الموضوع المحدد:</span>
+                        <strong class="text-[#1F1F1F] font-bold mx-1">{{ selected_subject.internal_number }} — {{ selected_subject.title }}</strong>
+                        <span class="text-[#5F6368]">({{ selected_subject.org_unit.name }})</span>
+                    </div>
+                    {% if selected_user %}
+                        <div class="px-3 py-1 rounded-full bg-[#E8F0FE] text-[#0B57D0] font-bold">
+                            المسار الخاص بـ: {{ selected_user.get_full_name|default:selected_user.username }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-right" id="traceTimelineTable">
+                        <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                            <tr>
+                                <th class="px-4 py-3">الوقت والتاريخ</th>
+                                <th class="px-4 py-3">نوع الحدث الإجرائي</th>
+                                <th class="px-4 py-3">المسؤول / الفاعل</th>
+                                <th class="px-4 py-3">بيان الإجراء وتفاصيل المسار</th>
+                                <th class="px-4 py-3 text-center">النتيجة</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#F0F2F5]">
+                            {% for step in trace_timeline %}
+                                <tr class="hover:bg-[#F9FBFD]">
+                                    <td class="px-4 py-2.5 mono-num text-[#5F6368] whitespace-nowrap">{{ step.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                    <td class="px-4 py-2.5">
+                                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#E8F0FE] text-[#0B57D0]">
+                                            {{ step.kind_label }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2.5 font-bold text-[#1F1F1F] whitespace-nowrap">{{ step.actor }}</td>
+                                    <td class="px-4 py-2.5 text-[#444746] leading-relaxed">{{ step.summary }}</td>
+                                    <td class="px-4 py-2.5 text-center">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {% if step.outcome == 'DENIED' or step.outcome == 'ERROR' %}bg-[#FCE8E6] text-[#B3261E]{% else %}bg-[#E6F4EA] text-[#137333]{% endif %}">
+                                            {{ step.outcome }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-xs text-[#747775]">
+                                        لا توجد خطوات مسجلة لهذا الموضوع مع هذا المستخدم.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-xs sm:text-sm text-[#747775]">
+                    قم باختيار موضوع من القائمة بالأعلى لعرض المخطط الزمني الكامل لمساره وتفاصيله.
+                </div>
+            {% endif %}
+        </div>
+
+    <!-- Tab 3: Problems and Errors -->
+    {% elif log_tab == 'errors' %}
+        <div class="space-y-5">
+            <!-- System Error Log -->
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+                <div class="px-5 py-3.5 bg-[#FCE8E6] border-b border-[#FAD2CF] flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[#B3261E] text-base">⚠️</span>
+                        <h3 class="font-bold text-xs sm:text-sm text-[#B3261E]">أخطاء واستثناءات النظام الفنية (System Error Log)</h3>
+                    </div>
+                    <span class="mono-num text-xs font-bold px-2 py-0.5 rounded-full bg-white text-[#B3261E]">{{ error_logs|length }} خطأ</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-right">
+                        <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                            <tr>
+                                <th class="px-4 py-3">الوقت</th>
+                                <th class="px-4 py-3">نوع الخطأ</th>
+                                <th class="px-4 py-3">الموديول البرمجي</th>
+                                <th class="px-4 py-3">رسالة الخطأ والتفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#F0F2F5]">
+                            {% for err in error_logs %}
+                                <tr class="hover:bg-[#F9FBFD]">
+                                    <td class="px-4 py-2.5 mono-num text-[#5F6368] whitespace-nowrap">{{ err.created_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td class="px-4 py-2.5 font-bold text-[#B3261E] mono-num">{{ err.error_type }}</td>
+                                    <td class="px-4 py-2.5 text-[#444746]">{{ err.source_module|default:"Core" }}</td>
+                                    <td class="px-4 py-2.5 text-[#1F1F1F] font-mono text-[11px] leading-relaxed">{{ err.error_message }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="4" class="px-4 py-6 text-center text-xs text-[#137333]">لا توجد أخطاء استثنائية مسجلة في سجل النظام الفني.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Denied / Error Security Audit Logs -->
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+                <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[#B3261E] text-base">🚫</span>
+                        <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">العمليات المرفوضة أمنياً ومحاولات الوصول المحظورة (DENIED)</h3>
+                    </div>
+                    <span class="mono-num text-xs font-bold px-2 py-0.5 rounded-full bg-[#FCE8E6] text-[#B3261E]">{{ denied_audit_logs|length }} محاولة</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-right">
+                        <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                            <tr>
+                                <th class="px-4 py-3">الوقت</th>
+                                <th class="px-4 py-3">المستخدم</th>
+                                <th class="px-4 py-3">العملية المطلوبة</th>
+                                <th class="px-4 py-3">الكيان المستهدف</th>
+                                <th class="px-4 py-3">سبب الرفض والبيانات</th>
+                                <th class="px-4 py-3">عنوان IP</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#F0F2F5]">
+                            {% for d in denied_audit_logs %}
+                                <tr class="hover:bg-[#F9FBFD]">
+                                    <td class="px-4 py-2.5 mono-num text-[#5F6368] whitespace-nowrap">{{ d.created_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ d.actor_user|default:"مجهول" }}</td>
+                                    <td class="px-4 py-2.5 mono-num font-semibold text-[#B3261E]">{{ d.action }}</td>
+                                    <td class="px-4 py-2.5 text-[#444746]">{{ d.model_name }} #{{ d.object_id }}</td>
+                                    <td class="px-4 py-2.5 text-[#444746]">{{ d.reason|default:"غير مصرح" }}</td>
+                                    <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ d.ip_address|default:"—" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="6" class="px-4 py-6 text-center text-xs text-[#137333]">لا توجد انتهاكات أمنية مسجلة.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    <!-- Tab 4: Activity Events -->
+    {% elif log_tab == 'events' %}
+        <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between">
+                <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">سجل النشاط الإجرائي والأحداث (Activity Log)</h3>
+                <span class="mono-num text-xs font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0]">{{ activity_events|length }} حدث</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-right">
+                    <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            <th class="px-4 py-3">الوقت</th>
+                            <th class="px-4 py-3">الموضوع</th>
+                            <th class="px-4 py-3">نوع الحدث</th>
+                            <th class="px-4 py-3">الفاعل</th>
+                            <th class="px-4 py-3">بيان الحدث والتفاصيل</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#F0F2F5]">
+                        {% for act in activity_events %}
+                            <tr class="hover:bg-[#F9FBFD]">
+                                <td class="px-4 py-2.5 mono-num text-[#5F6368] whitespace-nowrap">{{ act.created_at|date:"Y-m-d H:i:s" }}</td>
+                                <td class="px-4 py-2.5 font-bold text-[#0B57D0]">
+                                    {% if act.subject %}
+                                        <a href="{% url 'subjects:subject_detail' act.subject.id %}" class="hover:underline">
+                                            {{ act.subject.internal_number }}
+                                        </a>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td class="px-4 py-2.5">
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F1F3F4] text-[#1F1F1F]">
+                                        {{ act.action_type }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ act.actor_user|default:"النظام" }}</td>
+                                <td class="px-4 py-2.5 text-[#444746] leading-relaxed">{{ act.description }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#747775]">لا توجد أحداث مسجلة.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    <!-- Default: All / Edits Tab -->
+    {% else %}
+        <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between">
+                <h3 class="font-bold text-xs sm:text-sm text-[#1F1F1F]">
+                    {% if log_tab == 'edits' %}سجل التعديلات والإجراءات الإدارية{% else %}سجل التدقيق الأمني العام (Audit Log){% endif %}
+                </h3>
+                <span class="mono-num text-xs font-bold px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0B57D0]">{{ logs|length }} سجل</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-right" id="mainAuditTable">
+                    <thead class="bg-[#F8FAFD] border-b border-[#ECEFF1] text-[#5F6368]">
+                        <tr>
+                            <th class="px-4 py-3">الوقت</th>
+                            <th class="px-4 py-3">المستخدم الفاعل</th>
+                            <th class="px-4 py-3">العملية الإجرائية</th>
+                            <th class="px-4 py-3">الكيان / السجل</th>
+                            <th class="px-4 py-3">النتيجة</th>
+                            <th class="px-4 py-3">البيان والسبب</th>
+                            <th class="px-4 py-3">عنوان IP</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#F0F2F5]">
+                        {% for l in logs %}
+                            <tr class="hover:bg-[#F9FBFD]">
+                                <td class="px-4 py-2.5 mono-num text-[#5F6368] whitespace-nowrap">{{ l.created_at|date:"Y-m-d H:i:s" }}</td>
+                                <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ l.actor_user|default:"نظام" }}</td>
+                                <td class="px-4 py-2.5 mono-num font-semibold text-[#0B57D0]">{{ l.action }}</td>
+                                <td class="px-4 py-2.5 text-[#444746]">{{ l.model_name }} #{{ l.object_id }}</td>
+                                <td class="px-4 py-2.5">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {% if l.outcome == 'DENIED' or l.outcome == 'ERROR' %}bg-[#FCE8E6] text-[#B3261E]{% else %}bg-[#E6F4EA] text-[#137333]{% endif %}">
+                                        {{ l.outcome }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2.5 text-[#444746]">{{ l.reason|default:"—" }}</td>
+                                <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ l.ip_address|default:"—" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="7" class="px-4 py-8 text-center text-xs text-[#747775]">لا توجد سجلات مسجلة ضمن المعايير المحددة.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function exportAuditLogPdf() {
+    const tabName = "{{ log_tab|escapejs }}";
+    const title = "تقرير سجل التدقيق والمتابعة المؤسسي — " + (
+        tabName === 'tracer' ? 'تتبع مسار موضوع لمستخدم' :
+        tabName === 'errors' ? 'سجل المشكلات والأخطاء' :
+        tabName === 'edits' ? 'سجل التعديلات والإجراءات' :
+        tabName === 'events' ? 'سجل النشاط والأحداث' : 'سجل التدقيق الأمني العام'
+    );
+
+    const activeTable = document.querySelector("#traceTimelineTable, #mainAuditTable, table");
+    const headers = activeTable
+        ? Array.from(activeTable.querySelectorAll("thead th")).map(th => th.innerText.trim())
+        : ["البيان"];
+    const rows = activeTable
+        ? Array.from(activeTable.querySelectorAll("tbody tr")).map(tr =>
+            Array.from(tr.querySelectorAll("td")).map(td => td.innerText.trim())
+          ).filter(r => r.length > 0)
+        : [["لا توجد بيانات مسجلة"]];
+
+    if (window.exportInstitutionalPdf) {
+        window.exportInstitutionalPdf({
+            filename: "audit-log-" + tabName + "-" + new Date().toISOString().slice(0, 10),
+            title: title,
+            subtitle: "تاريخ الاستخراج: " + new Date().toLocaleString("ar-EG"),
+            metadata: [
+                ["التبويب", tabName || "all"],
+                ["عدد الصفوف", String(rows.length)],
+                ["رقم المرجع", "AUDIT-" + new Date().toISOString().slice(0, 10).replace(/-/g, "")]
+            ],
+            sections: [
+                {
+                    heading: title,
+                    table: {
+                        headers: headers,
+                        rows: rows.slice(0, 80)
+                    }
+                }
+            ]
+        });
+    }
+}
+</script>
+{% endblock %}

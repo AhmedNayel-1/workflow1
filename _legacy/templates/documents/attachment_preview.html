@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}معاينة المرفق — {{ attachment.original_filename }}{% endblock %}
+{% block page_title %}معاينة وطباعة المرفق: {{ attachment.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-4">
+    <!-- شريط معلومات المرفق وضوابط السرية والطباعة -->
+    <div class="bg-white border border-[#E0E2E6] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div class="space-y-1.5 min-w-[280px]">
+            <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-sm sm:text-base font-bold text-[#1F1F1F]">{{ attachment.original_filename }}</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {% if doc.confidentiality.rank >= 3 %}bg-[#FCE8E6] text-[#B3261E]{% elif doc.confidentiality.rank == 2 %}bg-amber-100 text-amber-900{% else %}bg-[#E8F0FE] text-[#0B57D0]{% endif %}">
+                    {{ doc.confidentiality.name }}
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#F1F3F4] text-[#444746]">
+                    {{ attachment.file_extension }}
+                </span>
+            </div>
+            <div class="text-[11px] text-[#5F6368] flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>المستند: <a href="{% url 'documents:document_detail' doc.id %}" class="font-bold text-[#0B57D0] hover:underline mono-num">#{{ doc.internal_number }}</a></span>
+                <span>·</span>
+                <span>الرافع: <strong class="text-[#1F1F1F]">{{ attachment.uploaded_by }}</strong></span>
+                <span>·</span>
+                <span class="mono-num">{{ attachment.uploaded_at|date:"Y-m-d H:i" }}</span>
+                <span>·</span>
+                <span class="mono-num">{{ attachment.file_size|filesizeformat }}</span>
+                <span>·</span>
+                <span class="mono-num text-[10px]">SHA: {{ attachment.sha256_hash|slice:":12" }}...</span>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 no-print">
+            <button
+                type="button"
+                onclick="printCurrentView()"
+                class="px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5"
+            >
+                <span>🖨️</span> طباعة فورية
+            </button>
+            {% if integrity.ok %}
+                <a
+                    href="{% url 'documents:attachment_download' attachment.id %}"
+                    class="px-4 py-2 bg-white border border-[#DADCE0] hover:bg-[#F8FAFD] text-[#444746] rounded-full text-xs font-semibold transition-colors"
+                >
+                    تنزيل الملف
+                </a>
+            {% endif %}
+            <a
+                href="{% url 'documents:document_detail' doc.id %}"
+                class="px-3.5 py-2 text-[#5F6368] hover:text-[#1F1F1F] rounded-full text-xs font-semibold hover:bg-[#F1F3F4] transition-colors"
+            >
+                عودة للمستند
+            </a>
+        </div>
+    </div>
+
+    <!-- مؤشر سلامة البصمة الرقمية -->
+    {% if not integrity.ok %}
+        <div class="p-5 rounded-2xl bg-[#FCE8E6] border border-[#FAD2CF] text-[#B3261E] space-y-1.5">
+            <div class="font-bold text-sm">تعذرت المعاينة: فشل التحقق من سلامة الملف ({{ integrity.status }})</div>
+            <p class="text-xs">{{ integrity.label }}. تم تسجيل المحاولة في سجل التدقيق الأمني ولن يتم عرض الملف لحماية النظام.</p>
+        </div>
+    {% else %}
+        <!-- عارض المعاينة حسب نوع الملف -->
+        {% if attachment.preview_kind == "pdf" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden" id="preview-render-block">
+                <div class="px-4 py-2.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between text-xs">
+                    <span class="font-bold text-[#1F1F1F]">معاينة مستند PDF</span>
+                    <a href="{% url 'documents:attachment_download' attachment.id %}" class="text-[#0B57D0] font-bold hover:underline">تنزيل نسخة PDF الأصلية</a>
+                </div>
+                <iframe
+                    id="pdf-frame"
+                    src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream"
+                    title="{{ attachment.original_filename }}"
+                    class="w-full"
+                    style="height: 75vh; min-height: 520px; border: 0;"
+                ></iframe>
+            </div>
+
+        {% elif attachment.preview_kind == "image" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden" id="preview-render-block">
+                <div class="px-4 py-2.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="font-bold text-[#1F1F1F]">معاينة الصورة</span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="adjustZoom(-0.2)" class="px-2.5 py-1 border border-[#DADCE0] bg-white hover:bg-[#F2F6FC] rounded-lg text-xs font-semibold">− تصغير</button>
+                        <button type="button" onclick="resetZoom()" class="px-2.5 py-1 border border-[#DADCE0] bg-white hover:bg-[#F2F6FC] rounded-lg text-xs font-semibold mono-num" id="zoom-label">100%</button>
+                        <button type="button" onclick="adjustZoom(0.2)" class="px-2.5 py-1 border border-[#DADCE0] bg-white hover:bg-[#F2F6FC] rounded-lg text-xs font-semibold">+ تكبير</button>
+                    </div>
+                </div>
+                <div class="p-6 bg-[#F8FAFD] overflow-auto text-center" style="max-height: 75vh;">
+                    <img
+                        id="preview-image"
+                        src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream"
+                        alt="{{ attachment.original_filename }}"
+                        class="mx-auto rounded-xl border border-[#DADCE0] bg-white shadow-xs"
+                        style="max-width: 100%; transform-origin: top center; transition: transform 0.15s ease;"
+                    >
+                </div>
+            </div>
+            <script>
+                var currentZoom = 1;
+                function applyZoom() {
+                    var img = document.getElementById('preview-image');
+                    var lbl = document.getElementById('zoom-label');
+                    if (img) img.style.transform = 'scale(' + currentZoom + ')';
+                    if (lbl) lbl.textContent = Math.round(currentZoom * 100) + '%';
+                }
+                function adjustZoom(delta) {
+                    currentZoom = Math.min(3.0, Math.max(0.4, currentZoom + delta));
+                    applyZoom();
+                }
+                function resetZoom() {
+                    currentZoom = 1;
+                    applyZoom();
+                }
+            </script>
+
+        {% elif attachment.preview_kind == "office" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden" id="preview-render-block">
+                <div class="px-4 py-2.5 bg-[#F8FAFD] border-b border-[#ECEFF1] flex items-center justify-between text-xs">
+                    <span class="font-bold text-[#1F1F1F]">معاينة مستند أوفيس مدمجة ({{ attachment.file_extension|upper }})</span>
+                    <a href="{% url 'documents:attachment_download' attachment.id %}" class="text-[#0B57D0] font-bold hover:underline">تنزيل الملف الأصلي</a>
+                </div>
+                <div class="p-6 bg-white overflow-auto max-h-[75vh] leading-relaxed text-xs sm:text-sm text-[#1F1F1F]" id="office-content-wrap">
+                    {{ office_preview_html|safe }}
+                </div>
+            </div>
+
+        {% elif attachment.preview_kind == "audio" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl p-6 text-center space-y-3 shadow-sm" id="preview-render-block">
+                <div class="text-sm font-bold text-[#1F1F1F]">مشغّل الملف الصوتي المدمج</div>
+                <audio controls class="w-full max-w-lg mx-auto" src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream"></audio>
+            </div>
+
+        {% elif attachment.preview_kind == "video" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl p-4 text-center shadow-sm" id="preview-render-block">
+                <video controls class="w-full max-w-3xl mx-auto rounded-xl" style="max-height: 70vh;" src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream"></video>
+            </div>
+
+        {% elif attachment.preview_kind == "text" or attachment.preview_kind == "csv" or attachment.preview_kind == "json" %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl shadow-sm overflow-hidden" id="preview-render-block">
+                <div class="px-4 py-2.5 bg-[#F8FAFD] border-b border-[#ECEFF1] text-xs font-bold text-[#1F1F1F]">معاينة المحتوى النصي / الجدولي ({{ attachment.file_extension|upper }})</div>
+                <pre class="p-5 text-xs text-[#1F1F1F] overflow-x-auto leading-relaxed whitespace-pre-wrap font-mono" id="text-content-wrap">{{ text_preview|default:"(الملف فارغ)" }}</pre>
+            </div>
+
+        {% else %}
+            <div class="bg-white border border-[#E0E2E6] rounded-2xl p-8 text-center space-y-3 shadow-sm" id="preview-render-block">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#E8F0FE] text-[#0B57D0] text-xl font-bold">📄</div>
+                <h3 class="text-base font-bold text-[#1F1F1F]">معاينة وتنزيل الملف ({{ attachment.file_extension|upper }})</h3>
+                <p class="text-xs text-[#5F6368] max-w-md mx-auto">
+                    تم التحقق من سلامة البصمة الرقمية لهذا الملف. يمكنك فحصه مباشرة أو طباعة بطاقة اعتماده الرسمية.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    <button type="button" onclick="fetch('{% url 'documents:attachment_download' attachment.id %}?raw=1').then(r=>r.text()).then(t=>{var pre=document.getElementById('raw-fallback-pre');pre.textContent=t;pre.classList.remove('hidden');})" class="px-4 py-2 border border-[#DADCE0] bg-white hover:bg-[#F2F6FC] rounded-full text-xs font-semibold text-[#444746]">
+                        فحص المحتوى الخام
+                    </button>
+                    <a href="{% url 'documents:attachment_download' attachment.id %}" class="px-5 py-2 bg-[#0B57D0] hover:bg-[#0842A0] text-white rounded-full text-xs font-bold">
+                        تنزيل الملف الآن
+                    </a>
+                </div>
+                <pre id="raw-fallback-pre" class="hidden mt-4 text-right p-4 rounded-xl bg-[#F8FAFD] border border-[#DADCE0] text-xs overflow-x-auto max-h-[50vh] whitespace-pre-wrap"></pre>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<script>
+function printCurrentView() {
+    const kind = "{{ attachment.preview_kind|escapejs }}";
+    const filename = "{{ attachment.original_filename|escapejs }}";
+
+    if (kind === "pdf") {
+        const frame = document.getElementById("pdf-frame");
+        if (frame && frame.contentWindow) {
+            try {
+                frame.contentWindow.print();
+                return;
+            } catch (e) {}
+        }
+    }
+
+    if (kind === "image") {
+        const img = document.getElementById("preview-image");
+        if (img && window.printHtmlInHiddenIframe) {
+            window.printHtmlInHiddenIframe(
+                filename,
+                `<div style="text-align:center;"><h2 style="font-size:14px;margin-bottom:12px;">${filename}</h2><img src="${img.src}" style="max-width:100%;max-height:90vh;" /></div>`
+            );
+            return;
+        }
+    }
+
+    if (kind === "office") {
+        const officeWrap = document.getElementById("office-content-wrap");
+        if (officeWrap && window.printHtmlInHiddenIframe) {
+            window.printHtmlInHiddenIframe(
+                filename,
+                `<div style="direction:rtl;padding:20px;"><h2 style="font-size:16px;color:#0B57D0;border-bottom:2px solid #0B57D0;padding-bottom:8px;margin-bottom:16px;">${filename}</h2>${officeWrap.innerHTML}</div>`
+            );
+            return;
+        }
+    }
+
+    if (kind === "text" || kind === "csv" || kind === "json") {
+        const textWrap = document.getElementById("text-content-wrap");
+        if (textWrap && window.printHtmlInHiddenIframe) {
+            window.printHtmlInHiddenIframe(
+                filename,
+                `<div style="direction:rtl;padding:20px;"><h2 style="font-size:14px;margin-bottom:12px;">${filename}</h2><pre style="direction:ltr;text-align:left;">${textWrap.textContent}</pre></div>`
+            );
+            return;
+        }
+    }
+
+    // Generic print fallback
+    window.print();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}إعدادات النظام والقوائم المرجعية{% endblock %}
+{% block page_title %}الإعدادات والقوائم المرجعية للنظام{% endblock %}
+
+{% block content %}
+<div class="space-y-5 text-xs">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3">
+        <div>
+            <h2 class="text-sm font-bold text-[#1F1F1F]">إدارة القوائم المرجعية المباشرة</h2>
+            <p class="text-[11px] text-[#5F6368] mt-0.5">
+                تظهر هذه القوائم مباشرة في نماذج «تسجيل مستند»، «إرسال رسالة»، و«إعداد مذكرة رسمية» مع إمكانية الإضافة والتعديل والحذف.
+            </p>
+        </div>
+        <a href="{% url 'core:dashboard' %}" class="text-xs font-bold text-[#0B57D0] hover:underline">العودة للبريد الوارد</a>
+    </div>
+
+    <!-- التبويبات المرجعية -->
+    <div class="flex flex-wrap gap-2 border-b border-[#ECEFF1] pb-3">
+        <a href="?tab=transaction_types" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'transaction_types' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            نوع المعاملة <span class="mono-num">({{ transaction_types|length }})</span>
+        </a>
+        <a href="?tab=memo_types" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'memo_types' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            أنواع المذكرات الرسمية <span class="mono-num">({{ memo_types_list|length }})</span>
+        </a>
+        <a href="?tab=memo_directed_targets" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'memo_directed_targets' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            الجهات الموجه إليها المذكرات <span class="mono-num">({{ memo_targets_list|length }})</span>
+        </a>
+        <a href="?tab=confidentiality_levels" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'confidentiality_levels' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            درجة السرية <span class="mono-num">({{ confidentialities|length }})</span>
+        </a>
+        <a href="?tab=priority_levels" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'priority_levels' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            درجة الأولوية <span class="mono-num">({{ priorities|length }})</span>
+        </a>
+        <a href="?tab=doc_types" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'doc_types' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            تصنيف المستند المرفق <span class="mono-num">({{ doc_types|length }})</span>
+        </a>
+        <a href="?tab=suspension_reasons" class="px-3.5 py-2 rounded-lg text-xs font-bold border transition-colors {% if active_tab == 'suspension_reasons' %}bg-[#D3E3FD] text-[#001D35] border-[#C2E7FF]{% else %}bg-white text-[#5F6368] border-[#DADCE0] hover:bg-[#F2F6FC]{% endif %}">
+            أسباب التعليق <span class="mono-num">({{ suspension_reasons|length }})</span>
+        </a>
+    </div>
+
+    <!-- نموذج الإضافة -->
+    <form method="post" class="bg-[#F6F8FC] border border-[#E1E3E1] rounded-xl p-4 space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="list_type" value="{{ active_tab }}">
+        <input type="hidden" name="op" value="add">
+        <div class="font-bold text-[#1F1F1F]">+ إضافة عنصر جديد إلى القائمة المختارة</div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input type="text" name="name" required placeholder="الاسم الظاهر في القائمة *" class="md:col-span-2 px-3 py-2 border border-[#DADCE0] rounded-lg bg-white text-[#1F1F1F]">
+            <input type="text" name="code" placeholder="الكود (تلقائي إذا تُرك فارغاً)" class="px-3 py-2 border border-[#DADCE0] rounded-lg bg-white mono-num">
+
+            {% if active_tab == 'confidentiality_levels' %}
+                <select name="rank" class="px-3 py-2 border border-[#DADCE0] rounded-lg bg-white">
+                    <option value="1">مستوى 1 · عادي (متاح هرمياً)</option>
+                    <option value="2">مستوى 2 · سري</option>
+                    <option value="3">مستوى 3 · سري للغاية (يحجب الوسطاء)</option>
+                </select>
+            {% elif active_tab == 'priority_levels' %}
+                <input type="number" name="sla_days" min="1" max="90" value="5" placeholder="مهلة الاستحقاق بالأيام" class="px-3 py-2 border border-[#DADCE0] rounded-lg bg-white mono-num">
+            {% elif active_tab == 'transaction_types' %}
+                <div class="flex items-center gap-3 px-2">
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="requires_decision"> يتطلب قرار</label>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="requires_committee"> لجنة</label>
+                </div>
+            {% endif %}
+
+            <div class="md:col-span-4 flex justify-end">
+                <button type="submit" class="px-4 py-2 bg-[#C2E7FF] hover:bg-[#B0DCFA] text-[#001D35] rounded-lg text-xs font-bold">+ إضافة للقائمة</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- جدول القيم الحالية مع التعديل والحذف المباشر -->
+    <div class="bg-white border border-[#E1E3E1] rounded-xl overflow-hidden">
+        <table class="w-full text-xs text-right">
+            <thead class="bg-[#F6F8FC] border-b border-[#ECEFF1] text-[#5F6368]">
+                <tr>
+                    <th class="px-4 py-3 mono-num">#</th>
+                    <th class="px-4 py-3 mono-num">الكود</th>
+                    <th class="px-4 py-3">المسمى</th>
+                    <th class="px-4 py-3">الخصائص</th>
+                    <th class="px-4 py-3 text-center">تعديل / حذف</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEFF1]">
+                {% if active_tab == 'transaction_types' %}
+                    {% for item in transaction_types %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368]">{% if item.requires_decision %}يتطلب قرار إداري{% else %}مراسلة / إجراء مباشر{% endif %}{% if item.requires_committee %} · لجنة{% endif %}</td>
+                            <td class="px-4 py-2.5 text-center space-x-1">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="requires_decision" {% if item.requires_decision %}checked{% endif %}> يتطلب قرار</label>
+                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="requires_committee" {% if item.requires_committee %}checked{% endif %}> لجنة</label>
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'memo_types' %}
+                    {% for item in memo_types_list %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368]">قالب نوع مذكرة رسمية في نموذج الرد</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'memo_directed_targets' %}
+                    {% for item in memo_targets_list %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368]">جهة / مسؤول توجيه معتمد في نموذج المذكرة</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'confidentiality_levels' %}
+                    {% for item in confidentialities %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368] mono-num">الرتبة {{ item.rank }} {% if item.overrides_hierarchy %}· يحجب التسلسل الهرمي{% else %}· متاح هرمياً{% endif %}</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <select name="rank" class="px-2 py-1 border border-[#DADCE0] rounded bg-white"><option value="1" {% if item.rank == 1 %}selected{% endif %}>1 · عادي</option><option value="2" {% if item.rank == 2 %}selected{% endif %}>2 · سري</option><option value="3" {% if item.rank == 3 %}selected{% endif %}>3 · سري للغاية</option></select>
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'priority_levels' %}
+                    {% for item in priorities %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368] mono-num">مهلة التنفيذ الافتراضية: {{ item.sla_days }} يوم</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <input type="number" name="sla_days" value="{{ item.sla_days }}" min="1" max="90" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'doc_types' %}
+                    {% for item in doc_types %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368]">تصنيف مستند مرفق معتمد</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% elif active_tab == 'suspension_reasons' %}
+                    {% for item in suspension_reasons %}
+                        <tr class="hover:bg-[#F2F6FC]">
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-2.5 mono-num text-[#5F6368]">{{ item.code }}</td>
+                            <td class="px-4 py-2.5 font-bold text-[#1F1F1F]">{{ item.name }}</td>
+                            <td class="px-4 py-2.5 text-[#5F6368]">سبب تعليق مرجعي</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <button type="button" onclick="document.getElementById('edit-row-{{ item.id }}').classList.toggle('hidden')" class="px-2.5 py-1 rounded text-[#0B57D0] hover:bg-[#D3E3FD] font-bold">تعديل</button>
+                                <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ item.id }}"><button type="submit" class="px-2.5 py-1 rounded text-[#C5221F] hover:bg-[#FCE8E6] font-bold">حذف</button></form>
+                            </td>
+                        </tr>
+                        <tr id="edit-row-{{ item.id }}" class="hidden bg-[#F8FAFD]">
+                            <td colspan="5" class="px-4 py-3">
+                                <form method="post" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}<input type="hidden" name="list_type" value="{{ active_tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <input type="text" name="code" value="{{ item.code }}" class="px-2 py-1 border border-[#DADCE0] rounded bg-white mono-num">
+                                    <input type="text" name="name" value="{{ item.name }}" required class="flex-1 px-2.5 py-1 border border-[#0B57D0] rounded bg-white">
+                                    <button type="submit" class="px-3 py-1 rounded bg-[#E6F4EA] text-[#137333] font-bold">✓ حفظ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

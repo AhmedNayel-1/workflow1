@@ -1,0 +1,10 @@
+{% extends "base_print.html" %}
+{% block title %}طباعة القرار {{ decision.decision_number }}{% endblock %}
+{% block content %}
+<p style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
+<h1>{{ decision.get_decision_type_display }} رقم {{ decision.decision_number }}</h1>
+<table><tr><th>الموضوع</th><td>{{ decision.subject.internal_number }} — {{ decision.subject.title }}</td></tr><tr><th>جهة الإصدار</th><td>{{ decision.issuing_authority }}</td></tr><tr><th>جهة الاعتماد</th><td>{{ decision.approving_authority }}</td></tr><tr><th>تاريخ الإصدار</th><td>{{ decision.issued_date|date:"Y-m-d"|default:"—" }}</td></tr></table>
+<h3 style="margin:18px 0 6px">{{ decision.title }}</h3>
+<div style="white-space:pre-wrap;line-height:2;font-size:15px">{{ decision.body }}</div>
+<div class="sign"><div>مُعِدّ القرار</div><div>{{ decision.approved_by.get_full_name|default:decision.approved_by.username|default:"المعتمِد" }}<br>المعتمِد</div></div>
+{% endblock %}
