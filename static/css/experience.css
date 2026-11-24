@@ -402,3 +402,11 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .memo-print-header,.memo-print-meta,.memo-print-title,.memo-print-body{break-inside:avoid}
  .memo-print-meta th{background:#f1f1f1!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+
+.memo-draft-preview{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--ux-border);border-radius:12px;background:var(--ux-surface)}
+.memo-draft-mark{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);font-weight:800}
+.memo-draft-preview>div{display:grid;gap:3px;min-width:0}
+.memo-draft-preview small,.memo-draft-preview span{color:var(--muted);font-size:11px}
+.memo-draft-preview b{font-size:13px;overflow-wrap:anywhere}
+.memo-draft-preview strong{color:var(--ink);font-weight:700}
