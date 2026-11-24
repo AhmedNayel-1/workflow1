@@ -261,3 +261,17 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .case-chronology::before{inset-inline-start:13px}
  .case-chronology .activity-heading{flex-direction:column;gap:3px}
 }
+
+/* Task workbench — client-side filters over the current server-rendered page. */
+.task-tools{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:12px 14px;border-bottom:1px solid var(--ux-border)}
+.task-search{flex:1 1 300px;min-width:220px}
+.task-search .in{width:100%;min-width:0;border:0;background:transparent}
+.task-search .in:focus{box-shadow:none}
+.task-filter{flex:0 1 170px;min-width:145px;background:var(--panel)}
+[data-task-item][hidden]{display:none!important}
+[data-task-count]{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:760px){
+ .task-tools{align-items:stretch}
+ .task-search,.task-filter{flex:1 1 100%;min-width:0;width:100%}
+ [data-task-count]{margin-inline-start:0}
+}
