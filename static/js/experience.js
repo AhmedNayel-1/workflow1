@@ -799,5 +799,33 @@
     update();
   }
 
+
+  // Phase 20 — accessible global navigation state and collapsed-rail labels.
+  const railElement = document.querySelector("#main-rail");
+  const railToggle = document.querySelector("[data-rail-toggle]");
+  const syncRailState = () => {
+    if (!railElement || !railToggle) return;
+    const mobile = window.innerWidth <= 1000;
+    const shell = railElement.closest(".shell");
+    const expanded = mobile ? railElement.classList.contains("open") : !(shell && shell.classList.contains("collapsed"));
+    railToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    railElement.querySelectorAll(".nav").forEach(link => {
+      if (link.classList.contains("on")) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+      if (!mobile && shell?.classList.contains("collapsed")) {
+        if (link.dataset.label) link.setAttribute("title", link.dataset.label);
+      } else if (link.dataset.label) {
+        link.removeAttribute("title");
+      }
+    });
+  };
+  syncRailState();
+  document.addEventListener("click", event => {
+    if (event.target.closest("[data-rail-toggle],#scrim,.rail .nav")) {
+      window.setTimeout(syncRailState, 0);
+    }
+  });
+  window.addEventListener("resize", syncRailState, { passive: true });
+
   document.documentElement.classList.add("ux-ready");
 })();
