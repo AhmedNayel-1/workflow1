@@ -173,6 +173,7 @@
     const statusFilter = taskRoot.querySelector("[data-task-status-filter]");
     const dueFilter = taskRoot.querySelector("[data-task-due-filter]");
     const count = taskRoot.querySelector("[data-task-count]");
+    const clear = taskRoot.querySelector("[data-task-clear]");
     const rows = Array.from(taskRoot.querySelectorAll("[data-task-item]"));
     const normalizeTaskText = value => String(value || "").toLocaleLowerCase("ar")
       .normalize("NFD").replace(/[\u064B-\u065F\u0670\u0640]/g, "")
@@ -209,6 +210,7 @@
     search?.addEventListener("input", applyTaskFilters);
     statusFilter?.addEventListener("change", applyTaskFilters);
     dueFilter?.addEventListener("change", applyTaskFilters);
+    clear?.addEventListener("click", () => { if (search) search.value = ""; if (statusFilter) statusFilter.value = ""; if (dueFilter) dueFilter.value = ""; applyTaskFilters(); search?.focus(); });
     applyTaskFilters();
   }
   document.documentElement.classList.add("ux-ready");
