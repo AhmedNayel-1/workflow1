@@ -527,3 +527,17 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
 @media(prefers-reduced-motion:reduce){
  .settings-edit-form{scroll-behavior:auto}
 }
+
+
+/* Phase 20 — global navigation accessibility and state clarity. */
+#main-rail .nav[aria-current="page"]{background:var(--hover);color:var(--ink);font-weight:700;box-shadow:inset 3px 0 0 var(--brand)}
+#main-rail .nav[aria-current="page"] .icon{color:var(--brand)}
+[data-rail-toggle][aria-expanded="false"]{color:var(--muted)}
+#main-rail .nav:focus-visible{position:relative;z-index:2}
+@media(max-width:1000px){
+  #main-rail{overscroll-behavior:contain}
+  #main-rail .rail-scroll{scrollbar-gutter:stable}
+}
+@media(prefers-reduced-motion:reduce){
+  #main-rail,.rail{transition:none!important}
+}
