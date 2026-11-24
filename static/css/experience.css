@@ -1,0 +1,81 @@
+/* Interactive Enterprise Experience — progressive layer over app.css.
+   Keeps the existing Django markup and business-facing components intact. */
+:root{
+  --ux-surface:color-mix(in srgb,var(--panel) 94%,var(--bg));
+  --ux-border:color-mix(in srgb,var(--line) 82%,transparent);
+  --ux-focus:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent);
+  --ux-motion:180ms;
+}
+html{scroll-padding-top:calc(var(--top,64px) + 24px)}
+body{ text-rendering:optimizeLegibility }
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline:0;box-shadow:var(--ux-focus);border-radius:var(--r-sm,8px)
+}
+:where(button,a,.btn,.nav,.tab,.chip,.mail,.item,.stat){
+  -webkit-tap-highlight-color:transparent
+}
+.btn,.iconbtn,.search-trigger,.nav,.tab,.chip,.mail,.stat,.panel,.drawer,.overlay{
+  transition:background-color var(--ux-motion) var(--ease),
+    border-color var(--ux-motion) var(--ease),
+    box-shadow var(--ux-motion) var(--ease),
+    color var(--ux-motion) var(--ease),
+    transform var(--ux-motion) var(--ease)
+}
+.btn:not(:disabled):hover{transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0) scale(.985)}
+.panel{
+  border-color:var(--ux-border);
+  box-shadow:0 1px 2px rgba(18,28,48,.025),0 8px 24px rgba(18,28,48,.025)
+}
+.panel-h{min-height:54px}
+.page-h h2,.case-h h2{letter-spacing:-.025em}
+.page-h p,.muted{line-height:1.75}
+.top{
+  backdrop-filter:saturate(150%) blur(14px);
+  -webkit-backdrop-filter:saturate(150%) blur(14px)
+}
+.top.scrolled{box-shadow:0 5px 22px rgba(20,30,55,.055)}
+.rail{border-inline-end-color:var(--ux-border)}
+.nav{position:relative}
+.nav::before{
+  content:"";position:absolute;inset-block:9px;inset-inline-start:0;
+  width:3px;border-radius:4px;background:transparent;transition:background var(--ux-motion)
+}
+.nav.on::before{background:var(--brand)}
+.nav:hover{transform:translateX(-2px)}
+.mail{border-block-end-color:var(--ux-border)}
+.mail:hover,.item:hover{background:var(--ux-surface)}
+.mail:focus-visible{position:relative;z-index:1}
+.stat:hover{transform:translateY(-2px);box-shadow:var(--sh-2)}
+.search-trigger{border-color:var(--ux-border)}
+.search-trigger:hover{border-color:var(--line-2);background:var(--panel)}
+.case-h{overflow:hidden}
+.case-meta>div{min-width:0}
+.case-meta b{overflow-wrap:anywhere}
+.subnav{
+  position:sticky;top:calc(var(--top,64px) + 8px);z-index:12;
+  background:color-mix(in srgb,var(--panel) 92%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--ux-border);border-radius:var(--r,12px);
+  box-shadow:var(--sh-1);padding:5px
+}
+.subnav a{border-radius:8px;transition:background var(--ux-motion),color var(--ux-motion)}
+.subnav a[aria-current="location"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.steps .step{transition:opacity var(--ux-motion),background var(--ux-motion)}
+.guide{border-color:color-mix(in srgb,var(--brand) 18%,var(--line))}
+input,select,textarea{accent-color:var(--brand)}
+:where(input,select,textarea):disabled{cursor:not-allowed;opacity:.68}
+::selection{background:var(--brand-soft);color:var(--ink)}
+.ux-reveal{animation:ux-enter 360ms var(--ease) both}
+@keyframes ux-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1000px){
+  .subnav{top:8px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
+  .subnav a{flex:none}
+  .panel{border-radius:var(--r,12px)}
+}
+@media(hover:none){
+  .btn:not(:disabled):hover,.nav:hover,.stat:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
