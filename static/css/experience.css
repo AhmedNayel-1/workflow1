@@ -105,3 +105,19 @@ input,select,textarea{accent-color:var(--brand)}
  .notification-tools .search-in{flex-basis:100%;width:100%}
  .notification-tools [data-notification-count]{margin-inline-end:auto}
 }
+
+
+/* Inbox reading experience — contextual next-step guidance */
+.preview-guidance{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;margin:18px 0 8px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
+.preview-guidance-mark{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:50%;font-weight:800;background:var(--brand-soft);color:var(--brand)}
+.preview-guidance b{display:block;font-size:14px;color:var(--ink)}
+.preview-guidance p{margin:3px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.preview-guidance.needs-action{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 24%,var(--line))}
+.preview-guidance.needs-action .preview-guidance-mark{background:var(--warn);color:#fff}
+.preview-guidance.is-overdue{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 28%,var(--line))}
+.preview-guidance.is-overdue .preview-guidance-mark{background:var(--bad);color:#fff}
+.preview-guidance.readonly .preview-guidance-mark{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.preview-attachment{cursor:pointer}
+.preview-attachment:focus-visible{outline:0;border-color:var(--brand);box-shadow:var(--ux-focus)}
+@media(max-width:1000px){.preview-guidance{margin:12px 0 6px}.detail-scroll{padding:18px}}
+@media(prefers-reduced-motion:reduce){.preview-guidance{animation:none}}
