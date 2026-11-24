@@ -268,14 +268,18 @@
 
   /* ---------------- معاينة الموضوع في الوارد ---------------- */
   const pill = (t, tone) => h("span", { class: "pill " + (tone || ""), text: t });
+  let previewRequestId = 0;
   async function loadSubject(id, row) {
+    const requestId = ++previewRequestId;
     const box = $("#detail-box"), inbox = $(".inbox");
+    box.setAttribute("aria-busy", "true");
     $$(".mail.on").forEach((r) => r.classList.remove("on")); row && row.classList.add("on");
     if (row) row.classList.remove("unread");
     box.textContent = ""; box.append(h("div", { class: "detail-empty", text: "جارٍ التحميل…" }));
     inbox.classList.add("show-detail");
     try {
       const d = await api(row.dataset.preview);
+      if (requestId !== previewRequestId) return;
       box.textContent = "";
       const kv = (k, v) => [h("dt", { text: k }), h("dd", {}, v)];
       const acts = h("div", { class: "detail-foot" },
@@ -285,14 +289,32 @@
       box.append(h("div", { class: "detail-scroll" },
         h("div", { class: "row wrap gap-s" }, h("span", { class: "tag code", text: d.internal_number }), pill(d.status_label, d.is_overdue ? "bad" : "brand"), pill(d.priority, "warn"), d.is_top_secret ? pill("سري للغاية", "bad") : pill(d.confidentiality, "info")),
         h("h2", { class: "mt-s", text: d.title }),
+        h("section", { class: "preview-guidance " + (d.is_overdue ? "is-overdue" : d.pending_ref_id ? "needs-action" : d.can_act ? "can-act" : "readonly"), "aria-live": "polite" },
+          h("span", { class: "preview-guidance-mark", text: d.is_overdue ? "!" : d.pending_ref_id ? "↳" : d.can_act ? "✓" : "i", "aria-hidden": "true" }),
+          h("div", {}, h("b", { text: d.is_overdue ? "هذا الموضوع تجاوز موعد استحقاقه" : d.pending_ref_id ? "الخطوة المطلوبة: تأكيد استلام الإحالة" : d.can_act ? "الموضوع ضمن نطاق عملك" : "للاطلاع والمتابعة فقط" }),
+            h("p", { text: d.is_overdue ? "راجع الموضوع وحدد الإجراء المناسب وفق مرحلته وصلاحياتك." : d.pending_ref_id ? "بعد تأكيد الاستلام، افتح الموضوع لمراجعة التفاصيل واستكمال الإجراء." : d.can_act ? "افتح الموضوع لمراجعة الإجراءات المتاحة لك والخطوة التالية." : "يمكنك مراجعة البيانات والمرفقات دون تنفيذ إجراء على الموضوع." }))),
         h("dl", { class: "kv" }, ...kv("نوع المعاملة", d.transaction_type), ...kv("القطاع / الوحدة", d.sector + " — " + d.org_unit), ...kv("المسؤول الحالي", d.current_owner), ...kv("الاستحقاق", h("span", { class: d.is_overdue ? "bold" : "", style: d.is_overdue ? "color:var(--bad)" : null, text: d.due_date + (d.is_overdue ? " (متأخر)" : "") })), ...kv("المذكرات", String(d.memos_count || 0))),
         d.description ? h("div", { class: "sect" }, h("h4", { text: "الوصف" }), h("p", { class: "muted", style: "white-space:pre-wrap", text: d.description })) : null,
-        (d.attachments || []).length ? h("div", { class: "sect" }, h("h4", { text: "المرفقات (" + d.attachments.length + ")" }), ...d.attachments.map((a) => h("div", { class: "item", "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind, style: "cursor:pointer" }, h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }), h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title }))))) : null,
+        (d.attachments || []).length ? h("div", { class: "sect" }, h("h4", { text: "المرفقات (" + d.attachments.length + ")" }), ...d.attachments.map((a) => h("div", { class: "item preview-attachment", role: "button", tabindex: "0", "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind, style: "cursor:pointer" }, h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }), h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title }))))) : null,
         (d.recent_referrals || []).length ? h("div", { class: "sect" }, h("h4", { text: "آخر الإحالات" }), h("div", { class: "tl" }, ...d.recent_referrals.map((r) => h("div", { class: "tl-i" }, h("b", { text: r.referred_by + " ← " + r.targets }), h("small", { text: r.purpose + " · " + r.created_at }), r.notes ? h("p", { text: r.notes }) : null)))) : null),
         acts);
-    } catch (err) { box.textContent = ""; box.append(h("div", { class: "detail-empty", text: err.message })); }
+    } catch (err) { if (requestId !== previewRequestId) return; box.textContent = ""; box.append(h("div", { class: "detail-empty", role: "alert", text: err.message })); }
+    finally { if (requestId === previewRequestId) box.setAttribute("aria-busy", "false"); }
   }
   on(document, "click", (e) => { const r = e.target.closest(".mail[data-preview]"); if (!r) return; if (e.target.closest("a.open-link")) return; e.preventDefault(); loadSubject(r.dataset.id, r); });
+  on(document, "keydown", (e) => {
+    const attachment = e.target.closest(".preview-attachment[data-pv]");
+    if (attachment && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); attachment.click(); return; }
+    const current = e.target.closest(".inbox-scroll .mail[data-preview]");
+    if (current && ["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      const rows = $(".inbox-scroll .mail[data-preview]"); if (!rows.length) return;
+      e.preventDefault(); const index = rows.indexOf(current);
+      const next = e.key === "Home" ? rows[0] : e.key === "End" ? rows[rows.length - 1] : rows[Math.max(0, Math.min(rows.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))];
+      next.focus(); next.click();
+    } else if (e.key === "Escape" && $(".inbox.show-detail")) {
+      e.preventDefault(); $(".inbox").classList.remove("show-detail"); const selected = $(".mail.on"); if (selected) selected.focus();
+    }
+  });
 
   /* ---------------- الإشعارات ---------------- */
   const notif = { items: [], cat: "" };
