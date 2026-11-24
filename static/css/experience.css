@@ -491,3 +491,39 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .report-print-data{font-size:10px!important}
  .report-print-data th,.report-print-kpis th{background:#f1f1f1!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+
+/* Phase 19 — settings catalog and workflow template discovery. */
+.settings-tools,.template-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border:1px solid var(--ux-border);border-radius:12px;background:var(--ux-surface)}
+.settings-search,.template-search{flex:1 1 300px;min-width:220px}
+.settings-search .in,.template-search .in{width:100%;min-width:0}
+.settings-tools [data-settings-count],.template-tools [data-workflow-template-count]{white-space:nowrap;font-variant-numeric:tabular-nums}
+.settings-workspace [data-settings-row][hidden],.template-no-results[hidden]{display:none!important}
+.settings-layout{gap:14px}
+.settings-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.settings-edit{position:relative}
+.settings-edit>summary{list-style:none;cursor:pointer}
+.settings-edit>summary::-webkit-details-marker{display:none}
+.settings-edit[open]{position:relative}
+.settings-edit-form{position:absolute;z-index:20;inset-block-start:calc(100% + 7px);inset-inline-end:0;width:min(320px,calc(100vw - 42px));display:grid;gap:10px;padding:14px;border:1px solid var(--ux-border);border-radius:12px;background:var(--panel);box-shadow:0 12px 35px rgba(0,0,0,.16)}
+.settings-edit-form .fld{display:grid;gap:5px}
+.settings-edit-form .fld>span{font-size:11px;color:var(--muted);font-weight:700}
+.settings-edit-form .in{width:100%;min-width:0}
+.settings-edit-form .chk{display:flex;align-items:center;gap:8px;font-size:12px}
+.settings-no-results{padding:20px;text-align:center;color:var(--muted);border-top:1px solid var(--ux-border)}
+.template-tools{margin-bottom:14px}
+[data-workflow-template-card][hidden]{display:none!important}
+.template-no-results{padding:22px;text-align:center;color:var(--muted)}
+@media(max-width:850px){
+ .settings-layout{grid-template-columns:minmax(0,1fr)!important}
+ .settings-add-form{position:static!important}
+}
+@media(max-width:680px){
+ .settings-tools,.template-tools{align-items:stretch}
+ .settings-search,.template-search{flex:1 1 100%;min-width:0;width:100%}
+ .settings-row-actions{flex-wrap:wrap}
+ .settings-edit-form{position:fixed;inset-inline:12px;inset-block-start:20%;width:auto;max-height:65vh;overflow:auto}
+}
+@media(prefers-reduced-motion:reduce){
+ .settings-edit-form{scroll-behavior:auto}
+}
