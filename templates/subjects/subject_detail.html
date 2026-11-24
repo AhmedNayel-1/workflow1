@@ -68,8 +68,8 @@
   </div></section>
 
 {# ====================== المذكرات ====================== #}
-<section class="panel" id="sec-memos"><div class="panel-h"><h3>{% icon 'note' %} مذكرات العرض والرأي</h3></div><div class="panel-b">
-  {% for m in memos %}<div class="item"><div class="ficon">{% icon 'note' %}</div><div class="grow"><div class="row between wrap"><h5>{{ m.title }}</h5><span class="pill {{ m.status|tone }}">{{ m.get_status_display }}</span></div>
+<section class="panel" id="sec-memos"><div class="panel-h"><h3>{% icon 'note' %} مذكرات العرض والرأي</h3><span class="muted xs" data-memo-count>{{ memos|length }} مذكرة</span></div><div class="panel-b"><div class="memo-tools"><label class="search-in grow">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-memo-search placeholder="ابحث في عنوان المذكرة أو رقمها أو نصها…" aria-label="بحث في المذكرات"></label><button class="btn sm ghost" type="button" data-memo-clear>مسح البحث</button></div>
+  {% for m in memos %}<div class="item" data-memo-item><div class="ficon">{% icon 'note' %}</div><div class="grow"><div class="row between wrap"><h5>{{ m.title }}</h5><span class="pill {{ m.status|tone }}">{{ m.get_status_display }}</span></div>
     <div class="row wrap gap-s"><span class="tag code">{{ m.memo_number }}</span><span class="tag">{{ m.get_memo_type_display }}</span><span class="muted xs">إلى: {{ m.directed_to }} · {{ m.author.get_full_name|default:m.author.username }} · {{ m.created_at|date:"Y-m-d" }}</span></div>
     <p class="muted sm mt-s" style="white-space:pre-wrap">{{ m.body|short:400 }}</p>
     <div class="row wrap gap-s mt-s"><a class="btn sm" href="{% url 'subjects:memo_print' m.id %}">{% icon 'print' 'sm' %}طباعة</a><a class="btn sm" href="{% url 'subjects:memo_export_pdf' m.id %}">PDF</a>
@@ -77,11 +77,11 @@
   {% empty %}{% include "partials/empty.html" with title="لا توجد مذكرات" icon_name="note" %}{% endfor %}
   {% if perms.can_memo %}<details class="dd mt" id="action-memo"><summary>{% icon 'plus' 'sm' %} إعداد مذكرة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_memo">
     <label class="fld"><span>نوع المذكرة</span><select class="in" name="memo_type">{% for mt in memo_types %}<option value="{{ mt.code }}">{{ mt.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>موجهة إلى</span><select class="in" name="directed_to_select" id="dt-sel"><option value="">— اختر —</option>{% for t in memo_directed_targets %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}</select></label>
-    <label class="fld full"><span>أو جهة أخرى</span><input class="in" name="directed_to_custom" placeholder="اكتب الجهة يدوياً"></label>
-    <label class="fld full"><span>عنوان المذكرة</span><input class="in" name="memo_title" required></label>
-    <label class="fld full"><span>نص المذكرة</span><textarea class="in" name="memo_body" rows="6" required></textarea></label>
-    <label class="fld full"><span>مرفق <small>(اختياري)</small></span><input class="in" type="file" name="memo_attachment"></label>
+    <label class="fld"><span>موجهة إلى</span><select class="in" name="directed_to_select" id="dt-sel" data-memo-directed><option value="">— اختر —</option>{% for t in memo_directed_targets %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}</select></label>
+    <label class="fld full"><span>أو جهة أخرى</span><input class="in" name="directed_to_custom" placeholder="اكتب الجهة يدوياً" data-memo-directed-custom></label>
+    <label class="fld full"><span>عنوان المذكرة</span><input class="in" name="memo_title" required data-memo-title></label>
+    <label class="fld full"><span>نص المذكرة</span><textarea class="in" name="memo_body" rows="6" required data-memo-body></textarea><small class="memo-field-hint" data-memo-body-count>0 حرف</small></label>
+    <label class="fld full"><span>مرفق <small>(اختياري)</small></span><input class="in" type="file" name="memo_attachment" data-memo-file><small class="memo-field-hint" data-memo-file-name>لم يتم اختيار مرفق</small></label>
     <div class="full"><button class="btn primary" type="submit">حفظ المذكرة</button></div></form></details>{% endif %}
 </div></section>
 
