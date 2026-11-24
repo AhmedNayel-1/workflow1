@@ -213,5 +213,73 @@
     clear?.addEventListener("click", () => { if (search) search.value = ""; if (statusFilter) statusFilter.value = ""; if (dueFilter) dueFilter.value = ""; applyTaskFilters(); search?.focus(); });
     applyTaskFilters();
   }
+  // Decision list workbench: filter only rows supplied by the current Django response.
+  const decisionRoot = document.querySelector("[data-decision-root]");
+  if (decisionRoot) {
+    const search = decisionRoot.querySelector("[data-decision-search]");
+    const typeFilter = decisionRoot.querySelector("[data-decision-type]");
+    const statusFilter = decisionRoot.querySelector("[data-decision-status]");
+    const count = decisionRoot.querySelector("[data-decision-count]");
+    const empty = decisionRoot.querySelector("[data-decision-empty]");
+    const clear = decisionRoot.querySelector("[data-decision-clear]");
+    const rows = Array.from(decisionRoot.querySelectorAll("[data-decision-item]"));
+    const normalizeDecisionText = value => String(value || "").toLocaleLowerCase("ar")
+      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
+    const populate = (filter, valueKey, labelKey) => {
+      const values = new Map();
+      rows.forEach(row => {
+        const value = row.dataset[valueKey] || "";
+        const label = row.dataset[labelKey] || value;
+        if (value && !values.has(value)) values.set(value, label);
+      });
+      [...values.entries()].sort((a,b) => a[1].localeCompare(b[1],"ar")).forEach(([value,label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        filter?.appendChild(option);
+      });
+    };
+    populate(typeFilter, "decisionType", "decisionTypeLabel");
+    populate(statusFilter, "decisionStatus", "decisionStatusLabel");
+    const applyDecisionFilters = () => {
+      const tokens = normalizeDecisionText(search?.value).split(/\\s+/).filter(Boolean);
+      const type = typeFilter?.value || "";
+      const status = statusFilter?.value || "";
+      let shown = 0;
+      rows.forEach(row => {
+        const haystack = normalizeDecisionText(row.textContent);
+        const matchesText = tokens.every(token => haystack.includes(token));
+        const matchesType = !type || row.dataset.decisionType === type;
+        const matchesStatus = !status || row.dataset.decisionStatus === status;
+        row.hidden = !(matchesText && matchesType && matchesStatus);
+        if (!row.hidden) shown++;
+      });
+      if (count) count.textContent = shown + " من " + rows.length + " قرار";
+      if (empty) empty.hidden = shown !== 0 || rows.length === 0;
+    };
+    search?.addEventListener("input", applyDecisionFilters);
+    typeFilter?.addEventListener("change", applyDecisionFilters);
+    statusFilter?.addEventListener("change", applyDecisionFilters);
+    clear?.addEventListener("click", () => {
+      if (search) search.value = "";
+      if (typeFilter) typeFilter.value = "";
+      if (statusFilter) statusFilter.value = "";
+      applyDecisionFilters();
+      search?.focus();
+    });
+    applyDecisionFilters();
+  }
+  // Decision form: show a live character count without imposing a new length rule.
+  const decisionBody = document.querySelector("[data-decision-body]");
+  const decisionBodyCount = document.querySelector("[data-decision-body-count]");
+  if (decisionBody && decisionBodyCount) {
+    const updateDecisionBodyCount = () => {
+      const length = decisionBody.value.length;
+      decisionBodyCount.textContent = length.toLocaleString("ar") + " حرف";
+    };
+    decisionBody.addEventListener("input", updateDecisionBodyCount);
+    updateDecisionBodyCount();
+  }
   document.documentElement.classList.add("ux-ready");
 })();
