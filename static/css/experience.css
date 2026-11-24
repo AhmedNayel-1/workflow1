@@ -235,3 +235,29 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .search-results-summary>div:first-child{flex-direction:column;gap:2px}
  .search-result-counts{width:100%}
 }
+
+
+/* Unified subject chronology: workflow milestones and operational events. */
+.case-chronology{position:relative;display:flex;flex-direction:column;gap:0;margin-top:8px}
+.case-chronology::before{content:"";position:absolute;inset-block:10px 12px;inset-inline-start:15px;width:2px;background:var(--ux-border)}
+.chronology-item{position:relative;display:flex;align-items:flex-start;gap:11px;padding:13px 0;border:0;border-bottom:1px solid var(--ux-border);background:transparent}
+.chronology-item:last-child{border-bottom:0}
+.chronology-item[hidden]{display:none!important}
+.chronology-marker{position:relative;z-index:1;display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border:1px solid var(--ux-border);border-radius:50%;background:var(--panel);color:var(--muted);font-size:15px;font-weight:800}
+.chronology-stage.is-complete .chronology-marker{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 30%,var(--line));color:var(--ok)}
+.chronology-stage.is-active .chronology-marker{background:var(--brand-soft);border-color:color-mix(in srgb,var(--brand) 35%,var(--line));color:var(--brand)}
+.chronology-stage.is-waiting .chronology-marker{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 35%,var(--line));color:var(--warn)}
+.chronology-route{display:block;margin:5px 0;color:var(--ink);font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.chronology-item .fi-b{min-width:0;flex:1}
+.chronology-item .fi-b p{margin:4px 0;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.chronology-pending{display:inline-block;margin-top:3px;color:var(--warn);font-weight:700}
+.chronology-current{margin-bottom:10px}
+.chronology-filter-anchor{scroll-margin-top:calc(var(--top,64px) + 80px)}
+.case-chronology .activity-heading{align-items:flex-start}
+.case-chronology .activity-heading time{white-space:nowrap}
+@media(max-width:560px){
+ .chronology-item{gap:8px}
+ .chronology-marker{flex-basis:28px;width:28px;height:28px}
+ .case-chronology::before{inset-inline-start:13px}
+ .case-chronology .activity-heading{flex-direction:column;gap:3px}
+}
