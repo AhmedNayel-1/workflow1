@@ -705,5 +705,50 @@
     update();
   }
 
+
+  // Phase 18 — report catalog and result-table reading tools.
+  const normalizeReportText = value => String(value || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه")
+    .toLocaleLowerCase("ar");
+
+  const reportCatalog = document.querySelector("[data-report-catalog]");
+  if (reportCatalog) {
+    const search = reportCatalog.querySelector("[data-report-catalog-search]");
+    const count = reportCatalog.querySelector("[data-report-catalog-count]");
+    const cards = [...reportCatalog.querySelectorAll("[data-report-card]")];
+    const update = () => {
+      const tokens = normalizeReportText(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      cards.forEach(card => {
+        const haystack = normalizeReportText(card.textContent);
+        card.hidden = !tokens.every(token => haystack.includes(token));
+        if (!card.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + cards.length.toLocaleString("ar") + " تقرير متاح";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const reportTable = document.querySelector("[data-report-table]");
+  if (reportTable) {
+    const search = reportTable.querySelector("[data-report-row-search]");
+    const count = reportTable.querySelector("[data-report-row-count]");
+    const rows = [...reportTable.querySelectorAll("[data-report-row]")];
+    const update = () => {
+      const tokens = normalizeReportText(search?.value).split(/\\s+/).filter(Boolean);
+      let shown = 0;
+      rows.forEach(row => {
+        const haystack = normalizeReportText(row.textContent);
+        row.hidden = !tokens.every(token => haystack.includes(token));
+        if (!row.hidden) shown++;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " صف معروض";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
   document.documentElement.classList.add("ux-ready");
 })();
