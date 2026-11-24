@@ -546,5 +546,82 @@
     updateTitle();updateTarget();updateBody();updateFile();
   }
 
+
+  // Phase 16: local account and organization workbench enhancements.
+  const accountUsers = document.querySelector("[data-account-users]");
+  if (accountUsers) {
+    const search = accountUsers.querySelector("[data-filter]");
+    const rows = [...accountUsers.querySelectorAll("[data-account-user-row]")];
+    const count = accountUsers.querySelector("[data-account-user-count]");
+    const update = () => {
+      const q = (search?.value || "").trim().toLocaleLowerCase("ar");
+      let shown = 0;
+      rows.forEach(row => { row.hidden = !!q && !row.textContent.toLocaleLowerCase("ar").includes(q); if (!row.hidden) shown++; });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " مستخدم في الصفحة";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const permissionMatrix = document.querySelector("[data-permission-matrix]");
+  if (permissionMatrix) {
+    const search = permissionMatrix.querySelector("[data-permission-search]");
+    const rows = [...permissionMatrix.querySelectorAll("[data-permission-row]")];
+    const categories = [...permissionMatrix.querySelectorAll("[data-permission-category]")];
+    const count = permissionMatrix.querySelector("[data-permission-count]");
+    const update = () => {
+      const q = (search?.value || "").trim().toLocaleLowerCase("ar");
+      let shown = 0;
+      rows.forEach(row => { row.hidden = !!q && !row.textContent.toLocaleLowerCase("ar").includes(q); if (!row.hidden) shown++; });
+      categories.forEach(category => {
+        let next = category.nextElementSibling, hasVisible = false;
+        while (next && !next.hasAttribute("data-permission-category")) {
+          if (next.matches("[data-permission-row]") && !next.hidden) hasVisible = true;
+          next = next.nextElementSibling;
+        }
+        category.hidden = !!q && !hasVisible;
+      });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " صلاحية معروضة";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const delegationRoot = document.querySelector("[data-delegations]");
+  if (delegationRoot) {
+    const search = delegationRoot.querySelector("[data-delegation-search]");
+    const rows = [...delegationRoot.querySelectorAll("[data-delegation-row]")];
+    const count = delegationRoot.querySelector("[data-delegation-count]");
+    const update = () => {
+      const q = (search?.value || "").trim().toLocaleLowerCase("ar");
+      let shown = 0;
+      rows.forEach(row => { row.hidden = !!q && !row.textContent.toLocaleLowerCase("ar").includes(q); if (!row.hidden) shown++; });
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + rows.length.toLocaleString("ar") + " تفويض في السجل المعروض";
+    };
+    search?.addEventListener("input", update);
+    update();
+  }
+
+  const orgSearch = document.querySelector("[data-org-search]");
+  const orgRoot = document.querySelector("#org-root");
+  if (orgSearch && orgRoot) {
+    const count = document.querySelector("[data-org-count]");
+    const update = () => {
+      const q = orgSearch.value.trim().toLocaleLowerCase("ar");
+      const branches = [...orgRoot.querySelectorAll(".org-branch")];
+      let shown = 0;
+      branches.forEach(branch => {
+        const match = !q || branch.textContent.toLocaleLowerCase("ar").includes(q);
+        branch.hidden = !match;
+        if (match) shown++;
+      });
+      if (count) count.textContent = q ? shown.toLocaleString("ar") + " وحدة مطابقة ضمن الهيكل المعروض" : "عرض " + branches.length.toLocaleString("ar") + " وحدة";
+    };
+    orgSearch.addEventListener("input", update);
+    const observer = new MutationObserver(update);
+    observer.observe(orgRoot, {childList:true,subtree:true});
+    update();
+  }
+
   document.documentElement.classList.add("ux-ready");
 })();
