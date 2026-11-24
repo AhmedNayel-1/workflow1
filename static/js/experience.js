@@ -175,7 +175,7 @@
     const count = taskRoot.querySelector("[data-task-count]");
     const rows = Array.from(taskRoot.querySelectorAll("[data-task-item]"));
     const normalizeTaskText = value => String(value || "").toLocaleLowerCase("ar")
-      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .normalize("NFD").replace(/[\u064B-\u065F\u0670\u0640]/g, "")
       .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
     const statusMap = new Map();
     rows.forEach(row => {
@@ -190,7 +190,7 @@
       statusFilter?.appendChild(option);
     });
     const applyTaskFilters = () => {
-      const tokens = normalizeTaskText(search?.value).split(/\\s+/).filter(Boolean);
+      const tokens = normalizeTaskText(search?.value).split(/\s+/).filter(Boolean);
       const status = statusFilter?.value || "";
       const due = dueFilter?.value || "";
       let visible = 0;
