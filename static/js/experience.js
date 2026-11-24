@@ -281,5 +281,80 @@
     decisionBody.addEventListener("input", updateDecisionBodyCount);
     updateDecisionBodyCount();
   }
+
+  // Subject list workbench: local search is intentionally limited to rows on this page.
+  const subjectList = document.querySelector("[data-subject-list]");
+  if (subjectList) {
+    const search = subjectList.querySelector("[data-subject-search]");
+    const rows = [...subjectList.querySelectorAll("[data-subject-row]")];
+    const count = subjectList.querySelector("[data-subject-count]");
+    const clear = subjectList.querySelector("[data-subject-clear]");
+    const total = rows.length;
+    const normalizeSubjectText = value => String(value || "")
+      .normalize("NFD").replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه")
+      .toLocaleLowerCase("ar");
+    const applySubjectSearch = () => {
+      const tokens = normalizeSubjectText(search?.value).split(/\\s+/).filter(Boolean);
+      let visible = 0;
+      rows.forEach(row => {
+        const haystack = normalizeSubjectText(row.textContent);
+        row.hidden = !tokens.every(token => haystack.includes(token));
+        if (!row.hidden) visible++;
+      });
+      if (count) count.textContent = visible.toLocaleString("ar") + " من " + total.toLocaleString("ar") + " موضوع معروض";
+    };
+    search?.addEventListener("input", applySubjectSearch);
+    clear?.addEventListener("click", () => {
+      if (search) search.value = "";
+      applySubjectSearch();
+      search?.focus();
+    });
+    applySubjectSearch();
+  }
+
+  // Subject registration: informational preview, section navigation, and file count.
+  const subjectForm = document.querySelector("[data-subject-form]");
+  if (subjectForm) {
+    const title = subjectForm.querySelector("[data-subject-title]");
+    const titlePreview = document.querySelector("[data-subject-title-preview]");
+    const titleCount = subjectForm.querySelector("[data-subject-title-count]");
+    const fileInput = subjectForm.querySelector("[data-subject-files]");
+    const fileCount = subjectForm.querySelector("[data-subject-file-count]");
+    const steps = [...subjectForm.querySelectorAll("[data-subject-step]")];
+    const progress = document.querySelector("[data-subject-form-progress]");
+    const navLinks = [...document.querySelectorAll(".subject-form-nav a")];
+    const updateTitle = () => {
+      const value = title?.value.trim() || "";
+      if (titlePreview) titlePreview.textContent = value || "موضوع جديد بدون عنوان";
+      if (titleCount) titleCount.textContent = (title?.value.length || 0).toLocaleString("ar") + " حرف";
+    };
+    const updateFiles = () => {
+      if (!fileCount) return;
+      const files = [...(fileInput?.files || [])];
+      fileCount.textContent = files.length
+        ? files.length.toLocaleString("ar") + " ملف: " + files.slice(0,3).map(file => file.name).join("، ") + (files.length > 3 ? "…" : "")
+        : "لم يتم اختيار ملفات";
+    };
+    const updateProgress = () => {
+      const completed = steps.filter(section => {
+        const fields = [...section.querySelectorAll("input:not([type=hidden]):not([type=file]),select,textarea")];
+        return fields.some(field => field.value.trim());
+      }).length;
+      if (progress) progress.textContent = completed.toLocaleString("ar") + " من " + steps.length.toLocaleString("ar") + " أقسام بها بيانات";
+    };
+    title?.addEventListener("input", updateTitle);
+    subjectForm.addEventListener("input", updateProgress);
+    subjectForm.addEventListener("change", updateProgress);
+    fileInput?.addEventListener("change", updateFiles);
+    navLinks.forEach(link => link.addEventListener("click", () => {
+      const target = document.querySelector(link.getAttribute("href"));
+      target?.scrollIntoView({behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+    }));
+    updateTitle();
+    updateFiles();
+    updateProgress();
+  }
+
   document.documentElement.classList.add("ux-ready");
 })();
