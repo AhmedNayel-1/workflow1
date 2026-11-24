@@ -96,6 +96,52 @@
       if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
     }
   });
+  // Activity log: filter only the latest events already rendered by Django.
+  const activityRoot = document.querySelector("[data-activity-root]");
+  if (activityRoot) {
+    const search = activityRoot.querySelector("[data-activity-search]");
+    const typeFilter = activityRoot.querySelector("[data-activity-type]");
+    const periodFilter = activityRoot.querySelector("[data-activity-period]");
+    const count = activityRoot.querySelector("[data-activity-count]");
+    const clear = activityRoot.querySelector("[data-activity-clear]");
+    const noResults = activityRoot.querySelector("[data-activity-no-results]");
+    const items = Array.from(activityRoot.querySelectorAll("[data-activity-item]"));
+    const types = [...new Set(items.map(item => item.dataset.actionType).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ar"));
+    types.forEach(type => {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = type;
+      typeFilter?.appendChild(option);
+    });
+    const apply = () => {
+      const query = (search?.value || "").trim().toLocaleLowerCase("ar");
+      const selectedType = typeFilter?.value || "";
+      const days = periodFilter?.value || "all";
+      const cutoff = days === "all" ? null : Date.now() - Number(days) * 24 * 60 * 60 * 1000;
+      let shown = 0;
+      items.forEach(item => {
+        const matchesText = !query || item.textContent.toLocaleLowerCase("ar").includes(query);
+        const matchesType = !selectedType || item.dataset.actionType === selectedType;
+        const timestamp = Number(item.dataset.logTimestamp) * 1000;
+        const matchesPeriod = cutoff === null || (Number.isFinite(timestamp) && timestamp >= cutoff && timestamp <= Date.now());
+        item.hidden = !(matchesText && matchesType && matchesPeriod);
+        if (!item.hidden) shown++;
+      });
+      if (count) count.textContent = shown + " من " + items.length + " حدث";
+      if (noResults) noResults.hidden = shown !== 0 || items.length === 0;
+    };
+    search?.addEventListener("input", apply);
+    typeFilter?.addEventListener("change", apply);
+    periodFilter?.addEventListener("change", apply);
+    clear?.addEventListener("click", () => {
+      if (search) search.value = "";
+      if (typeFilter) typeFilter.value = "";
+      if (periodFilter) periodFilter.value = "all";
+      apply();
+      search?.focus();
+    });
+    apply();
+  }
   // Contextual shortcuts open the existing server-rendered forms; no new workflow is introduced.
   document.addEventListener("click", event => {
     const shortcut = event.target.closest("[data-open-details]");
