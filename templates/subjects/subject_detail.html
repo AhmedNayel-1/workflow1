@@ -43,9 +43,20 @@
     {% for g in filtered_doc_groups %}{% for link in g.links %}{% with doc=link.document %}
     <div class="item"><div class="ficon">{% icon 'file' %}</div><div class="grow"><h5><a href="{% url 'documents:document_detail' doc.id %}" style="color:var(--ink)">{{ doc.title }}</a></h5>
       <div class="row wrap gap-s"><span class="tag code">{{ doc.internal_number }}</span><span class="pill info nodot">{{ doc.doc_type.name }}</span><span class="muted xs">{{ doc.document_date|date:"Y-m-d" }}</span></div>
-      {% for ver in doc.versions.all %}{% for att in ver.attachments.all %}
-      <div class="row between mt-s note" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}" style="cursor:pointer;margin-bottom:0"><span class="row gap-s trunc">{% icon 'clip' 'sm' %}<span class="trunc">{{ att.original_filename }}</span><span class="muted xs">v{{ ver.version_number }}</span></span><span class="row gap-s"><span class="btn sm" data-pv-btn>{% icon 'eye' 'sm' %}معاينة</span><a class="btn sm" href="{% url 'documents:attachment_download' att.id %}">{% icon 'download' 'sm' %}</a></span></div>
-      {% endfor %}{% endfor %}</div></div>
+      {% for ver in doc.versions.all %}
+      <div class="attachment-version">
+        <div class="attachment-version-head">
+          <div class="row gap-s wrap"><b>الإصدار v{{ ver.version_number }}</b>{% if ver.version_number == doc.current_version_number %}<span class="pill brand nodot">الإصدار الحالي</span>{% else %}<span class="pill nodot">إصدار سابق</span>{% endif %}{% if ver.is_approved %}<span class="pill ok">معتمد</span>{% else %}<span class="pill warn">غير معتمد</span>{% endif %}</div>
+          <span class="muted xs num">{{ ver.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% for att in ver.attachments.all %}
+        <div class="attachment-file-row row between wrap note" role="button" tabindex="0" aria-label="معاينة {{ att.original_filename }}" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}" data-pv-version="v{{ ver.version_number }}" data-pv-size="{{ att.file_size|fsize }}" data-pv-uploaded="{{ att.uploaded_at|date:'Y-m-d H:i' }}" data-pv-uploader="{{ att.uploaded_by.get_full_name|default:att.uploaded_by.username }}" data-pv-approved="{% if ver.is_approved %}معتمد{% else %}غير معتمد{% endif %}">
+          <span class="row gap-s trunc attachment-file-main">{% icon 'clip' 'sm' %}<span class="trunc">{{ att.original_filename }}</span><span class="muted xs">{{ att.file_size|fsize }}</span></span>
+          <span class="row gap-s attachment-file-actions"><span class="btn sm" data-pv-btn>{% icon 'eye' 'sm' %}معاينة</span><a class="btn sm" href="{% url 'documents:attachment_download' att.id %}" aria-label="تنزيل {{ att.original_filename }}">{% icon 'download' 'sm' %}</a></span>
+        </div>
+        {% empty %}<p class="muted xs attachment-version-empty">لا توجد مرفقات في هذا الإصدار.</p>{% endfor %}
+      </div>
+      {% endfor %}</div></div>
     {% endwith %}{% endfor %}{% empty %}{% include "partials/empty.html" with title="لا توجد مستندات" text="أرفق أول مستند لهذا الموضوع." icon_name="file" %}{% endfor %}
     {% if perms.can_act %}
     <details class="dd mt" id="action-upload"><summary>{% icon 'upload' 'sm' %} رفع مستند جديد {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="upload_attachment">
