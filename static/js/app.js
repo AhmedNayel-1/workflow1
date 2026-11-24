@@ -282,8 +282,38 @@
       if (requestId !== previewRequestId) return;
       box.textContent = "";
       const kv = (k, v) => [h("dt", { text: k }), h("dd", {}, v)];
+      const overviewPane = h("section", { class: "preview-pane is-active", "data-preview-pane": "overview" },
+        h("dl", { class: "kv" }, ...kv("نوع المعاملة", d.transaction_type), ...kv("القطاع / الوحدة", d.sector + " — " + d.org_unit), ...kv("المسؤول الحالي", d.current_owner), ...kv("الاستحقاق", h("span", { class: d.is_overdue ? "bold" : "", style: d.is_overdue ? "color:var(--bad)" : null, text: d.due_date + (d.is_overdue ? " (متأخر)" : "") })), ...kv("المذكرات المسجلة", String(d.memos_count || 0))),
+        d.description ? h("div", { class: "sect" }, h("h4", { text: "ملخص الموضوع" }), h("p", { class: "muted preview-description", text: d.description })) : h("div", { class: "note info mt-s", text: "لا يوجد وصف إضافي مسجل لهذا الموضوع." }),
+        h("div", { class: "preview-facts" },
+          h("div", {}, h("small", { text: "درجة السرية" }), h("b", { text: d.confidentiality })),
+          h("div", {}, h("small", { text: "الأولوية" }), h("b", { text: d.priority })),
+          h("div", {}, h("small", { text: "المذكرات" }), h("b", { text: String(d.memos_count || 0) })))));
+      const attachmentsPane = h("section", { class: "preview-pane", "data-preview-pane": "attachments", hidden: true },
+        (d.attachments || []).length ? h("div", { class: "preview-attachment-list" }, ...d.attachments.map((a) => h("div", { class: "item preview-attachment", role: "button", tabindex: "0", "aria-label": "معاينة " + a.filename, "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind },
+          h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }),
+          h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title })),
+          h("span", { class: "preview-open-label", text: "معاينة" })))) : h("div", { class: "detail-empty preview-tab-empty", text: "لا توجد مرفقات متاحة للمعاينة." }));
+      const referralsPane = h("section", { class: "preview-pane", "data-preview-pane": "referrals", hidden: true },
+        (d.recent_referrals || []).length ? h("div", { class: "tl preview-referral-list" }, ...d.recent_referrals.map((r) => h("div", { class: "tl-i" }, h("b", { text: r.referred_by + " ← " + r.targets }), h("small", { text: r.purpose + " · " + r.created_at }), r.notes ? h("p", { text: r.notes }) : null))) : h("div", { class: "detail-empty preview-tab-empty", text: "لا توجد إحالات سابقة مسجلة." }));
+      const panes = h("div", { class: "preview-panes" }, overviewPane, attachmentsPane, referralsPane);
+      let tabs;
+      const selectPreviewPane = (key) => {
+        $$(".preview-tab", tabs).forEach((button) => {
+          const active = button.dataset.previewTab === key;
+          button.classList.toggle("on", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        $$("[data-preview-pane]", panes).forEach((pane) => { pane.hidden = pane.dataset.previewPane !== key; });
+      };
+      const makeTab = (label, count, key, active) => h("button", { type: "button", class: "preview-tab" + (active ? " on" : ""), "data-preview-tab": key, "aria-pressed": active ? "true" : "false", onclick: () => selectPreviewPane(key) },
+        h("span", { text: label }), h("span", { class: "preview-tab-count", text: String(count) }));
+      tabs = h("div", { class: "preview-tabs", role: "group", "aria-label": "أقسام المعاينة" },
+        makeTab("الملخص", 1, "overview", true),
+        makeTab("المرفقات", (d.attachments || []).length, "attachments", false),
+        makeTab("الإحالات", (d.recent_referrals || []).length, "referrals", false));
       const acts = h("div", { class: "detail-foot" },
-        h("a", { class: "btn primary", href: d.detail_url, text: "فتح الموضوع" }),
+        h("a", { class: "btn primary", href: d.detail_url, text: "فتح الموضوع بالكامل" }),
         d.pending_ref_id && d.ack_url ? h("form", { class: "inline", method: "post", action: d.ack_url }, h("input", { type: "hidden", name: "csrfmiddlewaretoken", value: csrf() }), h("input", { type: "hidden", name: "action", value: "acknowledge" }), h("input", { type: "hidden", name: "next", value: location.pathname + location.search }), h("button", { class: "btn ok", type: "submit", text: "تأكيد الاستلام" })) : null,
         h("button", { class: "btn ghost menu-back", type: "button", onclick: () => inbox.classList.remove("show-detail"), text: "رجوع للقائمة" }));
       box.append(h("div", { class: "detail-scroll" },
@@ -293,10 +323,7 @@
           h("span", { class: "preview-guidance-mark", text: d.is_overdue ? "!" : d.pending_ref_id ? "↳" : d.can_act ? "✓" : "i", "aria-hidden": "true" }),
           h("div", {}, h("b", { text: d.is_overdue ? "هذا الموضوع تجاوز موعد استحقاقه" : d.pending_ref_id ? "الخطوة المطلوبة: تأكيد استلام الإحالة" : d.can_act ? "الموضوع ضمن نطاق عملك" : "للاطلاع والمتابعة فقط" }),
             h("p", { text: d.is_overdue ? "راجع الموضوع وحدد الإجراء المناسب وفق مرحلته وصلاحياتك." : d.pending_ref_id ? "بعد تأكيد الاستلام، افتح الموضوع لمراجعة التفاصيل واستكمال الإجراء." : d.can_act ? "افتح الموضوع لمراجعة الإجراءات المتاحة لك والخطوة التالية." : "يمكنك مراجعة البيانات والمرفقات دون تنفيذ إجراء على الموضوع." }))),
-        h("dl", { class: "kv" }, ...kv("نوع المعاملة", d.transaction_type), ...kv("القطاع / الوحدة", d.sector + " — " + d.org_unit), ...kv("المسؤول الحالي", d.current_owner), ...kv("الاستحقاق", h("span", { class: d.is_overdue ? "bold" : "", style: d.is_overdue ? "color:var(--bad)" : null, text: d.due_date + (d.is_overdue ? " (متأخر)" : "") })), ...kv("المذكرات", String(d.memos_count || 0))),
-        d.description ? h("div", { class: "sect" }, h("h4", { text: "الوصف" }), h("p", { class: "muted", style: "white-space:pre-wrap", text: d.description })) : null,
-        (d.attachments || []).length ? h("div", { class: "sect" }, h("h4", { text: "المرفقات (" + d.attachments.length + ")" }), ...d.attachments.map((a) => h("div", { class: "item preview-attachment", role: "button", tabindex: "0", "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind, style: "cursor:pointer" }, h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }), h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title }))))) : null,
-        (d.recent_referrals || []).length ? h("div", { class: "sect" }, h("h4", { text: "آخر الإحالات" }), h("div", { class: "tl" }, ...d.recent_referrals.map((r) => h("div", { class: "tl-i" }, h("b", { text: r.referred_by + " ← " + r.targets }), h("small", { text: r.purpose + " · " + r.created_at }), r.notes ? h("p", { text: r.notes }) : null)))) : null),
+        tabs, panes),
         acts);
     } catch (err) { if (requestId !== previewRequestId) return; box.textContent = ""; box.append(h("div", { class: "detail-empty", role: "alert", text: err.message })); }
     finally { if (requestId === previewRequestId) box.setAttribute("aria-busy", "false"); }
