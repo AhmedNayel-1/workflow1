@@ -30,29 +30,59 @@
     }), {threshold:.04});
     candidates.forEach(el => observer.observe(el));
   }
-  // Search the currently selected referrals tab without changing server-side results.
-  const referralRoot = document.querySelector("[data-tabs-root] .tabs")?.parentElement;
+  // Referral inbox: local text/status/due filters over the currently selected tab only.
+  const referralRoot = document.querySelector("[data-tabs-root]");
   if (referralRoot) {
     const search = referralRoot.querySelector("[data-referral-search]");
+    const statusFilter = referralRoot.querySelector("[data-referral-status]");
+    const dueFilter = referralRoot.querySelector("[data-referral-due]");
     const count = referralRoot.querySelector("[data-referral-count]");
     const clear = referralRoot.querySelector("[data-referral-clear]");
-    const apply = () => {
+    const normalizeReferralText = value => String(value || "").normalize("NFD")
+      .replace(/[\\u0300-\\u036f\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/[ىئ]/g, "ي").replace(/ة/g, "ه").toLocaleLowerCase("ar");
+    const applyReferralFilters = () => {
       const pane = referralRoot.querySelector("[data-pane].on") || referralRoot.querySelector("[data-pane]");
       if (!pane) return;
-      const q = (search?.value || "").trim().toLocaleLowerCase("ar");
-      const items = Array.from(pane.querySelectorAll("[data-referral-item]"));
+      const tokens = normalizeReferralText(search?.value).split(/\\s+/).filter(Boolean);
+      const status = statusFilter?.value || "";
+      const due = dueFilter?.value || "";
+      const items = [...pane.querySelectorAll("[data-referral-item]")];
       let shown = 0;
       items.forEach(item => {
-        const match = !q || item.textContent.toLocaleLowerCase("ar").includes(q);
-        item.hidden = !match;
-        if (match) shown++;
+        const haystack = normalizeReferralText(item.textContent);
+        const matchesText = tokens.every(token => haystack.includes(token));
+        const matchesStatus = !status || item.dataset.referralStatus === status;
+        const isOverdue = item.dataset.referralOverdue === "1";
+        const isUndated = item.dataset.referralUndated === "1";
+        const matchesDue = !due || (due === "overdue" ? isOverdue : due === "upcoming" ? !isOverdue && !isUndated : isUndated);
+        item.hidden = !(matchesText && matchesStatus && matchesDue);
+        if (!item.hidden) shown++;
       });
-      if (count) count.textContent = shown + " من " + items.length + " إحالة";
+      if (count) count.textContent = shown.toLocaleString("ar") + " من " + items.length.toLocaleString("ar") + " إحالة في هذا التبويب";
     };
-    search?.addEventListener("input", apply);
-    clear?.addEventListener("click", () => { if (search) search.value = ""; apply(); search?.focus(); });
-    referralRoot.querySelectorAll("[data-tab]").forEach(tab => tab.addEventListener("click", () => requestAnimationFrame(apply)));
-    apply();
+    const populateReferralStatuses = () => {
+      if (!statusFilter) return;
+      const values = new Map();
+      referralRoot.querySelectorAll("[data-referral-item]").forEach(item => {
+        if (item.dataset.referralStatus) values.set(item.dataset.referralStatus,item.dataset.referralStatusLabel || item.dataset.referralStatus);
+      });
+      [...values.entries()].sort((x,y)=>x[1].localeCompare(y[1],"ar")).forEach(([value,label])=>{
+        const option=document.createElement("option");option.value=value;option.textContent=label;statusFilter.appendChild(option);
+      });
+    };
+    search?.addEventListener("input",applyReferralFilters);
+    statusFilter?.addEventListener("change",applyReferralFilters);
+    dueFilter?.addEventListener("change",applyReferralFilters);
+    clear?.addEventListener("click",()=>{
+      if(search)search.value="";
+      if(statusFilter)statusFilter.value="";
+      if(dueFilter)dueFilter.value="";
+      applyReferralFilters();search?.focus();
+    });
+    referralRoot.querySelectorAll("[data-tab]").forEach(tab=>tab.addEventListener("click",()=>requestAnimationFrame(applyReferralFilters)));
+    populateReferralStatuses();
+    applyReferralFilters();
   }
   // Notification center: local search and unread-only filter.
   const notificationRoot = document.querySelector("[data-notification-search]")?.closest(".page");
@@ -443,6 +473,76 @@
     event.preventDefault();
     row.click();
   });
+
+
+  // Referral creation: live recipient count, routing summary and notes length.
+  const referralForm = document.querySelector("[data-referral-form]");
+  if (referralForm) {
+    const users = referralForm.querySelector("[data-referral-users]");
+    const units = referralForm.querySelector("[data-referral-units]");
+    const selectedCount = document.querySelector("[data-referral-selected-count]");
+    const routingPreview = document.querySelector("[data-referral-routing-preview]");
+    const notes = referralForm.querySelector("[data-referral-notes]");
+    const notesCount = referralForm.querySelector("[data-referral-notes-count]");
+    const routingLabels = new Map([...referralForm.querySelectorAll('input[name="routing_mode"]')].map(input=>[input.value,input.closest("label")?.querySelector("b")?.textContent.trim() || input.value]));
+    const updateRecipients = () => {
+      const userCount = [...(users?.selectedOptions || [])].length;
+      const unitCount = [...(units?.selectedOptions || [])].length;
+      const total = userCount + unitCount;
+      if(selectedCount) selectedCount.textContent = total ? total.toLocaleString("ar") + " مستلم (" + userCount.toLocaleString("ar") + " موظف، " + unitCount.toLocaleString("ar") + " وحدة)" : "لم يتم اختيار مستلمين";
+    };
+    const updateRouting = () => {
+      const selected = referralForm.querySelector('input[name="routing_mode"]:checked');
+      if(routingPreview) routingPreview.textContent = selected ? (routingLabels.get(selected.value) || selected.value) : "لم تُحدد بعد";
+    };
+    const updateNotes = () => { if(notesCount) notesCount.textContent = (notes?.value.length || 0).toLocaleString("ar") + " حرف"; };
+    users?.addEventListener("change",updateRecipients);
+    units?.addEventListener("change",updateRecipients);
+    referralForm.querySelectorAll('input[name="routing_mode"]').forEach(input=>input.addEventListener("change",updateRouting));
+    notes?.addEventListener("input",updateNotes);
+    referralForm.querySelectorAll(".referral-form-nav a").forEach(link=>link.addEventListener("click",()=>{
+      document.querySelector(link.getAttribute("href"))?.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"});
+    }));
+    updateRecipients();updateRouting();updateNotes();
+  }
+
+  // Memo workspace: local search over the memos rendered for this subject only.
+  const memoRoot = document.querySelector("#sec-memos");
+  if(memoRoot) {
+    const search=memoRoot.querySelector("[data-memo-search]");
+    const clear=memoRoot.querySelector("[data-memo-clear]");
+    const count=memoRoot.querySelector("[data-memo-count]");
+    const items=[...memoRoot.querySelectorAll("[data-memo-item]")];
+    const apply=()=>{
+      const q=(search?.value || "").trim().toLocaleLowerCase("ar");
+      let shown=0;
+      items.forEach(item=>{item.hidden=!!q&&!item.textContent.toLocaleLowerCase("ar").includes(q);if(!item.hidden)shown++;});
+      if(count)count.textContent=shown.toLocaleString("ar")+" من "+items.length.toLocaleString("ar")+" مذكرة";
+    };
+    search?.addEventListener("input",apply);
+    clear?.addEventListener("click",()=>{if(search)search.value="";apply();search?.focus();});
+    apply();
+  }
+
+  // Memo drafting: live preview, character count and attachment feedback; no new validation rules.
+  const memoForm=document.querySelector("#action-memo form");
+  if(memoForm) {
+    const title=memoForm.querySelector("[data-memo-title]");
+    const body=memoForm.querySelector("[data-memo-body]");
+    const target=memoForm.querySelector("[data-memo-directed]");
+    const customTarget=memoForm.querySelector("[data-memo-directed-custom]");
+    const file=memoForm.querySelector("[data-memo-file]");
+    const bodyCount=memoForm.querySelector("[data-memo-body-count]");
+    const fileName=memoForm.querySelector("[data-memo-file-name]");
+    const updateBody=()=>{if(bodyCount)bodyCount.textContent=(body?.value.length||0).toLocaleString("ar")+" حرف";};
+    const updateFile=()=>{if(fileName)fileName.textContent=file?.files?.[0]?.name||"لم يتم اختيار مرفق";};
+    title?.addEventListener("input",()=>{const preview=memoForm.querySelector("[data-memo-title-preview]");if(preview)preview.textContent=title.value.trim()||"مذكرة جديدة";});
+    target?.addEventListener("change",()=>{if(customTarget&&!customTarget.value.trim())customTarget.placeholder=target.value?"يمكنك اختيار جهة أخرى بدلاً من "+target.value:"اكتب الجهة يدوياً";});
+    customTarget?.addEventListener("input",()=>{const preview=memoForm.querySelector("[data-memo-target-preview]");if(preview)preview.textContent=customTarget.value.trim()||target?.value||"لم تُحدد جهة بعد";});
+    body?.addEventListener("input",updateBody);
+    file?.addEventListener("change",updateFile);
+    updateBody();updateFile();
+  }
 
   document.documentElement.classList.add("ux-ready");
 })();
