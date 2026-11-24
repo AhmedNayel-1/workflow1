@@ -462,3 +462,32 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
  .minutes-print-summary tr,.minutes-print-items tr{break-inside:avoid;page-break-inside:avoid}
  .minutes-print-header{font-size:18px!important}
 }
+
+
+/* Phase 18 — report catalog, data reading and print layout. */
+.report-catalog-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border:1px solid var(--ux-border);border-radius:12px;background:var(--ux-surface)}
+.report-catalog-search{flex:1 1 300px;min-width:220px}
+.report-catalog-search .in,.report-row-search .in{width:100%;min-width:0}
+.report-catalog [data-report-card][hidden],.report-tbl [data-report-row][hidden]{display:none!important}
+.report-catalog-count,.report-row-count{font-variant-numeric:tabular-nums}
+.report-row-search{flex:1 1 260px;min-width:220px}
+.report-tbl .toolbar{flex-wrap:wrap}
+.report-print-company{font-size:14px;font-weight:800}
+.report-print-title{margin:12px 0 5px;text-align:center}
+.report-print-meta{margin:0 0 16px}
+.report-print-kpis,.report-print-data{width:100%;border-collapse:collapse}
+.report-print-kpis{margin:12px 0 18px}
+.report-print-data{font-size:11px}
+.report-print-kpis th,.report-print-kpis td,.report-print-data th,.report-print-data td{padding:7px 8px;vertical-align:top}
+.report-print-data thead{display:table-header-group}
+.report-print-data tbody tr,.report-print-kpis tr{break-inside:avoid;page-break-inside:avoid}
+@media(max-width:680px){
+ .report-catalog-tools{align-items:stretch}
+ .report-catalog-search,.report-row-search{flex:1 1 100%;min-width:0;width:100%}
+ .report-tbl .toolbar{align-items:stretch}
+}
+@media print{
+ .report-print-title{font-size:20px!important}
+ .report-print-data{font-size:10px!important}
+ .report-print-data th,.report-print-kpis th{background:#f1f1f1!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
