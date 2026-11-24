@@ -141,3 +141,16 @@ input,select,textarea{accent-color:var(--brand)}
 .preview-tab-empty{min-height:170px}
 .preview-referral-list{padding:12px 4px}
 @media(max-width:560px){.preview-tabs{gap:3px;padding:4px}.preview-tab{padding:8px 5px;font-size:12px;gap:5px}.preview-facts{grid-template-columns:1fr}.preview-open-label{display:none}}
+
+
+/* Subject workspace — quick actions stay connected to the existing forms. */
+.case-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 16px}
+.case-actions-label{color:var(--muted);font-size:12px;font-weight:700;margin-inline-end:3px}
+.case-actions .btn{min-height:34px}
+.case-actions .btn:hover{border-color:var(--brand);color:var(--brand)}
+#action-upload:target,#action-memo:target,#action-task:target,#action-annotation:target{scroll-margin-top:calc(var(--top,64px) + 86px)}
+@media(max-width:680px){
+ .case-actions{gap:6px}
+ .case-actions-label{flex-basis:100%}
+ .case-actions .btn{flex:1 1 calc(50% - 6px);justify-content:center}
+}
