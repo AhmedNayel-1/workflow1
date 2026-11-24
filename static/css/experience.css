@@ -79,3 +79,18 @@ input,select,textarea{accent-color:var(--brand)}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Inbox and archive workflow refinements */
+.referral-tools{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px}
+.referral-tools .search-in{min-width:220px}
+.referral-tools .search-in .in{border:0;background:transparent;min-width:0}
+.referral-tools .search-in .in:focus{box-shadow:none}
+[data-referral-item][hidden]{display:none!important}
+.dcard[role="button"]{outline-offset:3px}
+.dcard[role="button"]:focus-visible{border-color:var(--brand);box-shadow:var(--ux-focus)}
+.subnav a[aria-current="location"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+@media(max-width:680px){
+ .referral-tools{flex-wrap:wrap}
+ .referral-tools .search-in{flex-basis:100%;width:100%}
+ .referral-tools [data-referral-count]{margin-inline-end:auto}
+}
