@@ -544,7 +544,7 @@
     units.forEach((u) => { const n = by[u.id]; if (u.parent_id && by[u.parent_id]) by[u.parent_id].kids.push(n); else top.push(n); });
     const node = (n) => {
       const users = (n.users || []).map((x) => h("span", { class: "chipuser", draggable: manage ? "true" : null, "data-emp-id": x.employee_id, title: x.job_title || "" }, h("span", { class: "avatar sm", text: (x.full_name || "؟").slice(0, 2) }), x.full_name, x.is_secretariat ? h("span", { class: "pill nodot", text: "سكرتارية" }) : null));
-      return h("div", { class: "org-branch" }, h("div", { class: "org-node", draggable: manage ? "true" : null, "data-unit-id": n.id, "data-drop": n.id },
+      return h("div", { class: "org-branch", "data-org-search-text": [n.name, n.code, ...(n.users || []).map(x => x.full_name || "")].join(" ") }, h("div", { class: "org-node", draggable: manage ? "true" : null, "data-unit-id": n.id, "data-drop": n.id },
         h("div", { class: "row between wrap" }, h("div", { class: "row gap-s" }, h("b", { text: n.name }), h("span", { class: "tag code", text: n.code }), n.unit_type ? h("span", { class: "pill info nodot", text: n.unit_type }) : null), h("span", { class: "muted xs", text: (n.sector_name || "") + " · " + (n.users_count || 0) + " موظف" })),
         users.length ? h("div", { class: "chips mt-s" }, ...users) : null),
         n.kids.length ? h("div", { class: "org-kids" }, ...n.kids.sort((a, b) => a.level_order - b.level_order).map(node)) : null);
