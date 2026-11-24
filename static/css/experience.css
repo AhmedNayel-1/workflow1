@@ -154,3 +154,22 @@ input,select,textarea{accent-color:var(--brand)}
  .case-actions-label{flex-basis:100%}
  .case-actions .btn{flex:1 1 calc(50% - 6px);justify-content:center}
 }
+
+
+/* Subject activity log — client-side filtering of the existing latest events. */
+.activity-tools{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:12px;margin-bottom:12px;border:1px solid var(--ux-border);border-radius:12px;background:var(--panel-2)}
+.activity-search{flex:1 1 220px;min-width:180px}
+.activity-search .in{width:100%;min-width:0;border-color:var(--ux-border);background:var(--panel)}
+.activity-filter{flex:0 1 170px;min-width:135px}
+.activity-filter .in{width:100%;min-width:0;background:var(--panel)}
+.activity-count{margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.activity-item[hidden]{display:none!important}
+.activity-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+.activity-type{display:inline-flex;align-items:center;padding:3px 8px;border-radius:7px;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:700}
+.activity-heading time{color:var(--muted);font-size:11px}
+.activity-no-results{padding:20px 8px;text-align:center}
+@media(max-width:680px){
+ .activity-tools{align-items:stretch}
+ .activity-search,.activity-filter{flex:1 1 100%;min-width:0}
+ .activity-count{margin-inline-start:0}
+}
