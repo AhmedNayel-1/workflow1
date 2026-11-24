@@ -9,6 +9,15 @@
     <div class="row wrap gap-s"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>{% if perms.can_refer %}<a class="btn sm" href="{% url 'workflow:referral_create' subject.id %}">{% icon 'share' 'sm' %}إحالة</a>{% endif %}{% if perms.can_decide %}<a class="btn sm" href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}إعداد قرار</a>{% endif %}</div>
   </div>
   <h2>{{ subject.title }}</h2>
+  <div class="case-actions" aria-label="إجراءات سريعة للموضوع">
+    <span class="case-actions-label">ابدأ إجراء</span>
+    {% if perms.can_act %}<a class="btn sm" href="#action-upload" data-open-details>إرفاق مستند</a>{% endif %}
+    {% if perms.can_memo %}<a class="btn sm" href="#action-memo" data-open-details>إعداد مذكرة</a>{% endif %}
+    {% if perms.can_task %}<a class="btn sm" href="#action-task" data-open-details>تكليف بمهمة</a>{% endif %}
+    {% if perms.can_annotate %}<a class="btn sm" href="#action-annotation" data-open-details>إضافة تأشيرة</a>{% endif %}
+    {% if perms.can_refer %}<a class="btn sm" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
+    {% if perms.can_decide %}<a class="btn sm" href="{% url 'decisions:decision_create' subject.id %}">إعداد قرار</a>{% endif %}
+  </div>
   <div class="steps">{% for st in workflow_steps %}<div class="step {% if st.done %}done{% endif %} {% if st.current %}now{% endif %}"><i>{% if st.done %}✓{% else %}{{ st.id }}{% endif %}</i><span>{{ st.title }}</span></div>{% endfor %}</div>
   <div class="case-meta">
     <div><small>المسؤول الحالي</small><b>{{ subject.current_owner|default:"—" }}</b></div>
@@ -22,7 +31,7 @@
 </section>
 
 <div class="mt">{% include "partials/guide.html" with guide=guide %}</div>
-<nav class="subnav" aria-label="أقسام الموضوع"><a href="#sec-documents" data-jump="sec-documents">المستندات <span class="cnt">{{ doc_links|length }}</span></a><a href="#sec-memos" data-jump="sec-memos">المذكرات <span class="cnt">{{ memos|length }}</span></a><a href="#sec-referrals" data-jump="sec-referrals">الإحالات <span class="cnt">{{ referrals|length }}</span></a><a href="#sec-tasks" data-jump="sec-tasks">المهام والقرارات</a><a href="#sec-closure" data-jump="sec-closure">التأشيرات والتعليق والإغلاق</a><a href="#sec-timeline" data-jump="sec-timeline">السجل الزمني</a></nav>
+<nav class="subnav" aria-label="أقسام الموضوع" data-subject-nav><a href="#sec-documents" data-jump="sec-documents">المستندات <span class="cnt">{{ doc_links|length }}</span></a><a href="#sec-memos" data-jump="sec-memos">المذكرات <span class="cnt">{{ memos|length }}</span></a><a href="#sec-referrals" data-jump="sec-referrals">الإحالات <span class="cnt">{{ referrals|length }}</span></a><a href="#sec-tasks" data-jump="sec-tasks">المهام والقرارات</a><a href="#sec-closure" data-jump="sec-closure">التأشيرات والتعليق والإغلاق</a><a href="#sec-timeline" data-jump="sec-timeline">مراحل السير</a><a href="#sec-activity" data-jump="sec-activity">سجل النشاط</a></nav>
 
 <div class="layout-3">
 <div class="col" style="gap:16px;min-width:0">
@@ -34,12 +43,23 @@
     {% for g in filtered_doc_groups %}{% for link in g.links %}{% with doc=link.document %}
     <div class="item"><div class="ficon">{% icon 'file' %}</div><div class="grow"><h5><a href="{% url 'documents:document_detail' doc.id %}" style="color:var(--ink)">{{ doc.title }}</a></h5>
       <div class="row wrap gap-s"><span class="tag code">{{ doc.internal_number }}</span><span class="pill info nodot">{{ doc.doc_type.name }}</span><span class="muted xs">{{ doc.document_date|date:"Y-m-d" }}</span></div>
-      {% for ver in doc.versions.all %}{% for att in ver.attachments.all %}
-      <div class="row between mt-s note" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}" style="cursor:pointer;margin-bottom:0"><span class="row gap-s trunc">{% icon 'clip' 'sm' %}<span class="trunc">{{ att.original_filename }}</span><span class="muted xs">v{{ ver.version_number }}</span></span><span class="row gap-s"><span class="btn sm" data-pv-btn>{% icon 'eye' 'sm' %}معاينة</span><a class="btn sm" href="{% url 'documents:attachment_download' att.id %}">{% icon 'download' 'sm' %}</a></span></div>
-      {% endfor %}{% endfor %}</div></div>
+      {% for ver in doc.versions.all %}
+      <div class="attachment-version">
+        <div class="attachment-version-head">
+          <div class="row gap-s wrap"><b>الإصدار v{{ ver.version_number }}</b>{% if ver.version_number == doc.current_version_number %}<span class="pill brand nodot">الإصدار الحالي</span>{% else %}<span class="pill nodot">إصدار سابق</span>{% endif %}{% if ver.is_approved %}<span class="pill ok">معتمد</span>{% else %}<span class="pill warn">غير معتمد</span>{% endif %}</div>
+          <span class="muted xs num">{{ ver.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% for att in ver.attachments.all %}
+        <div class="attachment-file-row row between wrap note" role="button" tabindex="0" aria-label="معاينة {{ att.original_filename }}" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}" data-pv-version="v{{ ver.version_number }}" data-pv-size="{{ att.file_size|fsize }}" data-pv-uploaded="{{ att.uploaded_at|date:'Y-m-d H:i' }}" data-pv-uploader="{{ att.uploaded_by.get_full_name|default:att.uploaded_by.username }}" data-pv-approved="{% if ver.is_approved %}معتمد{% else %}غير معتمد{% endif %}">
+          <span class="row gap-s trunc attachment-file-main">{% icon 'clip' 'sm' %}<span class="trunc">{{ att.original_filename }}</span><span class="muted xs">{{ att.file_size|fsize }}</span></span>
+          <span class="row gap-s attachment-file-actions"><span class="btn sm" data-pv-btn>{% icon 'eye' 'sm' %}معاينة</span><a class="btn sm" href="{% url 'documents:attachment_download' att.id %}" aria-label="تنزيل {{ att.original_filename }}">{% icon 'download' 'sm' %}</a></span>
+        </div>
+        {% empty %}<p class="muted xs attachment-version-empty">لا توجد مرفقات في هذا الإصدار.</p>{% endfor %}
+      </div>
+      {% endfor %}</div></div>
     {% endwith %}{% endfor %}{% empty %}{% include "partials/empty.html" with title="لا توجد مستندات" text="أرفق أول مستند لهذا الموضوع." icon_name="file" %}{% endfor %}
     {% if perms.can_act %}
-    <details class="dd mt"><summary>{% icon 'upload' 'sm' %} رفع مستند جديد {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="upload_attachment">
+    <details class="dd mt" id="action-upload"><summary>{% icon 'upload' 'sm' %} رفع مستند جديد {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="upload_attachment">
       <label class="fld"><span>عنوان المستند</span><input class="in" name="doc_title" placeholder="يؤخذ من اسم الملف إن تُرك فارغاً"></label>
       <label class="fld"><span>تصنيف المستند</span><select class="in" name="doc_type_id" required>{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
       <label class="fld full"><span>ملخص</span><input class="in" name="doc_summary"></label>
@@ -48,20 +68,20 @@
   </div></section>
 
 {# ====================== المذكرات ====================== #}
-<section class="panel" id="sec-memos"><div class="panel-h"><h3>{% icon 'note' %} مذكرات العرض والرأي</h3></div><div class="panel-b">
-  {% for m in memos %}<div class="item"><div class="ficon">{% icon 'note' %}</div><div class="grow"><div class="row between wrap"><h5>{{ m.title }}</h5><span class="pill {{ m.status|tone }}">{{ m.get_status_display }}</span></div>
+<section class="panel" id="sec-memos"><div class="panel-h"><h3>{% icon 'note' %} مذكرات العرض والرأي</h3><span class="muted xs" data-memo-count>{{ memos|length }} مذكرة</span></div><div class="panel-b"><div class="memo-tools"><label class="search-in grow">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-memo-search placeholder="ابحث في عنوان المذكرة أو رقمها أو نصها…" aria-label="بحث في المذكرات"></label><button class="btn sm ghost" type="button" data-memo-clear>مسح البحث</button></div>
+  {% for m in memos %}<div class="item" data-memo-item><div class="ficon">{% icon 'note' %}</div><div class="grow"><div class="row between wrap"><h5>{{ m.title }}</h5><span class="pill {{ m.status|tone }}">{{ m.get_status_display }}</span></div>
     <div class="row wrap gap-s"><span class="tag code">{{ m.memo_number }}</span><span class="tag">{{ m.get_memo_type_display }}</span><span class="muted xs">إلى: {{ m.directed_to }} · {{ m.author.get_full_name|default:m.author.username }} · {{ m.created_at|date:"Y-m-d" }}</span></div>
     <p class="muted sm mt-s" style="white-space:pre-wrap">{{ m.body|short:400 }}</p>
     <div class="row wrap gap-s mt-s"><a class="btn sm" href="{% url 'subjects:memo_print' m.id %}">{% icon 'print' 'sm' %}طباعة</a><a class="btn sm" href="{% url 'subjects:memo_export_pdf' m.id %}">PDF</a>
     {% if perms.can_approve and m.status != "APPROVED" %}<form method="post" class="inline" data-confirm="اعتماد المذكرة {{ m.memo_number }}؟">{% csrf_token %}<input type="hidden" name="action" value="approve_memo"><input type="hidden" name="memo_id" value="{{ m.id }}"><button class="btn sm ok" type="submit">{% icon 'check' 'sm' %}اعتماد</button></form>{% endif %}</div></div></div>
   {% empty %}{% include "partials/empty.html" with title="لا توجد مذكرات" icon_name="note" %}{% endfor %}
-  {% if perms.can_memo %}<details class="dd mt"><summary>{% icon 'plus' 'sm' %} إعداد مذكرة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_memo">
+  {% if perms.can_memo %}<details class="dd mt" id="action-memo"><summary>{% icon 'plus' 'sm' %} إعداد مذكرة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_memo"><div class="memo-draft-preview" aria-live="polite"><span class="memo-draft-mark">م</span><div><small>معاينة المذكرة</small><b data-memo-title-preview>مذكرة جديدة</b><span>موجهة إلى: <strong data-memo-target-preview>لم تُحدد جهة بعد</strong></span></div></div>
     <label class="fld"><span>نوع المذكرة</span><select class="in" name="memo_type">{% for mt in memo_types %}<option value="{{ mt.code }}">{{ mt.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>موجهة إلى</span><select class="in" name="directed_to_select" id="dt-sel"><option value="">— اختر —</option>{% for t in memo_directed_targets %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}</select></label>
-    <label class="fld full"><span>أو جهة أخرى</span><input class="in" name="directed_to_custom" placeholder="اكتب الجهة يدوياً"></label>
-    <label class="fld full"><span>عنوان المذكرة</span><input class="in" name="memo_title" required></label>
-    <label class="fld full"><span>نص المذكرة</span><textarea class="in" name="memo_body" rows="6" required></textarea></label>
-    <label class="fld full"><span>مرفق <small>(اختياري)</small></span><input class="in" type="file" name="memo_attachment"></label>
+    <label class="fld"><span>موجهة إلى</span><select class="in" name="directed_to_select" id="dt-sel" data-memo-directed><option value="">— اختر —</option>{% for t in memo_directed_targets %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}</select></label>
+    <label class="fld full"><span>أو جهة أخرى</span><input class="in" name="directed_to_custom" placeholder="اكتب الجهة يدوياً" data-memo-directed-custom></label>
+    <label class="fld full"><span>عنوان المذكرة</span><input class="in" name="memo_title" required data-memo-title></label>
+    <label class="fld full"><span>نص المذكرة</span><textarea class="in" name="memo_body" rows="6" required data-memo-body></textarea><small class="memo-field-hint" data-memo-body-count>0 حرف</small></label>
+    <label class="fld full"><span>مرفق <small>(اختياري)</small></span><input class="in" type="file" name="memo_attachment" data-memo-file><small class="memo-field-hint" data-memo-file-name>لم يتم اختيار مرفق</small></label>
     <div class="full"><button class="btn primary" type="submit">حفظ المذكرة</button></div></form></details>{% endif %}
 </div></section>
 
@@ -91,7 +111,7 @@
   {% for t in tasks %}<div class="item"><div class="grow"><div class="row between wrap"><h5>{{ t.title }}</h5><span class="pill {{ t.status|tone }}">{{ t.get_status_display }}</span></div><div class="muted xs">{{ t.assigned_to.get_full_name|default:t.assigned_to.username }} · {{ t.priority.name }}{% if t.due_date %} · الاستحقاق <span class="num">{{ t.due_date|date:"Y-m-d" }}</span>{% endif %}</div>{% if t.outcome %}<p class="sm muted">{{ t.outcome }}</p>{% endif %}
     {% if t.status != "COMPLETED" and t.status != "CANCELLED" and t.assigned_to_id == request.user.id or t.status != "COMPLETED" and t.status != "CANCELLED" and perms.can_task %}<form method="post" action="{% url 'workflow:task_update_status' t.id %}" class="row wrap gap-s mt-s">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><select class="in sm" name="status" style="max-width:180px"><option value="RECEIVED">مستلمة</option><option value="IN_PROGRESS">قيد التنفيذ</option><option value="PAUSED">متوقفة</option><option value="WAITING_EXTERNAL">في انتظار جهة أخرى</option><option value="COMPLETED">مكتملة</option></select><input class="in sm grow" name="outcome" placeholder="النتيجة / ملاحظات"><button class="btn sm" type="submit">تحديث</button></form>{% endif %}</div></div>
   {% empty %}<p class="muted sm">لا توجد مهام.</p>{% endfor %}
-  {% if perms.can_task %}<details class="dd mt"><summary>{% icon 'plus' 'sm' %} تكليف بمهمة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" action="{% url 'workflow:task_create' subject.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}">
+  {% if perms.can_task %}<details class="dd mt" id="action-task"><summary>{% icon 'plus' 'sm' %} تكليف بمهمة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" action="{% url 'workflow:task_create' subject.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}">
     <label class="fld full"><span>عنوان المهمة</span><input class="in" name="title" required></label><label class="fld full"><span>الوصف</span><textarea class="in" name="description" rows="2"></textarea></label>
     <label class="fld"><span>المكلَّف</span><select class="in" name="assigned_to_id" required>{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
     <label class="fld"><span>الأولوية</span><select class="in" name="priority_id">{% for p in compose_meta.priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
@@ -108,7 +128,7 @@
       <label class="fld full"><span>ملاحظات الاستيفاء</span><textarea class="in" name="fulfillment_notes" rows="2"></textarea></label><label class="fld full"><span>المستند المستوفى</span><input class="in" type="file" name="fulfillment_attachment"></label><div class="full"><button class="btn ok" type="submit">استئناف العمل</button></div></form></details>{% endif %}</div>{% endfor %}
 
   {% if subject.status != "CLOSED" %}<div class="grid g2 mt">
-    {% if perms.can_annotate %}<details class="dd"><summary>{% icon 'edit' 'sm' %} إضافة تأشيرة {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post">{% csrf_token %}<input type="hidden" name="action" value="add_annotation"><textarea class="in" name="annotation_text" rows="3" placeholder="نص التأشيرة" required></textarea><input class="in" name="required_action" placeholder="الإجراء المطلوب (اختياري)"><select class="in" name="assigned_unit_id"><option value="">— الجهة المكلّفة —</option>{% for u in org_units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select><select class="in" name="document_id"><option value="">— مرتبطة بمستند —</option>{% for l in doc_links %}<option value="{{ l.document.id }}">{{ l.document.title|short:40 }}</option>{% endfor %}</select><div><button class="btn primary" type="submit">حفظ التأشيرة</button></div></form></details>{% endif %}
+    {% if perms.can_annotate %}<details class="dd" id="action-annotation"><summary>{% icon 'edit' 'sm' %} إضافة تأشيرة {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post">{% csrf_token %}<input type="hidden" name="action" value="add_annotation"><textarea class="in" name="annotation_text" rows="3" placeholder="نص التأشيرة" required></textarea><input class="in" name="required_action" placeholder="الإجراء المطلوب (اختياري)"><select class="in" name="assigned_unit_id"><option value="">— الجهة المكلّفة —</option>{% for u in org_units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select><select class="in" name="document_id"><option value="">— مرتبطة بمستند —</option>{% for l in doc_links %}<option value="{{ l.document.id }}">{{ l.document.title|short:40 }}</option>{% endfor %}</select><div><button class="btn primary" type="submit">حفظ التأشيرة</button></div></form></details>{% endif %}
     {% if perms.can_suspend and subject.status != "SUSPENDED" %}<details class="dd"><summary>{% icon 'clock' 'sm' %} تعليق لاستيفاء مستندات {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post" data-confirm="تعليق الموضوع حتى استيفاء المطلوب؟">{% csrf_token %}<input type="hidden" name="action" value="suspend"><select class="in" name="reason_ref_id"><option value="">— سبب التعليق —</option>{% for r in suspension_reasons %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select><textarea class="in" name="reason_details" rows="2" placeholder="تفاصيل السبب" required></textarea><input class="in" name="required_item" placeholder="المستند / الإجراء المطلوب"><input class="in" name="required_from" placeholder="المطلوب من (جهة)"><input class="in" type="date" name="expected_follow_up_date"><div><button class="btn bad" type="submit">تعليق الموضوع</button></div></form></details>{% endif %}
     {% if perms.can_close %}<details class="dd"><summary>{% icon 'archive' 'sm' %} إغلاق الموضوع وأرشفته {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post" data-confirm="سيُغلق الموضوع ويُؤرشف. هل أنت متأكد؟" data-danger>{% csrf_token %}<input type="hidden" name="action" value="close_subject"><input type="hidden" name="version_lock" value="{{ subject.version_lock }}"><textarea class="in" name="closure_notes" rows="3" placeholder="ملاحظات الإغلاق"></textarea>{% if perms.can_exceptional_close %}<label class="chk"><input type="checkbox" name="exceptional"> إغلاق استثنائي (تجاوز المتطلبات)</label>{% endif %}<div><button class="btn dark" type="submit">إغلاق وأرشفة</button></div></form></details>{% endif %}
     {% if perms.can_edit %}<details class="dd"><summary>{% icon 'edit' 'sm' %} تعديل بيانات الموضوع {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post">{% csrf_token %}<input type="hidden" name="action" value="update_meta"><input type="hidden" name="version_lock" value="{{ subject.version_lock }}"><input class="in" name="title" value="{{ subject.title }}" required><textarea class="in" name="description" rows="3">{{ subject.description }}</textarea><input class="in" name="keywords" value="{{ subject.keywords }}" placeholder="كلمات مفتاحية"><div><button class="btn primary" type="submit">حفظ التعديل</button></div></form></details>{% endif %}
@@ -123,10 +143,46 @@
 
 {# ====================== العمود الجانبي ====================== #}
 <aside class="col sticky" style="gap:16px">
-  <section class="panel" id="sec-timeline"><div class="panel-h"><h3>{% icon 'clock' %} مراحل السير</h3><span class="muted xs">{{ completed_stages_count }} مرحلة منجزة</span></div><div class="panel-b">
-    <div class="tl" id="timeline-box">{% for st in workflow_stages %}<div class="tl-i {% if st.status == 'completed' %}ok{% elif st.status == 'pending' %}mute{% endif %}"><b>{{ st.from_label }} ← {{ st.to_label }}</b><small>{{ st.date }}</small><p>{{ st.what_happened }}</p>{% if st.pending_text %}<small style="color:var(--warn)">{{ st.pending_text }}</small>{% endif %}</div>{% endfor %}</div>
-    <div class="note brand xs">{{ active_stage_pending_text }}</div></div></section>
-  <section class="panel"><div class="panel-h"><h3>{% icon 'list' %} سجل النشاط</h3></div><div class="panel-b"><div class="feed">{% for log in activity_logs|slice:":25" %}<div class="fi"><span class="avatar sm">{{ log.actor_user|default:"؟"|initials }}</span><div class="fi-b"><p>{{ log.description|short:140 }}</p><small>{{ log.actor_user.get_full_name|default:log.actor_user.username }}{% if log.acting_on_behalf_of %} (نيابةً عن {{ log.acting_on_behalf_of }}){% endif %} · <span class="num">{{ log.created_at|date:"Y-m-d H:i" }}</span></small></div></div>{% empty %}<p class="muted sm">لا يوجد نشاط.</p>{% endfor %}</div></div></section>
+  <section class="panel" id="sec-timeline" data-activity-root>
+    <div class="panel-h"><h3>{% icon 'clock' %} الخط الزمني للموضوع</h3><span class="muted xs">{{ completed_stages_count }} من {{ workflow_stages|length }} مرحلة مكتملة</span></div>
+    <div class="panel-b">
+      <div class="note brand xs chronology-current">{{ active_stage_pending_text }}</div>
+      <div id="sec-activity" class="chronology-filter-anchor">
+        <div class="activity-tools" role="search" aria-label="البحث في الخط الزمني">
+          <label class="search-in activity-search"><span class="sr-only">ابحث في الخط الزمني</span><input class="in" type="search" placeholder="ابحث في الإجراء أو الوصف أو المستخدم..." data-activity-search autocomplete="off"></label>
+          <label class="activity-filter"><span class="sr-only">نوع الحدث</span><select class="in" data-activity-type><option value="">كل الأحداث</option></select></label>
+          <label class="activity-filter"><span class="sr-only">الفترة الزمنية</span><select class="in" data-activity-period><option value="all">كل الفترات</option><option value="1">آخر 24 ساعة</option><option value="7">آخر 7 أيام</option><option value="30">آخر 30 يومًا</option></select></label>
+          <button class="btn sm" type="button" data-activity-clear>مسح الفلاتر</button>
+          <span class="activity-count muted xs" data-activity-count aria-live="polite">—</span>
+        </div>
+      </div>
+      <div class="case-chronology" data-activity-list aria-live="polite">
+        {% for st in workflow_stages %}
+        <article class="fi activity-item chronology-item chronology-stage {% if st.status == 'completed' %}is-complete{% elif st.status == 'waiting' %}is-waiting{% else %}is-active{% endif %}" data-activity-item data-action-type="مرحلة سير" data-log-timestamp="{{ st.date }}">
+          <span class="chronology-marker" aria-hidden="true">{% if st.status == 'completed' %}✓{% elif st.status == 'waiting' %}!{% else %}•{% endif %}</span>
+          <div class="fi-b">
+            <div class="activity-heading"><span class="activity-type">{{ st.title }}</span><time class="num">{{ st.date }}</time></div>
+            <b class="chronology-route">{{ st.from_label }} <span aria-hidden="true">←</span> {{ st.to_label }}</b>
+            <p>{{ st.what_happened }}</p>
+            {% if st.pending_text %}<small class="chronology-pending">{{ st.pending_text }}</small>{% elif st.completed_text %}<small class="muted">{{ st.completed_text }}</small>{% endif %}
+          </div>
+        </article>
+        {% endfor %}
+        {% for log in activity_logs|slice:":25" %}
+        <article class="fi activity-item chronology-item chronology-log" data-activity-item data-action-type="{{ log.action_type }}" data-log-timestamp="{{ log.created_at|date:'U' }}">
+          <span class="avatar sm">{{ log.actor_user|default:"؟"|initials }}</span>
+          <div class="fi-b">
+            <div class="activity-heading"><span class="activity-type">{{ log.action_type }}</span><time class="num" datetime="{{ log.created_at|date:'c' }}">{{ log.created_at|date:"Y-m-d H:i" }}</time></div>
+            <p>{{ log.description|short:140 }}</p>
+            <small>{{ log.actor_user.get_full_name|default:log.actor_user.username }}{% if log.acting_on_behalf_of %} (نيابةً عن {{ log.acting_on_behalf_of }}){% endif %}</small>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      <p class="activity-no-results muted sm" data-activity-no-results hidden>لا توجد أحداث تطابق معايير البحث الحالية.</p>
+      <p class="muted xs mt-s">يشمل الخط الزمني مراحل سير المعاملة وأحدث 25 حدثًا من سجل النشاط. الفلاتر محلية ولا تغيّر السجل المحفوظ.</p>
+    </div>
+  </section>
 </aside>
 </div>
 {% endwith %}

@@ -8,6 +8,7 @@
   <script>try{var t=JSON.parse(localStorage.getItem("theme")||"null")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
   <style>.drawer:not(.open),.overlay:not(.open),.scrim:not(.open){display:none!important}[hidden]{display:none!important}</style>
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/experience.css' %}?v=2">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -17,7 +18,7 @@
     {% include "partials/rail.html" %}
     <div class="main">
       <header class="top">
-        <button type="button" class="iconbtn" data-rail-toggle aria-label="القائمة">{% icon 'panel' %}</button>
+        <button type="button" class="iconbtn" data-rail-toggle aria-label="القائمة" aria-controls="main-rail" aria-expanded="true">{% icon 'panel' %}</button>
         <h1 class="trunc">{% block heading %}{% endblock %}</h1>
         <button type="button" class="search-trigger" data-cmdk aria-label="بحث سريع (Ctrl+K)">{% icon 'search' 'sm' %}<span>ابحث أو اكتب أمراً…</span><kbd class="kbd">Ctrl K</kbd></button>
         <button type="button" class="btn primary" data-compose="document" style="flex:none">{% icon 'plus' %}<span class="hide-sm">جديد</span></button>
@@ -37,6 +38,7 @@
   <div id="server-msgs" hidden>{% for m in messages %}<span data-t="{% if 'error' in m.tags %}error{% elif 'warning' in m.tags %}warning{% elif 'success' in m.tags %}success{% else %}info{% endif %}">{{ m }}</span>{% endfor %}</div>
   {% endif %}
   <script src="{% static 'js/app.js' %}?v=4" defer></script>
+  <script src="{% static 'js/experience.js' %}?v=1" defer></script>
   <script>setTimeout(function(){var css=getComputedStyle(document.documentElement).getPropertyValue("--ui-version").trim(),js=window.UI_VERSION,bad=[];if(css!=="4")bad.push(css?"ملف التنسيق app.css قديم":"لم يُحمَّل app.css");if(js!==4)bad.push(js?"ملف app.js قديم":"لم يُحمَّل app.js أو توقف بخطأ (F12 ثم Console)");if(!bad.length)return;var d=document.createElement("div");d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#b00020;color:#fff;padding:10px 16px;text-align:center;font:14px Tahoma,sans-serif";d.textContent=bad.join(" · ")+" — يُقدَّم من مسار static قديم أو من الكاش. نفّذ collectstatic ثم Ctrl+F5.";document.body.insertBefore(d,document.body.firstChild)},2500)</script>
   {% block extra_js %}{% endblock %}
 </body>

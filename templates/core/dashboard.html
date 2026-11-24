@@ -42,19 +42,19 @@
     <div class="inbox-scroll">
       {% for s in displayed_subjects %}
         {% ifchanged s.created_at|date:"Y-m-d" %}<div class="day">{% if s.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}اليوم{% else %}{{ s.created_at|date:"j F Y" }}{% endif %}</div>{% endifchanged %}
-        <a class="mail {% if s.has_pending_ref %}unread{% endif %}" href="{% url 'subjects:subject_detail' s.id %}" data-id="{{ s.id }}" data-preview="{% url 'subjects:subject_preview_json' s.id %}">
+        <a class="mail {% if s.has_pending_ref %}unread{% endif %}" href="{% url 'subjects:subject_detail' s.id %}" data-id="{{ s.id }}" data-preview="{% url 'subjects:subject_preview_json' s.id %}" data-can-act="{{ s.can_act|yesno:'true,false' }}" data-overdue="{{ s.is_overdue|yesno:'true,false' }}" aria-label="{{ s.internal_number }} — {{ s.title }} — {% if s.has_pending_ref %}بانتظار تأكيد الاستلام{% elif s.can_act %}ضمن نطاق عملك{% else %}للاطلاع والمتابعة{% endif %}">
           <span class="avatar">{{ s.sender_label|initials }}</span>
           <div class="grow">
             <div class="mail-top"><b class="trunc">{{ s.sender_label }}</b><span class="num xs">{{ s.created_at|date:"H:i" }}</span></div>
             <div class="mail-t trunc">{{ s.title }}</div>
-            <div class="mail-meta"><span class="tag code">{{ s.internal_number }}</span><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span>{% if s.is_overdue %}<span class="pill bad nodot">متأخر</span>{% endif %}{% if s.has_pending_ref %}<span class="pill warn nodot">بانتظار استلامك</span>{% endif %}{% if s.confidentiality.overrides_hierarchy %}<span class="lock">{% icon 'lock' 'sm' %}</span>{% endif %}{% if s.doc_count %}<span class="muted xs">{% icon 'clip' 'sm' %} {{ s.doc_count }}</span>{% endif %}</div>
+            <div class="mail-meta"><span class="tag code">{{ s.internal_number }}</span><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span>{% if s.is_overdue %}<span class="pill bad nodot">متأخر</span>{% endif %}{% if s.has_pending_ref %}<span class="pill warn nodot">بانتظار استلامك</span>{% elif s.can_act %}<span class="pill brand nodot">في نطاق عملك</span>{% else %}<span class="pill nodot">للاطلاع فقط</span>{% endif %}{% if s.confidentiality.overrides_hierarchy %}<span class="lock">{% icon 'lock' 'sm' %}</span>{% endif %}{% if s.doc_count %}<span class="muted xs">{% icon 'clip' 'sm' %} {{ s.doc_count }}</span>{% endif %}</div>
           </div>
         </a>
       {% empty %}{% include "partials/empty.html" with title="لا توجد مواضيع هنا" text="سيظهر هنا كل ما يصلك أو ما يطابق بحثك." icon_name="inbox" action_label="موضوع جديد" %}{% endfor %}
     </div>
     {% include "partials/pager.html" %}
   </div>
-  <div class="detail" id="detail-box"><div class="detail-empty"><div><span class="avatar lg">{% icon 'inbox' %}</span><h4 class="mt-s">اختر موضوعاً</h4><p class="muted sm">تظهر هنا التفاصيل السريعة والمرفقات وآخر الإحالات.</p></div></div></div>
+  <div class="detail" id="detail-box" aria-live="polite" aria-busy="false"><div class="detail-empty"><div><span class="avatar lg">{% icon 'inbox' %}</span><h4 class="mt-s">اختر موضوعاً</h4><p class="muted sm">تظهر هنا التفاصيل السريعة والمرفقات وآخر الإحالات.</p></div></div></div>
 </section>
 {% endif %}
 {% endblock %}

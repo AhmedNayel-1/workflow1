@@ -149,35 +149,94 @@
     $$("form[data-auto]").forEach((f) => on(f, "change", (e) => { if (e.target.matches("select,input[type=date],input[type=checkbox]")) f.requestSubmit ? f.requestSubmit() : f.submit(); }));
   }
 
-  /* ---------------- لوحة الأوامر Ctrl+K ---------------- */
-  let cmd = { items: [], shown: [], sel: 0 };
+  /* ---------------- البحث الذكي والتنقل Ctrl+K ---------------- */
+  const cmd = { items: [], shown: [], sel: 0, recent: store.get("cmdk_recent_searches", []) };
+  const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("ar")
+    .normalize("NFD").replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
   function toggleCmdk(force) {
     const o = $("#cmdk"); if (!o) return;
     if (o.classList.contains("open") && force !== true) { closeOv(o); return; }
-    cmd.items = [{ g: "إجراءات", t: "إنشاء موضوع جديد", k: "N", run: () => wz.open("document") }, { g: "إجراءات", t: "إرسال مراسلة سريعة", run: () => wz.open("message") },
-      { g: "إجراءات", t: "التنبيهات", run: () => openDr("dr-notif") }, { g: "إجراءات", t: "المحادثات", run: () => openDr("dr-chat") }, { g: "إجراءات", t: "تبديل المظهر (فاتح/داكن)", run: () => $("[data-theme-toggle]").click() }]
-      .concat($$(".rail .nav").map((a) => ({ g: (a.closest("[data-cap]") || {}).dataset ? a.closest("[data-cap]").dataset.cap : "التنقل", t: a.dataset.label || a.textContent.trim(), href: a.getAttribute("href") })));
-    openOv("cmdk"); const i = $("#cmdk-in"); i.value = ""; renderCmd(""); i.focus();
-  }
-  function renderCmd(q) {
-    const L = $("#cmdk-l"); q = q.trim();
-    cmd.shown = cmd.items.filter((x) => !q || x.t.includes(q));
-    if (q) cmd.shown.push({ g: "بحث", t: "ابحث في الأرشيف عن «" + q + "»", href: $("#cmdk").dataset.search + "?q=" + encodeURIComponent(q) });
-    cmd.sel = 0; L.textContent = "";
-    if (!cmd.shown.length) { L.append(h("div", { class: "empty", text: "لا نتائج" })); return; }
-    let last = null;
-    cmd.shown.forEach((x, i) => { if (x.g !== last) { L.append(h("div", { class: "cmdk-g", text: x.g })); last = x.g; } L.append(h("div", { class: "cmdk-i" + (i === 0 ? " sel" : ""), role: "option", onclick: () => runCmd(x) }, h("span", { text: x.t }), x.k ? h("span", { class: "kbd", text: x.k }) : null)); });
-  }
-  function runCmd(x) { closeOv($("#cmdk")); x.run ? x.run() : (location.href = x.href); }
-  function initCmdk() {
-    const i = $("#cmdk-in"); if (!i) return;
-    on(i, "input", () => renderCmd(i.value));
-    on(i, "keydown", (e) => {
-      const rows = $$(".cmdk-i"); if (!rows.length) return;
-      const mv = (d) => { rows[cmd.sel].classList.remove("sel"); cmd.sel = (cmd.sel + d + rows.length) % rows.length; rows[cmd.sel].classList.add("sel"); rows[cmd.sel].scrollIntoView({ block: "nearest" }); };
-      if (e.key === "ArrowDown") { e.preventDefault(); mv(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mv(-1); } else if (e.key === "Enter") { e.preventDefault(); runCmd(cmd.shown[cmd.sel]); }
+    const navItems = $$(".rail .nav").map((a) => {
+      const group = a.closest("[data-cap]");
+      return { g: group ? group.dataset.cap : "التنقل", t: a.dataset.label || a.textContent.trim(),
+        aliases: a.dataset.searchAliases || "", href: a.getAttribute("href"), type: "navigation" };
     });
-    $$("[data-cmdk]").forEach((b) => on(b, "click", () => toggleCmdk(true)));
+    cmd.items = [
+      { g: "إجراءات سريعة", t: "إنشاء موضوع جديد", aliases: "موضوع معاملة جديد اضافة", k: "N", run: () => wz.open("document") },
+      { g: "إجراءات سريعة", t: "إرسال مراسلة سريعة", aliases: "رسالة مراسله", run: () => wz.open("message") },
+      { g: "إجراءات سريعة", t: "فتح التنبيهات", aliases: "اشعارات", run: () => openDr("dr-notif") },
+      { g: "إجراءات سريعة", t: "فتح المحادثات", aliases: "دردشة شات", run: () => openDr("dr-chat") },
+      { g: "إجراءات سريعة", t: "تبديل المظهر فاتح / داكن", aliases: "الوضع الليلي", run: () => $("[data-theme-toggle]")?.click() },
+      { g: "بحث", t: "البحث في الموضوعات والمستندات", aliases: "رقم معاملة عنوان مستند ارشيف", href: $("#cmdk").dataset.search, type: "search" },
+      { g: "بحث", t: "البحث المتقدم في الموضوعات", aliases: "مرشحات حالة قطاع سرية تاريخ", href: $("#cmdk").dataset.advancedSearch, type: "search" }
+    ].concat(navItems);
+    openOv("cmdk");
+    const input = $("#cmdk-in"); input.value = ""; renderCmd("");
+    input.focus();
+  }
+  function rememberCmdSearch(query) {
+    const value = String(query || "").trim(); if (!value) return;
+    cmd.recent = [value, ...cmd.recent.filter((x) => normalizeSearch(x) !== normalizeSearch(value))].slice(0, 6);
+    store.set("cmdk_recent_searches", cmd.recent);
+  }
+  function runCmd(item) {
+    if (!item) return;
+    if (item.searchQuery) rememberCmdSearch(item.searchQuery);
+    closeOv($("#cmdk"));
+    if (item.run) item.run(); else if (item.href) location.href = item.href;
+  }
+  function renderCmd(query) {
+    const list = $("#cmdk-l"); if (!list) return;
+    const raw = String(query || "").trim(), normalized = normalizeSearch(raw);
+    list.textContent = ""; cmd.shown = [];
+    const matches = cmd.items.map((item) => {
+      const haystack = normalizeSearch([item.t, item.g, item.aliases].join(" "));
+      const tokens = normalized.split(/\s+/).filter(Boolean);
+      const ok = !tokens.length || tokens.every((token) => haystack.includes(token));
+      const exact = normalized && normalizeSearch(item.t).startsWith(normalized) ? 0 : 1;
+      return { item, ok, exact };
+    }).filter((x) => x.ok).sort((a,b) => a.exact-b.exact);
+    matches.forEach((x) => cmd.shown.push(x.item));
+    if (raw) {
+      const quickUrl = $("#cmdk").dataset.search + "?q=" + encodeURIComponent(raw);
+      const advancedUrl = $("#cmdk").dataset.advancedSearch + "?q=" + encodeURIComponent(raw);
+      cmd.shown.push({ g: "نتائج البحث", t: "ابحث عن «" + raw + "» في الموضوعات والمستندات", href: quickUrl, type: "search", searchQuery: raw });
+      cmd.shown.push({ g: "نتائج البحث", t: "استخدم البحث المتقدم لنفس العبارة", href: advancedUrl, type: "search", searchQuery: raw });
+    } else if (cmd.recent.length) {
+      cmd.recent.forEach((term) => cmd.shown.push({ g: "عمليات البحث الأخيرة", t: term, href: $("#cmdk").dataset.search + "?q=" + encodeURIComponent(term), type: "search", searchQuery: term }));
+    }
+    cmd.sel = 0;
+    if (!cmd.shown.length) {
+      list.append(h("div", { class: "empty cmdk-empty", text: "مفيش نتائج مطابقة. جرّب كلمة مختلفة أو افتح البحث في الأرشيف." }));
+      return;
+    }
+    let last = null;
+    cmd.shown.forEach((item, index) => {
+      if (item.g !== last) { list.append(h("div", { class: "cmdk-g", text: item.g })); last = item.g; }
+      const button = h("button", { type: "button", class: "cmdk-i" + (index === 0 ? " sel" : ""),
+        role: "option", "aria-selected": index === 0 ? "true" : "false", onclick: () => runCmd(item) },
+        h("span", { class: "cmdk-result-title", text: item.t }),
+        h("span", { class: "cmdk-result-kind", text: item.type === "search" ? "بحث" : item.type === "navigation" ? "فتح" : "إجراء" }));
+      button.dataset.cmdIndex = String(index); list.append(button);
+    });
+  }
+  function initCmdk() {
+    const input = $("#cmdk-in"); if (!input) return;
+    on(input, "input", () => renderCmd(input.value));
+    on(input, "keydown", (e) => {
+      const rows = $$(".cmdk-i", $("#cmdk-l")); if (!rows.length) return;
+      const move = (direction) => {
+        rows[cmd.sel]?.classList.remove("sel"); rows[cmd.sel]?.setAttribute("aria-selected", "false");
+        cmd.sel = (cmd.sel + direction + rows.length) % rows.length;
+        rows[cmd.sel].classList.add("sel"); rows[cmd.sel].setAttribute("aria-selected", "true");
+        rows[cmd.sel].scrollIntoView({ block: "nearest" });
+      };
+      if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+      else if (e.key === "Enter") { e.preventDefault(); runCmd(cmd.shown[cmd.sel]); }
+    });
+    $$("[data-cmdk]").forEach((button) => on(button, "click", () => toggleCmdk(true)));
   }
 
   /* ---------------- معالج الإنشاء ---------------- */
@@ -235,23 +294,69 @@
   };
 
   /* ---------------- معاينة المرفقات ---------------- */
-  function previewAtt(d) {
-    const body = $("#pv-body"); body.textContent = "";
+  let subjectPreviewItems = [];
+  let subjectPreviewIndex = -1;
+  function previewAtt(d, sourceEl = null) {
+    const body = $("#pv-body"); if (!body) return;
+    body.textContent = "";
     $("#pv-name").textContent = d.name || "مرفق";
     $("#pv-dl").href = d.dl || "#"; $("#pv-page").href = d.page || "#";
+    const meta = $("#pv-meta");
+    const details = [
+      d.version ? "الإصدار " + d.version : "",
+      d.size ? "الحجم " + d.size : "",
+      d.uploaded ? "تاريخ الإضافة " + d.uploaded : "",
+      d.uploader ? "أضيف بواسطة " + d.uploader : "",
+      d.approved ? "حالة الإصدار: " + d.approved : ""
+    ].filter(Boolean);
+    if (meta) { meta.textContent = details.join(" · "); meta.hidden = details.length === 0; }
+    const subjectSection = sourceEl && sourceEl.closest("#sec-documents");
+    subjectPreviewItems = subjectSection ? Array.from(subjectSection.querySelectorAll("[data-pv]")) : [];
+    subjectPreviewIndex = subjectPreviewItems.indexOf(sourceEl);
+    const prev = $("#pv-prev"), next = $("#pv-next");
+    if (prev) prev.hidden = subjectPreviewIndex <= 0;
+    if (next) next.hidden = subjectPreviewIndex < 0 || subjectPreviewIndex >= subjectPreviewItems.length - 1;
     const kind = (d.kind || "").toLowerCase();
-    if (/image|img/.test(kind)) body.append(h("img", { src: d.url, alt: d.name }));
-    else if (/pdf|text|txt/.test(kind)) body.append(h("iframe", { src: d.url, title: d.name }));
+    if (/image|img/.test(kind)) body.append(h("img", { class: "pv-media-image", src: d.url, alt: d.name || "صورة مرفقة" }));
+    else if (/pdf|text|txt/.test(kind)) body.append(h("iframe", { class: "pv-media-frame", src: d.url, title: d.name || "معاينة المرفق" }));
     else body.append(h("div", { class: "empty" }, h("div", { class: "ico", text: "📄" }), h("h4", { text: "لا تتوفر معاينة مباشرة لهذا النوع" }), h("p", { text: "يمكنك فتح صفحة المعاينة الكاملة أو تنزيل الملف." })));
     openOv("pv");
   }
   on(document, "click", (e) => {
+    const step = e.target.closest("[data-pv-step]");
+    if (step) {
+      const target = subjectPreviewItems[subjectPreviewIndex + Number(step.dataset.pvStep)];
+      if (target) target.click();
+      return;
+    }
+    const previewButton = e.target.closest("[data-pv-btn]");
+    if (previewButton) {
+      const row = previewButton.closest("[data-pv]");
+      if (row) { e.preventDefault(); previewAtt({
+        name: row.dataset.pvName, url: row.dataset.pvUrl, dl: row.dataset.pvDl, page: row.dataset.pvPage, kind: row.dataset.pvKind,
+        version: row.dataset.pvVersion, size: row.dataset.pvSize, uploaded: row.dataset.pvUploaded, uploader: row.dataset.pvUploader, approved: row.dataset.pvApproved
+      }, row); }
+      return;
+    }
     const el = e.target.closest("[data-pv]"); if (!el) return;
     const inner = e.target.closest("a[href],button,form,input,select,textarea");
     if (inner && el.contains(inner) && inner !== el) return;
     e.preventDefault(); const d = el.dataset;
     if (el.closest("[data-docs]") && (el.classList.contains("dcard") || el.hasAttribute("data-split"))) { splitPreview(el); return; }
-    previewAtt({ name: d.pvName, url: d.pvUrl, dl: d.pvDl, page: d.pvPage, kind: d.pvKind });
+    previewAtt({ name: d.pvName, url: d.pvUrl, dl: d.pvDl, page: d.pvPage, kind: d.pvKind,
+      version: d.pvVersion, size: d.pvSize, uploaded: d.pvUploaded, uploader: d.pvUploader, approved: d.pvApproved }, el);
+  });
+  on(document, "keydown", (e) => {
+    const row = e.target.closest("#sec-documents [data-pv][role=button]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); row.click(); return; }
+  });
+  on(document, "keydown", (e) => {
+    if (!$("#pv")?.classList.contains("open") || !subjectPreviewItems.length) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const direction = e.key === "ArrowLeft" ? 1 : -1;
+      const target = subjectPreviewItems[subjectPreviewIndex + direction];
+      if (target) { e.preventDefault(); target.click(); }
+    }
   });
   function splitPreview(card) {
     const root = card.closest("[data-docs]"), pv = $(".pv-b", root), d = card.dataset;
@@ -268,31 +373,80 @@
 
   /* ---------------- معاينة الموضوع في الوارد ---------------- */
   const pill = (t, tone) => h("span", { class: "pill " + (tone || ""), text: t });
+  let previewRequestId = 0;
   async function loadSubject(id, row) {
+    const requestId = ++previewRequestId;
     const box = $("#detail-box"), inbox = $(".inbox");
+    box.setAttribute("aria-busy", "true");
     $$(".mail.on").forEach((r) => r.classList.remove("on")); row && row.classList.add("on");
     if (row) row.classList.remove("unread");
     box.textContent = ""; box.append(h("div", { class: "detail-empty", text: "جارٍ التحميل…" }));
     inbox.classList.add("show-detail");
     try {
       const d = await api(row.dataset.preview);
+      if (requestId !== previewRequestId) return;
       box.textContent = "";
       const kv = (k, v) => [h("dt", { text: k }), h("dd", {}, v)];
+      const overviewPane = h("section", { class: "preview-pane is-active", "data-preview-pane": "overview" },
+        h("dl", { class: "kv" }, ...kv("نوع المعاملة", d.transaction_type), ...kv("القطاع / الوحدة", d.sector + " — " + d.org_unit), ...kv("المسؤول الحالي", d.current_owner), ...kv("الاستحقاق", h("span", { class: d.is_overdue ? "bold" : "", style: d.is_overdue ? "color:var(--bad)" : null, text: d.due_date + (d.is_overdue ? " (متأخر)" : "") })), ...kv("المذكرات المسجلة", String(d.memos_count || 0))),
+        d.description ? h("div", { class: "sect" }, h("h4", { text: "ملخص الموضوع" }), h("p", { class: "muted preview-description", text: d.description })) : h("div", { class: "note info mt-s", text: "لا يوجد وصف إضافي مسجل لهذا الموضوع." }),
+        h("div", { class: "preview-facts" },
+          h("div", {}, h("small", { text: "درجة السرية" }), h("b", { text: d.confidentiality })),
+          h("div", {}, h("small", { text: "الأولوية" }), h("b", { text: d.priority })),
+          h("div", {}, h("small", { text: "المذكرات" }), h("b", { text: String(d.memos_count || 0) }))));
+      const attachmentsPane = h("section", { class: "preview-pane", "data-preview-pane": "attachments", hidden: true },
+        (d.attachments || []).length ? h("div", { class: "preview-attachment-list" }, ...d.attachments.map((a) => h("div", { class: "item preview-attachment", role: "button", tabindex: "0", "aria-label": "معاينة " + a.filename, "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind },
+          h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }),
+          h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title })),
+          h("span", { class: "preview-open-label", text: "معاينة" })))) : h("div", { class: "detail-empty preview-tab-empty", text: "لا توجد مرفقات متاحة للمعاينة." }));
+      const referralsPane = h("section", { class: "preview-pane", "data-preview-pane": "referrals", hidden: true },
+        (d.recent_referrals || []).length ? h("div", { class: "tl preview-referral-list" }, ...d.recent_referrals.map((r) => h("div", { class: "tl-i" }, h("b", { text: r.referred_by + " ← " + r.targets }), h("small", { text: r.purpose + " · " + r.created_at }), r.notes ? h("p", { text: r.notes }) : null))) : h("div", { class: "detail-empty preview-tab-empty", text: "لا توجد إحالات سابقة مسجلة." }));
+      const panes = h("div", { class: "preview-panes" }, overviewPane, attachmentsPane, referralsPane);
+      let tabs;
+      const selectPreviewPane = (key) => {
+        $$(".preview-tab", tabs).forEach((button) => {
+          const active = button.dataset.previewTab === key;
+          button.classList.toggle("on", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        $$("[data-preview-pane]", panes).forEach((pane) => { pane.hidden = pane.dataset.previewPane !== key; });
+      };
+      const makeTab = (label, count, key, active) => h("button", { type: "button", class: "preview-tab" + (active ? " on" : ""), "data-preview-tab": key, "aria-pressed": active ? "true" : "false", onclick: () => selectPreviewPane(key) },
+        h("span", { text: label }), h("span", { class: "preview-tab-count", text: String(count) }));
+      tabs = h("div", { class: "preview-tabs", role: "group", "aria-label": "أقسام المعاينة" },
+        makeTab("الملخص", 1, "overview", true),
+        makeTab("المرفقات", (d.attachments || []).length, "attachments", false),
+        makeTab("الإحالات", (d.recent_referrals || []).length, "referrals", false));
       const acts = h("div", { class: "detail-foot" },
-        h("a", { class: "btn primary", href: d.detail_url, text: "فتح الموضوع" }),
+        h("a", { class: "btn primary", href: d.detail_url, text: "فتح الموضوع بالكامل" }),
         d.pending_ref_id && d.ack_url ? h("form", { class: "inline", method: "post", action: d.ack_url }, h("input", { type: "hidden", name: "csrfmiddlewaretoken", value: csrf() }), h("input", { type: "hidden", name: "action", value: "acknowledge" }), h("input", { type: "hidden", name: "next", value: location.pathname + location.search }), h("button", { class: "btn ok", type: "submit", text: "تأكيد الاستلام" })) : null,
         h("button", { class: "btn ghost menu-back", type: "button", onclick: () => inbox.classList.remove("show-detail"), text: "رجوع للقائمة" }));
       box.append(h("div", { class: "detail-scroll" },
         h("div", { class: "row wrap gap-s" }, h("span", { class: "tag code", text: d.internal_number }), pill(d.status_label, d.is_overdue ? "bad" : "brand"), pill(d.priority, "warn"), d.is_top_secret ? pill("سري للغاية", "bad") : pill(d.confidentiality, "info")),
         h("h2", { class: "mt-s", text: d.title }),
-        h("dl", { class: "kv" }, ...kv("نوع المعاملة", d.transaction_type), ...kv("القطاع / الوحدة", d.sector + " — " + d.org_unit), ...kv("المسؤول الحالي", d.current_owner), ...kv("الاستحقاق", h("span", { class: d.is_overdue ? "bold" : "", style: d.is_overdue ? "color:var(--bad)" : null, text: d.due_date + (d.is_overdue ? " (متأخر)" : "") })), ...kv("المذكرات", String(d.memos_count || 0))),
-        d.description ? h("div", { class: "sect" }, h("h4", { text: "الوصف" }), h("p", { class: "muted", style: "white-space:pre-wrap", text: d.description })) : null,
-        (d.attachments || []).length ? h("div", { class: "sect" }, h("h4", { text: "المرفقات (" + d.attachments.length + ")" }), ...d.attachments.map((a) => h("div", { class: "item", "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind, style: "cursor:pointer" }, h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }), h("div", { class: "grow" }, h("h5", { text: a.filename }), h("small", { class: "muted", text: a.doc_type + " · " + a.doc_title }))))) : null,
-        (d.recent_referrals || []).length ? h("div", { class: "sect" }, h("h4", { text: "آخر الإحالات" }), h("div", { class: "tl" }, ...d.recent_referrals.map((r) => h("div", { class: "tl-i" }, h("b", { text: r.referred_by + " ← " + r.targets }), h("small", { text: r.purpose + " · " + r.created_at }), r.notes ? h("p", { text: r.notes }) : null)))) : null),
+        h("section", { class: "preview-guidance " + (d.is_overdue ? "is-overdue" : d.pending_ref_id ? "needs-action" : d.can_act ? "can-act" : "readonly"), "aria-live": "polite" },
+          h("span", { class: "preview-guidance-mark", text: d.is_overdue ? "!" : d.pending_ref_id ? "↳" : d.can_act ? "✓" : "i", "aria-hidden": "true" }),
+          h("div", {}, h("b", { text: d.is_overdue ? "هذا الموضوع تجاوز موعد استحقاقه" : d.pending_ref_id ? "الخطوة المطلوبة: تأكيد استلام الإحالة" : d.can_act ? "الموضوع ضمن نطاق عملك" : "للاطلاع والمتابعة فقط" }),
+            h("p", { text: d.is_overdue ? "راجع الموضوع وحدد الإجراء المناسب وفق مرحلته وصلاحياتك." : d.pending_ref_id ? "بعد تأكيد الاستلام، افتح الموضوع لمراجعة التفاصيل واستكمال الإجراء." : d.can_act ? "افتح الموضوع لمراجعة الإجراءات المتاحة لك والخطوة التالية." : "يمكنك مراجعة البيانات والمرفقات دون تنفيذ إجراء على الموضوع." }))),
+        tabs, panes),
         acts);
-    } catch (err) { box.textContent = ""; box.append(h("div", { class: "detail-empty", text: err.message })); }
+    } catch (err) { if (requestId !== previewRequestId) return; box.textContent = ""; box.append(h("div", { class: "detail-empty", role: "alert", text: err.message })); }
+    finally { if (requestId === previewRequestId) box.setAttribute("aria-busy", "false"); }
   }
   on(document, "click", (e) => { const r = e.target.closest(".mail[data-preview]"); if (!r) return; if (e.target.closest("a.open-link")) return; e.preventDefault(); loadSubject(r.dataset.id, r); });
+  on(document, "keydown", (e) => {
+    const attachment = e.target.closest(".preview-attachment[data-pv]");
+    if (attachment && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); attachment.click(); return; }
+    const current = e.target.closest(".inbox-scroll .mail[data-preview]");
+    if (current && ["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      const rows = $(".inbox-scroll .mail[data-preview]"); if (!rows.length) return;
+      e.preventDefault(); const index = rows.indexOf(current);
+      const next = e.key === "Home" ? rows[0] : e.key === "End" ? rows[rows.length - 1] : rows[Math.max(0, Math.min(rows.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))];
+      next.focus(); next.click();
+    } else if (e.key === "Escape" && $(".inbox.show-detail")) {
+      e.preventDefault(); $(".inbox").classList.remove("show-detail"); const selected = $(".mail.on"); if (selected) selected.focus();
+    }
+  });
 
   /* ---------------- الإشعارات ---------------- */
   const notif = { items: [], cat: "" };
@@ -390,7 +544,7 @@
     units.forEach((u) => { const n = by[u.id]; if (u.parent_id && by[u.parent_id]) by[u.parent_id].kids.push(n); else top.push(n); });
     const node = (n) => {
       const users = (n.users || []).map((x) => h("span", { class: "chipuser", draggable: manage ? "true" : null, "data-emp-id": x.employee_id, title: x.job_title || "" }, h("span", { class: "avatar sm", text: (x.full_name || "؟").slice(0, 2) }), x.full_name, x.is_secretariat ? h("span", { class: "pill nodot", text: "سكرتارية" }) : null));
-      return h("div", {}, h("div", { class: "org-node", draggable: manage ? "true" : null, "data-unit-id": n.id, "data-drop": n.id },
+      return h("div", { class: "org-branch", "data-org-search-text": [n.name, n.code, ...(n.users || []).map(x => x.full_name || "")].join(" ") }, h("div", { class: "org-node", draggable: manage ? "true" : null, "data-unit-id": n.id, "data-drop": n.id },
         h("div", { class: "row between wrap" }, h("div", { class: "row gap-s" }, h("b", { text: n.name }), h("span", { class: "tag code", text: n.code }), n.unit_type ? h("span", { class: "pill info nodot", text: n.unit_type }) : null), h("span", { class: "muted xs", text: (n.sector_name || "") + " · " + (n.users_count || 0) + " موظف" })),
         users.length ? h("div", { class: "chips mt-s" }, ...users) : null),
         n.kids.length ? h("div", { class: "org-kids" }, ...n.kids.sort((a, b) => a.level_order - b.level_order).map(node)) : null);
@@ -415,6 +569,74 @@
     });
   }
 
+  /* ---------------- تحسين عرض نتائج البحث ---------------- */
+  function initSearchResults() {
+    const root = $("[data-search-results]");
+    if (!root) return;
+    const query = String(root.dataset.searchQuery || "").trim();
+    if (!query) return;
+    const normalizeWithMap = (value) => {
+      let normalized = "";
+      const starts = [], ends = [];
+      for (let i = 0; i < value.length;) {
+        const char = String.fromCodePoint(value.codePointAt(i));
+        const next = i + char.length;
+        const folded = char.toLocaleLowerCase("ar").normalize("NFD")
+          .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+          .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
+        for (let j = 0; j < folded.length; j++) {
+          normalized += folded[j]; starts.push(i); ends.push(next);
+        }
+        i = next;
+      }
+      return { normalized, starts, ends };
+    };
+    const terms = query.split(/\s+/).filter((token) => token.length > 1)
+      .map((token) => normalizeWithMap(token).normalized).filter(Boolean);
+    if (!terms.length) return;
+    $$("[data-search-highlight]").forEach((node) => {
+      if (node.dataset.highlighted === "1") return;
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) if (walker.currentNode.nodeValue.trim()) textNodes.push(walker.currentNode);
+      textNodes.forEach((textNode) => {
+        const value = textNode.nodeValue;
+        const mapped = normalizeWithMap(value);
+        const ranges = [];
+        terms.forEach((term) => {
+          let at = mapped.normalized.indexOf(term);
+          while (at >= 0) {
+            const last = at + term.length - 1;
+            if (mapped.starts[at] !== undefined && mapped.ends[last] !== undefined)
+              ranges.push([mapped.starts[at], mapped.ends[last]]);
+            at = mapped.normalized.indexOf(term, at + term.length);
+          }
+        });
+        if (!ranges.length) return;
+        ranges.sort((a,b) => a[0]-b[0]);
+        const merged = [];
+        ranges.forEach((range) => {
+          const last = merged[merged.length-1];
+          if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+          else merged.push(range.slice());
+        });
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+        merged.forEach(([matchStart,matchEnd]) => {
+          if (matchStart > cursor) fragment.append(document.createTextNode(value.slice(cursor,matchStart)));
+          const mark = document.createElement("mark");
+          mark.className = "search-match";
+          mark.textContent = value.slice(matchStart,matchEnd);
+          fragment.append(mark);
+          cursor = matchEnd;
+        });
+        if (cursor < value.length) fragment.append(document.createTextNode(value.slice(cursor)));
+        textNode.parentNode.replaceChild(fragment,textNode);
+      });
+      node.dataset.highlighted = "1";
+    });
+  }
+
   /* ---------------- مفتاح الـ idempotency وإرسال مزدوج ---------------- */
   on(document, "submit", (e) => { const f = e.target; if (f.method !== "post" || f.dataset.multi !== undefined) return; const b = $("button[type=submit]:not([data-nolock])", f); if (!b || f.id === "wz-form") return; setTimeout(() => { b.disabled = true; setTimeout(() => (b.disabled = false), 8000); }, 0); }, false);
 
@@ -424,7 +646,7 @@
     const rail = store.get("rail", false); if (rail && innerWidth > 1000) $(".shell") && $(".shell").classList.add("collapsed");
     $$("#server-msgs [data-t]").forEach((m, i) => setTimeout(() => toast(m.textContent.trim(), m.dataset.t), i * 160));
     on(window, "scroll", () => $(".top") && $(".top").classList.toggle("scrolled", scrollY > 4), { passive: true });
-    [initTabs, initTables, initCmdk, () => wz.init(), initChat, initCalendar, initOrg].forEach((fn) => { try { fn(); } catch (e) { console.error("init failed:", fn.name, e); toast("خطأ في تهيئة الواجهة: " + e.message, "error"); } });
+    [initTabs, initTables, initCmdk, initSearchResults, () => wz.init(), initChat, initCalendar, initOrg].forEach((fn) => { try { fn(); } catch (e) { console.error("init failed:", fn.name, e); toast("خطأ في تهيئة الواجهة: " + e.message, "error"); } });
     const ib = $(".inbox[data-autoload]"); const first = ib && $(".mail[data-preview]", ib);
     if (first && innerWidth > 1000) { loadSubject(first.dataset.id, first); ib.classList.remove("show-detail"); }
     if (location.hash.startsWith("#sec-")) setTimeout(() => jump(location.hash.slice(1)), 300);

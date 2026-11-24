@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-h"><div><h2 class="trunc">{{ attachment.original_filename }}</h2><p><span class="tag code">{{ internal_number }}</span> {{ doc.title }}</p></div><div class="row"><a class="btn" href="{% url 'documents:document_detail' doc.id %}">المستند</a><a class="btn primary" href="{% url 'documents:attachment_download' attachment.id %}">{% icon 'download' %}تنزيل</a></div></div>
 {% if integrity and not integrity.ok %}<div class="note bad"><b>تحذير سلامة:</b> {{ integrity.label }}</div>{% endif %}
-<section class="panel" style="min-height:70vh;overflow:hidden">
+<div class="attachment-preview-meta"><span><small>اسم الملف</small><b>{{ attachment.original_filename }}</b></span><span><small>حجم الملف</small><b>{{ attachment.file_size|fsize }}</b></span><span><small>المستند</small><b>{{ internal_number }}</b></span>{% if integrity %}<span><small>سلامة الملف</small><b>{% if integrity.ok %}سليم{% else %}يحتاج مراجعة{% endif %}</b></span>{% endif %}</div><section class="panel attachment-preview-stage" style="min-height:70vh;overflow:hidden">
   {% if office_preview_html %}<div class="panel-b scroll-x office">{{ office_preview_html|safe }}</div>
   {% elif attachment.preview_kind == "pdf" %}<iframe src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream" title="{{ attachment.original_filename }}" style="width:100%;height:78vh;border:0"></iframe>
   {% elif attachment.preview_kind == "image" %}<div class="panel-b" style="text-align:center"><img src="{% url 'documents:attachment_download' attachment.id %}?inline=1&mode=stream" alt="{{ attachment.original_filename }}" style="max-height:78vh"></div>
