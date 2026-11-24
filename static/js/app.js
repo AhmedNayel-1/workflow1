@@ -288,7 +288,7 @@
         h("div", { class: "preview-facts" },
           h("div", {}, h("small", { text: "درجة السرية" }), h("b", { text: d.confidentiality })),
           h("div", {}, h("small", { text: "الأولوية" }), h("b", { text: d.priority })),
-          h("div", {}, h("small", { text: "المذكرات" }), h("b", { text: String(d.memos_count || 0) })))));
+          h("div", {}, h("small", { text: "المذكرات" }), h("b", { text: String(d.memos_count || 0) }))));
       const attachmentsPane = h("section", { class: "preview-pane", "data-preview-pane": "attachments", hidden: true },
         (d.attachments || []).length ? h("div", { class: "preview-attachment-list" }, ...d.attachments.map((a) => h("div", { class: "item preview-attachment", role: "button", tabindex: "0", "aria-label": "معاينة " + a.filename, "data-pv": "", "data-pv-name": a.filename, "data-pv-url": a.preview_url, "data-pv-dl": a.download_url, "data-pv-page": a.full_page_url, "data-pv-kind": a.preview_kind },
           h("div", { class: "ficon", text: (a.filename.split(".").pop() || "").slice(0, 4).toUpperCase() }),
