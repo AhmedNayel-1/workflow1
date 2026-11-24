@@ -569,6 +569,57 @@
     });
   }
 
+  /* ---------------- تحسين عرض نتائج البحث ---------------- */
+  function initSearchResults() {
+    const root = $("[data-search-results]");
+    if (!root) return;
+    const query = String(root.dataset.searchQuery || "").trim();
+    if (!query) return;
+    const tokens = query.split(/\\s+/).filter((token) => token.length > 1);
+    if (!tokens.length) return;
+    const normalize = (value) => String(value || "").toLocaleLowerCase("ar")
+      .normalize("NFD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
+    const terms = tokens.map(normalize).filter(Boolean);
+    if (!terms.length) return;
+    $("[data-search-highlight]", document).forEach((node) => {
+      if (node.dataset.highlighted === "1") return;
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) if (walker.currentNode.nodeValue.trim()) textNodes.push(walker.currentNode);
+      textNodes.forEach((textNode) => {
+        const value = textNode.nodeValue;
+        const normalized = normalize(value);
+        const ranges = [];
+        terms.forEach((term) => {
+          let at = normalized.indexOf(term);
+          while (at >= 0) { ranges.push([at, at + term.length]); at = normalized.indexOf(term, at + term.length); }
+        });
+        if (!ranges.length) return;
+        ranges.sort((a,b) => a[0]-b[0]);
+        const merged = [];
+        ranges.forEach((range) => {
+          const last = merged[merged.length-1];
+          if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+          else merged.push(range.slice());
+        });
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+        merged.forEach(([start,end]) => {
+          if (start > cursor) fragment.append(document.createTextNode(value.slice(cursor,start)));
+          const mark = document.createElement("mark");
+          mark.className = "search-match";
+          mark.textContent = value.slice(start,end);
+          fragment.append(mark);
+          cursor = end;
+        });
+        if (cursor < value.length) fragment.append(document.createTextNode(value.slice(cursor)));
+        textNode.parentNode.replaceChild(fragment,textNode);
+      });
+      node.dataset.highlighted = "1";
+    });
+  }
+
   /* ---------------- مفتاح الـ idempotency وإرسال مزدوج ---------------- */
   on(document, "submit", (e) => { const f = e.target; if (f.method !== "post" || f.dataset.multi !== undefined) return; const b = $("button[type=submit]:not([data-nolock])", f); if (!b || f.id === "wz-form") return; setTimeout(() => { b.disabled = true; setTimeout(() => (b.disabled = false), 8000); }, 0); }, false);
 
@@ -578,7 +629,7 @@
     const rail = store.get("rail", false); if (rail && innerWidth > 1000) $(".shell") && $(".shell").classList.add("collapsed");
     $$("#server-msgs [data-t]").forEach((m, i) => setTimeout(() => toast(m.textContent.trim(), m.dataset.t), i * 160));
     on(window, "scroll", () => $(".top") && $(".top").classList.toggle("scrolled", scrollY > 4), { passive: true });
-    [initTabs, initTables, initCmdk, () => wz.init(), initChat, initCalendar, initOrg].forEach((fn) => { try { fn(); } catch (e) { console.error("init failed:", fn.name, e); toast("خطأ في تهيئة الواجهة: " + e.message, "error"); } });
+    [initTabs, initTables, initCmdk, initSearchResults, () => wz.init(), initChat, initCalendar, initOrg].forEach((fn) => { try { fn(); } catch (e) { console.error("init failed:", fn.name, e); toast("خطأ في تهيئة الواجهة: " + e.message, "error"); } });
     const ib = $(".inbox[data-autoload]"); const first = ib && $(".mail[data-preview]", ib);
     if (first && innerWidth > 1000) { loadSubject(first.dataset.id, first); ib.classList.remove("show-detail"); }
     if (location.hash.startsWith("#sec-")) setTimeout(() => jump(location.hash.slice(1)), 300);
