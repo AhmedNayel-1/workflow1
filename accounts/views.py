@@ -472,11 +472,23 @@ def permissions_matrix(request):
 @login_required
 def delegations_view(request):
     """إدارة السكرتارية والإنابة المؤقتة مع الاحتفاظ بالسجل التاريخي."""
+    is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
+    direct_role_ids = list(PermissionService.get_active_assignments(request.user).values_list("role_id", flat=True))
+
+    def has_direct_permission(code):
+        if is_full_admin:
+            return True
+        return RolePermission.objects.filter(
+            role_id__in=direct_role_ids,
+            permission__code=code,
+            max_confidentiality_rank__gte=1,
+        ).exists()
+
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "create_delegation":
-            if not PermissionService.user_has_permission(request.user, "DELEGATION_MANAGE"):
-                raise PermissionDenied("ليس لديك صلاحية إنشاء تفويض أو إنابة.")
+            if not has_direct_permission("DELEGATION_MANAGE"):
+                raise PermissionDenied("ليس لديك صلاحية مباشرة لإنشاء تفويض أو إنابة.")
 
             # لا يوجد حالياً رمز صلاحية مستقل يسمح بإنشاء تفويض نيابةً عن مسؤول آخر.
             posted_delegator_id = request.POST.get("delegator_id") or ""
@@ -505,7 +517,7 @@ def delegations_view(request):
 
             allowed_actions = list(dict.fromkeys(request.POST.getlist("allowed_actions")))
             valid_codes = set(PermissionCode.objects.values_list("code", flat=True))
-            if any(code not in valid_codes or not PermissionService.user_has_permission(delegator, code) for code in allowed_actions):
+            if any(code not in valid_codes or not has_direct_permission(code) for code in allowed_actions):
                 raise PermissionDenied("لا يجوز منح المفوَّض إليه إجراءً لا يملكه المفوِّض.")
 
             allow_confidential = request.POST.get("allow_confidential") == "on"
@@ -548,8 +560,8 @@ def delegations_view(request):
             messages.success(request, "تم تسجيل التفويض بنجاح.")
         elif action == "revoke":
             delegation = get_object_or_404(Delegation, id=request.POST.get("delegation_id"))
-            if not PermissionService.user_has_permission(request.user, "DELEGATION_MANAGE"):
-                raise PermissionDenied("ليس لديك صلاحية إلغاء التفويضات.")
+            if not has_direct_permission("DELEGATION_MANAGE"):
+                raise PermissionDenied("ليس لديك صلاحية مباشرة لإلغاء التفويضات.")
             is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
             bounds = PermissionService.get_scoped_admin_boundaries(request.user)
             if not is_full_admin and delegation.delegator_id != request.user.id:
@@ -587,7 +599,7 @@ def delegations_view(request):
     permission_codes = PermissionCode.objects.all()
     permission_codes = [
         permission for permission in permission_codes
-        if PermissionService.user_has_permission(request.user, permission.code)
+        if has_direct_permission(permission.code)
     ]
     return render(
         request,
