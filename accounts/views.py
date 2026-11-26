@@ -504,7 +504,10 @@ def delegations_view(request):
             if not is_full_admin:
                 delegate_unit_id = delegate.current_unit.id if delegate.current_unit else None
                 delegate_sector_id = delegate.current_sector.id if delegate.current_sector else None
-                if delegate_unit_id not in bounds["unit_ids"] and delegate_sector_id not in bounds["sector_ids"]:
+                if delegate_unit_id:
+                    if delegate_unit_id not in bounds["unit_ids"]:
+                        raise PermissionDenied("المفوَّض إليه خارج وحدات نطاقك التنظيمي.")
+                elif delegate_sector_id not in bounds["sector_ids"]:
                     raise PermissionDenied("المفوَّض إليه خارج نطاقك التنظيمي.")
 
             scope_unit_id = request.POST.get("scope_unit_id") or None
@@ -564,10 +567,16 @@ def delegations_view(request):
                 raise PermissionDenied("ليس لديك صلاحية مباشرة لإلغاء التفويضات.")
             is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
             bounds = PermissionService.get_scoped_admin_boundaries(request.user)
-            if not is_full_admin and delegation.delegator_id != request.user.id:
+            if not is_full_admin:
                 delegator_unit_id = delegation.delegator.current_unit.id if delegation.delegator.current_unit else None
                 delegator_sector_id = delegation.delegator.current_sector.id if delegation.delegator.current_sector else None
-                if delegation.scope_unit_id not in bounds["unit_ids"] and delegator_unit_id not in bounds["unit_ids"] and delegator_sector_id not in bounds["sector_ids"]:
+                scope_in_bounds = delegation.scope_unit_id in bounds["unit_ids"]
+                delegator_in_bounds = (
+                    delegator_unit_id in bounds["unit_ids"]
+                    if delegator_unit_id
+                    else delegator_sector_id in bounds["sector_ids"]
+                )
+                if not scope_in_bounds and not delegator_in_bounds:
                     raise PermissionDenied("لا يمكنك إلغاء تفويض خارج نطاقك التنظيمي.")
             delegation.is_active = False
             delegation.revoked_at = timezone.now()
@@ -590,11 +599,11 @@ def delegations_view(request):
     users = User.objects.filter(is_active=True)
     org_units = OrgUnit.objects.filter(is_active=True)
     if not is_full_admin:
-        delegations = delegations.filter(Q(delegator=request.user) | Q(scope_unit_id__in=bounds["unit_ids"]))
-        users = users.filter(
-            Q(employee__current_unit_id__in=bounds["unit_ids"])
-            | Q(role_assignments__is_active=True, role_assignments__sector_id__in=bounds["sector_ids"])
+        delegations = delegations.filter(
+            Q(scope_unit_id__in=bounds["unit_ids"])
+            | Q(delegator__employee__current_unit_id__in=bounds["unit_ids"])
         ).distinct()
+        users = users.filter(employee__current_unit_id__in=bounds["unit_ids"]).distinct()
         org_units = org_units.filter(id__in=bounds["unit_ids"])
     permission_codes = PermissionCode.objects.all()
     permission_codes = [
