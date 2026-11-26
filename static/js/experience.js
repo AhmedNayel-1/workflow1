@@ -900,6 +900,7 @@
       holder.hidden = holder.childElementCount === 0;
     };
     controls.forEach(control => { control.addEventListener("input", update); control.addEventListener("change", update); });
+    root.querySelectorAll("[data-subject-clear],[data-document-clear],[data-decision-clear],[data-task-clear],[data-referral-clear],[data-notification-clear]").forEach(button => button.addEventListener("click", () => window.setTimeout(update, 0)));
     update();
   });
 
