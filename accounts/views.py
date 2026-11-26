@@ -521,7 +521,7 @@ def delegations_view(request):
                 raise PermissionDenied("لا يجوز منح المفوَّض إليه إجراءً لا يملكه المفوِّض.")
 
             allow_confidential = request.POST.get("allow_confidential") == "on"
-            if allow_confidential and not PermissionService.get_active_assignments(delegator).filter(
+            if allow_confidential and not is_full_admin and not PermissionService.get_active_assignments(delegator).filter(
                 role__can_view_confidential=True
             ).exists() and not PermissionService.get_active_assignments(delegator).filter(
                 role__can_view_top_secret=True
