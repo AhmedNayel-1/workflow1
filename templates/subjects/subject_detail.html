@@ -21,7 +21,7 @@
     <div class="panel-b">
       <label class="fld full"><span>إجراء</span><select class="in" data-specialist-action-select>
         <option value="">— اختر الإجراء —</option>
-        {% if pending_recipient %}<option value="receive">استلام</option><option value="complete">إتمام التنفيذ</option><option value="return">إرجاع للمحيل</option>{% elif perms.can_close %}<option value="complete">إتمام التنفيذ</option>{% endif %}
+        {% if pending_recipient %}<option value="receive">استلام</option><option value="complete">إتمام التنفيذ</option><option value="return">إرجاع للمحيل</option>{% elif perms.can_close %}<option value="complete">إغلاق الموضوع</option>{% endif %}
         {% if perms.can_decide %}<option value="decision">قرار جديد</option>{% endif %}
         {% if perms.can_suspend %}<option value="suspension">{% if active_suspension %}تعليق (استئناف بعد التعليق){% else %}تعليق{% endif %}</option>{% endif %}
       </select></label>
