@@ -475,11 +475,21 @@ def delegations_view(request):
     is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
     direct_role_ids = list(PermissionService.get_active_assignments(request.user).values_list("role_id", flat=True))
 
-    def has_direct_permission(code):
+    def has_direct_permission(code, scope_unit=None):
         if is_full_admin:
             return True
+        role_ids = direct_role_ids
+        if scope_unit is not None:
+            scoped_assignments = PermissionService.get_active_assignments(
+                request.user, sector=scope_unit.sector
+            )
+            role_ids = [
+                assignment.role_id for assignment in scoped_assignments
+                if assignment.org_unit is None
+                or scope_unit.id in assignment.org_unit.get_descendant_ids()
+            ]
         return RolePermission.objects.filter(
-            role_id__in=direct_role_ids,
+            role_id__in=role_ids,
             permission__code=code,
             max_confidentiality_rank__gte=1,
         ).exists()
@@ -520,16 +530,22 @@ def delegations_view(request):
 
             allowed_actions = list(dict.fromkeys(request.POST.getlist("allowed_actions")))
             valid_codes = set(PermissionCode.objects.values_list("code", flat=True))
-            if any(code not in valid_codes or not has_direct_permission(code) for code in allowed_actions):
+            if any(code not in valid_codes or not has_direct_permission(code, scope_unit=scope_unit) for code in allowed_actions):
                 raise PermissionDenied("لا يجوز منح المفوَّض إليه إجراءً لا يملكه المفوِّض.")
 
             allow_confidential = request.POST.get("allow_confidential") == "on"
-            if allow_confidential and not is_full_admin and not PermissionService.get_active_assignments(delegator).filter(
-                role__can_view_confidential=True
-            ).exists() and not PermissionService.get_active_assignments(delegator).filter(
-                role__can_view_top_secret=True
-            ).exists():
-                raise PermissionDenied("لا يمكنك تفويض الاطلاع السري بصلاحيات لا تملكها.")
+            if allow_confidential and not is_full_admin:
+                scoped_assignments = PermissionService.get_active_assignments(delegator, sector=scope_unit.sector)
+                scoped_assignments = [
+                    assignment for assignment in scoped_assignments
+                    if assignment.org_unit is None
+                    or scope_unit.id in assignment.org_unit.get_descendant_ids()
+                ]
+                if not any(
+                    assignment.role.can_view_confidential or assignment.role.can_view_top_secret
+                    for assignment in scoped_assignments
+                ):
+                    raise PermissionDenied("لا يمكنك تفويض الاطلاع السري بصلاحيات لا تملكها في نطاق الوحدة المحدد.")
 
             valid_from = parse_datetime(request.POST.get("valid_from", "")) or timezone.now()
             valid_to = parse_datetime(request.POST.get("valid_to", "")) or (
