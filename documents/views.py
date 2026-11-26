@@ -293,6 +293,9 @@ def document_detail(request, doc_id: int):
     linked_subjects = []
     for link in doc.subjectdocumentlink_set.all():
         linked_subject = link.subject
+        # لا تكشف رقم الموضوع أو عنوانه أو حدث ربطه إلا لمن يملك صلاحية رؤية الموضوع نفسه.
+        if not PermissionService.can_view_subject(request.user, linked_subject):
+            continue
         linked_subject.document_relation_label = link.get_relation_type_display()
         linked_subjects.append(linked_subject)
         timeline_events.append({
@@ -538,7 +541,11 @@ def document_export_pdf(request, doc_id: int):
         versions_lines.append(
             f"v{ver.version_number} | Approved: {'Yes' if ver.is_approved else 'No'} | Files: {att_names}"
         )
-    linked_lines = [f"{lnk.subject.internal_number}: {lnk.subject.title}" for lnk in doc.subjectdocumentlink_set.all()]
+    linked_lines = [
+        f"{lnk.subject.internal_number}: {lnk.subject.title}"
+        for lnk in doc.subjectdocumentlink_set.all()
+        if PermissionService.can_view_subject(request.user, lnk.subject)
+    ]
 
     pdf_bytes = build_institutional_pdf_bytes(
         title=f"Document {doc.internal_number} - {doc.title}",

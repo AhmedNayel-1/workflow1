@@ -7,6 +7,7 @@
 5. عزل القطاعات والوحدات التنظيمية في الطبقة المنطقية المركزية (CorrespondenceAccessPolicy) واللجان.
 """
 from datetime import timedelta
+from unittest.mock import patch
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -20,7 +21,7 @@ from committees.models import Committee, CommitteeMeeting
 from core.models import ConfidentialityLevel, DocumentType, PriorityLevel, TransactionType
 from decisions.models import Decision
 from decisions.services import DecisionService
-from documents.models import Document
+from documents.models import Document, SubjectDocumentLink
 from documents.services import DocumentService
 from organization.models import OrgUnit, OrgUnitType, Sector
 from subjects.models import Subject
@@ -443,6 +444,43 @@ class SecurityAndIsolationTests(TestCase):
             {"action": "new_version", "change_reason": "تعديل بدون عهدة"},
         )
         self.assertEqual(resp_ver.status_code, 403)
+
+    def test_linked_subjects_are_filtered_in_document_detail_and_pdf(self):
+        """المستخدم الذي يرى مستنداً مرتبطاً بموضوع عادي لا يرى رقم أو عنوان الموضوع السري المرتبط به."""
+        viewer = User.objects.get(username="transfers_sup")
+        creator = User.objects.get(username="hr_head")
+        visible_subject = Subject.objects.filter(applicant_name="محمد محمود علي").first()
+        hidden_subject = Subject.objects.get(confidentiality__code="TOP_SECRET")
+        self.assertTrue(PermissionService.can_view_subject(viewer, visible_subject))
+        self.assertFalse(PermissionService.can_view_subject(viewer, hidden_subject))
+        doc = DocumentService.register_document(
+            title="مستند متعدد الموضوعات لاختبار إخفاء الروابط",
+            doc_type=DocumentType.objects.first(),
+            confidentiality=ConfidentialityLevel.objects.get(code="NORMAL"),
+            created_by=creator, subject=visible_subject,
+        )
+        SubjectDocumentLink.objects.create(
+            subject=hidden_subject, document=doc, linked_by=creator,
+            is_primary_subject=False, relation_type=SubjectDocumentLink.RelationType.SUPPORTING,
+        )
+        client = Client()
+        client.force_login(viewer)
+        detail = client.get(reverse("documents:document_detail", args=[doc.id]))
+        self.assertEqual(detail.status_code, 200)
+        visible_ids = {item.id for item in detail.context["linked_subjects"]}
+        self.assertIn(visible_subject.id, visible_ids)
+        self.assertNotIn(hidden_subject.id, visible_ids)
+        self.assertNotContains(detail, hidden_subject.internal_number)
+        self.assertNotContains(detail, hidden_subject.title)
+
+        with patch("documents.views.build_institutional_pdf_bytes", return_value=b"%PDF-test") as pdf_builder:
+            pdf_response = client.get(reverse("documents:document_export_pdf", args=[doc.id]))
+        self.assertEqual(pdf_response.status_code, 200)
+        linked_section = next(section for section in pdf_builder.call_args.kwargs["sections"] if section["heading"] == "Linked Subjects")
+        linked_text = " ".join(linked_section["lines"])
+        self.assertIn(visible_subject.internal_number, linked_text)
+        self.assertNotIn(hidden_subject.internal_number, linked_text)
+        self.assertNotIn(hidden_subject.title, linked_text)
 
     # =========================================================================
     # 4. فرض صلاحيات الإحالة على المستخدمين والوحدات التنظيمية معاً
