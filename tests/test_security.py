@@ -129,6 +129,16 @@ class SecurityAndIsolationTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(UserRoleAssignment.objects.filter(user=actor, role=sector_head, is_active=True).exists())
+        self.assertFalse(PermissionService.can_assign_role(actor, "SECTOR_DIR_ADMIN"))
+
+        # لا يسمح لمسؤول النطاق بسحب دور من حسابه الشخصي أيضاً.
+        own_assignment = UserRoleAssignment.objects.get(user=actor, role__code="SECTOR_DIR_ADMIN", is_active=True)
+        remove_response = client.post(
+            reverse("accounts:users_list"),
+            {"action": "remove_role", "assignment_id": own_assignment.id},
+        )
+        self.assertEqual(remove_response.status_code, 403)
+        self.assertTrue(UserRoleAssignment.objects.filter(id=own_assignment.id).exists())
 
         # نفس القاعدة تمنع إنشاء حساب جديد بدور أعلى من مستوى المنشئ.
         with self.assertRaises(PermissionDenied):

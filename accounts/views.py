@@ -287,6 +287,8 @@ def users_list(request):
 
         elif action == "remove_role":
             assignment = get_object_or_404(UserRoleAssignment, id=request.POST.get("assignment_id"))
+            if not is_full_admin and assignment.user_id == request.user.id:
+                raise PermissionDenied("لا يمكنك تعديل أو سحب أي دور من حسابك الشخصي.")
             if not is_full_admin and not PermissionService.can_manage_target_user(request.user, target_user=assignment.user):
                 raise PermissionDenied("لا يمكنك سحب أدوار مستخدم خارج نطاقك.")
             AuditService.log_audit(
