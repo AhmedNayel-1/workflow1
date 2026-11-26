@@ -66,3 +66,44 @@
 .gh-layout{visibility:hidden;animation:od-reveal 0s linear 1.2s forwards}
 @keyframes od-reveal{to{visibility:visible}}
 .odoo-ui .gh-layout{visibility:visible;animation:none}
+
+
+/* RTL workflow statusbar and readable sizing. First stage stays at the right. */
+.od-statusbar{
+  direction:rtl;
+  flex-direction:row;
+  flex-wrap:nowrap;
+  justify-content:flex-start;
+  max-width:100%;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+.od-statusbar li{
+  direction:rtl;
+  font-size:15px;
+  line-height:1.5;
+  min-height:36px;
+  padding:4px 18px;
+  flex:0 0 auto;
+  clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%);
+}
+.od-statusbar li:first-child{
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%);
+}
+.odoo-ui .btn,
+.od-cp .btn,
+.odoo-ui .od-chatter .btn{
+  font-size:15px;
+  min-height:34px;
+  height:auto;
+  line-height:1.4;
+  padding:5px 13px;
+}
+.odoo-ui .case-h h2{font-size:26px}
+.odoo-ui .od-sheet .subnav a{font-size:15px;min-height:40px}
+.odoo-ui #sec-stages .case-meta small,
+.odoo-ui #sec-stages .sd-side-sec small{font-size:14px}
+.odoo-ui #sec-stages .case-meta b,
+.odoo-ui #sec-stages .sd-side-sec b{font-size:15px}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p,
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.chronology-route{font-size:15px;line-height:1.65}
