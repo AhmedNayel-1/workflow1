@@ -266,6 +266,43 @@ def document_detail(request, doc_id: int):
             att_rows.append({"att": att, "integrity": integrity})
         versions_data.append({"ver": ver, "attachments": att_rows})
 
+    timeline_events = [{
+        "title": "تسجيل المستند",
+        "description": doc.title,
+        "date": doc.created_at,
+        "actor": doc.created_by.get_full_name() or doc.created_by.username,
+    }]
+    attachment_count = 0
+    for row in versions_data:
+        ver = row["ver"]
+        timeline_events.append({
+            "title": "إصدار نسخة معتمدة" if ver.is_approved else "إصدار نسخة",
+            "description": f"النسخة v{ver.version_number}" + (f" — {ver.change_reason}" if ver.change_reason else ""),
+            "date": ver.created_at,
+            "actor": ver.created_by.get_full_name() or ver.created_by.username,
+        })
+        for attachment_row in row["attachments"]:
+            att = attachment_row["att"]
+            attachment_count += 1
+            timeline_events.append({
+                "title": "إضافة مرفق",
+                "description": att.original_filename,
+                "date": att.uploaded_at,
+                "actor": att.uploaded_by.get_full_name() or att.uploaded_by.username,
+            })
+    linked_subjects = []
+    for link in doc.subjectdocumentlink_set.all():
+        linked_subject = link.subject
+        linked_subject.document_relation_label = link.get_relation_type_display()
+        linked_subjects.append(linked_subject)
+        timeline_events.append({
+            "title": "ربط بموضوع",
+            "description": f"{linked_subject.internal_number} — {linked_subject.title}",
+            "date": link.linked_at,
+            "actor": link.linked_by.get_full_name() or link.linked_by.username,
+        })
+    timeline_events.sort(key=lambda event: event["date"], reverse=True)
+
     visible_subjects = PermissionService.filter_visible_subjects(Subject.objects.all(), request.user)
     can_approve_doc = PermissionService.user_has_permission(
         request.user,
@@ -280,6 +317,10 @@ def document_detail(request, doc_id: int):
         {
             "doc": doc,
             "versions_data": versions_data,
+            "attachment_count": attachment_count,
+            "linked_subjects": linked_subjects,
+            "linked_subject_count": len(linked_subjects),
+            "timeline_events": timeline_events,
             "visible_subjects": visible_subjects,
             "can_approve_doc": can_approve_doc,
         },
