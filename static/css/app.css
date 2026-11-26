@@ -396,7 +396,7 @@ tr.on{background:var(--brand-soft)!important}
 
 /* ---------- صقل بصري: وضوح أعلى وتسلسل أقوى (معاينة) ---------- */
 body{font-size:16px;font-weight:500;line-height:1.7;text-rendering:optimizeLegibility}
-.sm{font-size:14px}.xs{font-size:13px}
+.xs{font-size:13px}
 .muted,.soft{font-weight:500}
 h1,h2,h3,h4{font-weight:700;color:var(--ink)}
 .page{padding:14px 28px 72px}
