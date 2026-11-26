@@ -852,3 +852,34 @@ html:has(.subject-form){scroll-padding-bottom:84px}
   .odoo-ui .sd-guide .ui-guide .alts::-webkit-scrollbar-track{background:#e9ecef;border-radius:8px}
   .odoo-ui .sd-guide .ui-guide .alts::-webkit-scrollbar-thumb{background:#8b929a;border-radius:8px}
 }
+
+
+/* Final control-panel sizing override: auto grid tracks were stretching the PDF action. */
+@media(min-width:761px){
+  .odoo-ui .od-cp:has(.od-document-statusbar){
+    grid-template-columns:max-content minmax(0,1fr)!important;
+  }
+  .odoo-ui .od-cp:has(.od-document-statusbar)>a.btn{
+    width:max-content!important;
+    min-width:0;
+    justify-self:start!important;
+  }
+}
+@media(max-width:760px){
+  .odoo-ui .od-cp .od-statusbar{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    justify-content:flex-start!important;
+    align-items:center;
+    gap:6px!important;
+    min-height:44px;
+  }
+  .odoo-ui .od-cp .od-statusbar li{
+    flex:0 0 auto!important;
+    margin:0!important;
+    clip-path:none!important;
+    border-radius:4px;
+    min-height:30px;
+    padding:5px 12px!important;
+  }
+}
