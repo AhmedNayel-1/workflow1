@@ -39,7 +39,7 @@ def subject_list(request):
     """قائمة الموضوعات المصفاة بصلاحية المستخدم ودرجة السرية مع دعم التصفح بالصفحات."""
     qs = Subject.objects.select_related(
         "transaction_type", "sector", "org_unit", "confidentiality", "priority", "current_owner"
-    )
+    ).prefetch_related("memos", "decisions", "referrals__recipients")
     status_filter = request.GET.get("status")
     sector_filter = request.GET.get("sector")
     if status_filter:
@@ -51,6 +51,8 @@ def subject_list(request):
     paginator = Paginator(visible_subjects, 25)
     page_number = request.GET.get("page", 1)
     page_obj = paginator.get_page(page_number)
+    for item in page_obj.object_list:
+        item.current_stage_label = SubjectService.get_current_stage_label(item)
 
     sectors = Sector.objects.filter(is_active=True)
     can_create = PermissionService.user_has_permission(request.user, "SUBJECT_CREATE")
