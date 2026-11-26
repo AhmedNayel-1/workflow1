@@ -598,3 +598,17 @@ html:has(.subject-form){scroll-padding-bottom:84px}
 .odoo-pg .org-acts{display:inline-flex;gap:6px}
 .odoo-pg .org-acts .btn.sm{padding:2px 8px;font-size:12px}
 .odoo-pg .org-usermove{border:1px solid var(--line);background:var(--panel);border-radius:3px;font-size:11px;cursor:pointer;margin-inline-start:6px;padding:0 6px}
+
+
+/* Phase 2 — shared list view, filters, breadcrumbs and responsive toolbars */
+.od-breadcrumbs{display:flex;align-items:center;gap:8px;min-width:0;margin:0 0 8px;padding:2px 1px;color:var(--muted);font-size:12.5px;line-height:1.5}
+.od-breadcrumbs a{color:var(--info);text-decoration:none}.od-breadcrumbs a:hover{text-decoration:underline}
+.od-breadcrumbs [aria-current=page]{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.od-breadcrumbs .od-breadcrumb-sep{color:#a1a6ac;user-select:none}
+.od-list-view{min-width:0}.od-list-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.od-list-toolbar .search-in{flex:1 1 240px;min-width:180px}.od-list-toolbar .search-in .in{min-width:0;width:100%}
+.od-list-toolbar>select,.od-list-toolbar>.in,.od-list-toolbar>label:not(.search-in){max-width:100%}
+.od-list-toolbar [data-notification-count],.od-list-toolbar [data-referral-count],.od-list-toolbar [data-task-count],.od-list-toolbar [data-document-count]{white-space:nowrap;font-variant-numeric:tabular-nums}
+.od-filter-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-block:0 10px}.od-filter-chips .chip{white-space:nowrap}
+.od-list-view .pager{border-top:1px solid var(--line-2)}
+@media(max-width:760px){.od-breadcrumbs{margin-bottom:6px}.od-list-toolbar{align-items:stretch}.od-list-toolbar .search-in{flex:1 1 100%;width:100%;min-width:0}.od-list-toolbar>select,.od-list-toolbar>.in{flex:1 1 calc(50% - 8px);width:auto!important;min-width:0}.od-list-toolbar>.spacer{display:none}.od-list-toolbar [data-notification-count],.od-list-toolbar [data-referral-count],.od-list-toolbar [data-task-count],.od-list-toolbar [data-document-count]{margin-inline-end:auto;align-self:center}.od-list-view .pager{align-items:center;padding:10px 12px}.od-list-view .pages{flex-wrap:wrap}}
