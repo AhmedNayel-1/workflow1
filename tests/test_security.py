@@ -24,7 +24,7 @@ from decisions.services import DecisionService
 from documents.models import Document, SubjectDocumentLink
 from documents.services import DocumentService
 from organization.models import OrgUnit, OrgUnitType, Sector
-from subjects.models import Subject
+from subjects.models import Memo, Subject
 from subjects.services import SubjectService
 from workflow.models import Referral, Task
 from workflow.services import WorkflowEngineService
@@ -550,6 +550,38 @@ class SecurityAndIsolationTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(version.attachments.count(), 0)
+
+    def test_approved_memo_exposes_next_decision_stage(self):
+        """بعد اعتماد مذكرة العرض يظهر أن المرحلة التالية هي إعداد قرار جديد."""
+        specialist = User.objects.get(username="transfers_emp")
+        base = Subject.objects.filter(applicant_name="محمد محمود علي").first()
+        tx_type = TransactionType.objects.filter(
+            sector=base.sector, requires_decision=True
+        ).first()
+        if tx_type is None:
+            self.skipTest("لا يوجد نوع معاملة يتطلب قراراً في بيانات الاختبار.")
+
+        subject = SubjectService.create_subject(
+            title="اختبار مرحلة القرار بعد اعتماد المذكرة",
+            transaction_type=tx_type,
+            sector=base.sector,
+            org_unit=base.org_unit,
+            confidentiality=base.confidentiality,
+            priority=base.priority,
+            created_by=specialist,
+            current_owner=specialist,
+        )
+        Memo.objects.create(
+            subject=subject,
+            memo_number=f"TEST-{subject.internal_number}",
+            memo_type=Memo.MemoType.PRESENTATION,
+            title="مذكرة عرض معتمدة",
+            directed_to="رئيس القطاع",
+            body="نص اختبار",
+            status=Memo.MemoStatus.APPROVED,
+            author=specialist,
+        )
+        self.assertEqual(SubjectService.get_current_stage_label(subject), "قرار جديد")
 
     def test_specialist_action_menu_logs_action_and_status_separately(self):
         """قائمة المختص تعرض الإجراء، والاستلام/الرد لا يغلقان الموضوع، والسبب الفارغ للإرجاع مرفوض."""
