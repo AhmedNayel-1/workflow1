@@ -53,6 +53,7 @@ class DecisionService:
             action_type="DECISION_DRAFTED",
             actor_user=created_by,
             description=f"تم إعداد مشروع القرار رقم {decision.decision_number}: {decision.title}",
+            metadata={"action": "قرار جديد", "status": subject.get_status_display(), "status_code": subject.status, "decision_status": decision.get_status_display()},
         )
         return decision
 
@@ -87,6 +88,7 @@ class DecisionService:
             action_type="DECISION_ISSUED" if issue_immediately else "DECISION_APPROVED",
             actor_user=user,
             description=f"{'اعتماد وإصدار' if issue_immediately else 'اعتماد'} القرار رقم {decision.decision_number}",
+            metadata={"action": "إصدار القرار" if issue_immediately else "اعتماد القرار", "status": decision.subject.get_status_display(), "status_code": decision.subject.status, "decision_status": decision.get_status_display()},
         )
         AuditService.log_audit(
             actor=user,
