@@ -685,3 +685,88 @@ html:has(.subject-form){scroll-padding-bottom:84px}
  .od-record-grid .document-attachment{align-items:flex-start}
  .od-record-grid .document-attachment>span:last-child{width:100%;justify-content:flex-start}
 }
+
+
+/* Phase 4 — responsive record detail fixes */
+@media(max-width:760px){
+  /* Subject metadata: stack label/value instead of squeezing Arabic into single letters. */
+  .odoo-ui #sec-stages .case-meta{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+    padding:4px 12px 10px!important;
+  }
+  .odoo-ui #sec-stages .case-meta>div:not(.sd-full),
+  .odoo-ui #sec-stages .sd-side-sec{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:3px!important;
+    min-width:0;
+    padding:9px 2px!important;
+  }
+  .odoo-ui #sec-stages .case-meta small,
+  .odoo-ui #sec-stages .sd-side-sec small,
+  .odoo-ui #sec-stages .case-meta b,
+  .odoo-ui #sec-stages .sd-side-sec b{
+    min-width:0;
+    max-width:100%;
+    white-space:normal!important;
+    word-break:normal!important;
+    overflow-wrap:anywhere;
+  }
+  .odoo-ui #sec-stages .sd-full-b{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+  }
+  .odoo-ui #sec-stages .sd-full-b>div{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:3px!important;
+    min-width:0;
+  }
+  /* Keep the complete status path reachable without clipping its first/last chevron. */
+  .od-cp{min-width:0}
+  .od-cp .od-statusbar{
+    flex:1 1 100%;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    margin:0;
+    padding-inline:5px;
+    box-sizing:border-box;
+    overflow-x:auto;
+    overscroll-behavior-inline:contain;
+    scroll-padding-inline:8px;
+  }
+  .od-cp .od-statusbar li:first-child{margin-inline-start:0}
+  /* Document metadata becomes a readable single-column stack on narrow screens. */
+  .od-document-record .od-record-meta{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+  .od-document-record .od-record-meta>div{
+    flex:1 1 auto;
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:3px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line-2);
+  }
+  .od-document-record .od-record-meta>div:last-child{border-bottom:0}
+}
+@media(min-width:761px){
+  /* Avoid a visibly empty trailing cell when optional document metadata is absent. */
+  .od-document-record .od-record-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0 28px;
+  }
+  .od-document-record .od-record-meta>div{
+    flex:1 1 calc(50% - 28px);
+    min-width:220px;
+  }
+  .od-cp>a.btn{
+    flex:0 0 auto!important;
+    width:auto!important;
+    align-self:flex-start;
+  }
+}
