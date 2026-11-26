@@ -3,9 +3,10 @@
 {% block heading %}جميع الموضوعات{% endblock %}
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
+{% include "partials/breadcrumbs.html" with current="الموضوعات" %}
 <div class="page-h od-lh"><div><h2>الموضوعات</h2><p>سجل كل المعاملات التي يسمح لك نطاق صلاحياتك برؤيتها.</p></div>{% if can_create %}<button class="btn primary" data-compose="document">{% icon 'plus' %}موضوع جديد</button>{% endif %}</div>
-<section class="panel" data-table data-subject-list>
-  <form class="toolbar" method="get" data-auto>
+<section class="panel od-list-view" data-table data-subject-list>
+  <form class="toolbar od-list-toolbar" method="get" data-auto>
     <div class="search-in" style="min-width:240px">{% icon 'search' 'sm' %}<input class="in sm" data-subject-search placeholder="بحث سريع في الموضوعات المعروضة…" type="search"></div>
     <select class="in sm" name="status" style="width:auto"><option value="">كل الحالات</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if status_filter == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
     <select class="in sm" name="sector" style="width:auto"><option value="">كل القطاعات</option>{% for s in sectors %}<option value="{{ s.id }}" {% if sector_filter == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select>
