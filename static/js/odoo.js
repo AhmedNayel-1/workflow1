@@ -2,21 +2,14 @@
 (function(){
   var lay=document.querySelector('.gh-layout'),nav=document.querySelector('[data-subject-nav]');
   if(!lay||!nav)return;
-  var main=lay.querySelector(':scope>.col'),chat=document.getElementById('sec-timeline'),aside=lay.querySelector(':scope>aside'),det=document.getElementById('sec-stages');
-  if(!main||!chat)return;
-  document.body.classList.add('odoo-ui');
-  var box=document.createElement('div');box.className='od-chatter';box.id='od-chatter';box.appendChild(chat);lay.appendChild(box);
-  var hd=document.querySelector('.case-h'),gd=document.querySelector('.sd-guide');
-  var sheet=document.createElement('div');sheet.className='od-sheet';main.insertBefore(sheet,main.firstChild);if(hd)sheet.appendChild(hd);sheet.appendChild(nav);if(gd)main.insertBefore(gd,sheet);
+  var main=lay.querySelector(':scope>.col'),box=document.getElementById('od-chatter'),det=document.getElementById('sec-stages');
+  if(!main||!box||!det)return;
+  var hd=document.querySelector('.od-sheet .case-h');
   /* the creation-field copy inside the first activity entry duplicates the sheet's own full-data block */
   function dedupe(){document.querySelectorAll('.sd-has-card .sd-caption,.sd-has-card .sd-fields').forEach(function(n){n.remove()});}
   var fd=document.querySelector('#sec-stages .sd-full details');if(fd)fd.open=true;
   dedupe();setTimeout(dedupe,0);setTimeout(dedupe,600);window.addEventListener('load',dedupe);if(hd)hd.classList.add('od-on');
-  var firstSheet=main.querySelector(':scope>section.panel:not(.case-h)');
-  if(det){det.classList.add('od-detail');main.insertBefore(det,sheet.nextSibling);if(aside)aside.remove();det.querySelector('.panel-b')&&0;}
-  // the timeline link now means: focus the always-visible activity panel
-  var act=nav.querySelector('[data-jump=sec-activity]');if(act)act.remove();
-  var st=nav.querySelector('[data-jump=sec-stages]');if(st){st.textContent='التفاصيل';nav.insertBefore(st,nav.firstChild);}
+  // The sheet, detail panel, and activity column are authored in HTML; JS only controls their behavior.
   var panels=[].slice.call(main.querySelectorAll(':scope>section.panel:not(.case-h)'));
   function show(p){panels.forEach(function(x){x.classList.toggle('od-on',x===p)});nav.querySelectorAll('a').forEach(function(a){a.classList.toggle('gh-cur',a.dataset.jump===p.id)});}
   function owner(el){for(var i=0;i<panels.length;i++)if(panels[i]===el||panels[i].contains(el))return panels[i];return null;}
