@@ -4,7 +4,7 @@
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
 {% include "partials/breadcrumbs.html" with current="القرارات" %}
-<div class="page-h"><div><h2>القرارات الإدارية</h2><p>القرارات المرتبطة بالموضوعات المتاحة لك.</p></div></div>
+<div class="page-h od-list-heading"><div><h2>القرارات الإدارية</h2><p>القرارات المرتبطة بالموضوعات المتاحة لك.</p></div></div>
 <section class="panel od-list-view decision-workbench" data-decision-root data-odoo-list data-filter-chip-root><div class="toolbar od-list-toolbar decision-tools">
   <label class="search-in decision-search">{% icon 'search' 'sm' %}<input class="in sm" data-decision-search data-filter-chip="بحث" type="search" placeholder="ابحث برقم القرار أو العنوان أو الموضوع…" aria-label="البحث في القرارات"></label>
   <select class="in sm decision-filter" data-decision-type data-filter-chip="النوع" aria-label="تصفية حسب نوع القرار"><option value="">كل الأنواع</option></select>
