@@ -6,7 +6,7 @@
 {% include "partials/breadcrumbs.html" with current="اللجان والاجتماعات" %}
 <div class="page-h"><div><h2>اللجان والاجتماعات</h2><p>جدول الجلسات، واختر يوماً من التقويم لتصفيتها.</p></div>{% if can_manage %}<button class="btn primary" data-open="new-meeting">{% icon 'plus' %}جلسة جديدة</button>{% endif %}</div>
 <script id="meet-data" type="application/json">[{% for c in committees %}{% for m in c.meetings.all %}{"date":"{{ m.meeting_date|date:'Y-m-d' }}"},{% endfor %}{% endfor %}{"date":""}]</script>
-<div class="committee-tools od-list-toolbar" data-committee-workspace><label class="search-in committee-search">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-committee-search placeholder="ابحث باسم اللجنة أو رقم الجلسة أو المكان…" aria-label="البحث في اللجان والاجتماعات"></label><span class="muted xs" data-committee-count aria-live="polite"></span><span class="muted xs">بحث محلي في اللجان والاجتماعات المعروضة</span></div>
+<div class="committee-tools od-list-toolbar" data-committee-workspace data-filter-chip-root><label class="search-in committee-search">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-committee-search data-filter-chip="بحث" placeholder="ابحث باسم اللجنة أو رقم الجلسة أو المكان…" aria-label="البحث في اللجان والاجتماعات"></label><span class="muted xs" data-committee-count aria-live="polite"></span><span class="muted xs">بحث محلي في اللجان والاجتماعات المعروضة</span>{% include "partials/filter_chips.html" %}</div>
 <div class="grid g-main-r">
   <div class="col" style="gap:16px">
     <section class="panel"><div class="cal" id="cal"></div><div class="panel-f row between"><span class="xs muted">النقطة = يوجد اجتماع</span><button class="btn sm ghost" id="cal-clear" hidden>عرض الكل</button></div></section>
