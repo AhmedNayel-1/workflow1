@@ -26,7 +26,7 @@
       <td><div class="sl-tags"><span class="sd-tag" data-prio="{{ s.priority.name }}">{{ s.priority.name }}</span>{% if s.confidentiality.overrides_hierarchy %}<span class="sd-tag sd-tag-secret">{{ s.confidentiality.name }}</span>{% elif s.confidentiality.name != "عادي" %}<span class="sd-tag sd-tag-conf">{{ s.confidentiality.name }}</span>{% endif %}{% if s.is_overdue %}<span class="sd-tag" data-prio="عاجل">متأخر</span>{% endif %}</div></td></tr>{% endwith %}
     {% empty %}<tr><td colspan="8">{% include "partials/empty.html" with title="لا توجد موضوعات" text="جرّب تغيير التصفية أو أنشئ موضوعاً جديداً." icon_name="folder" %}</td></tr>{% endfor %}
   </tbody></table></div>
-  <aside class="sl-side" data-sl-side hidden aria-label="تفاصيل الموضوع المحدد"></aside></div>
+  {% include "partials/subject_side_panel.html" %}</div>
   <div class="sl-foot" data-sl-foot><span><b data-f-total>0</b> موضوع معروض</span><span>متأخر: <b data-f-late>0</b></span><span>سري: <b data-f-secret>0</b></span><span>محدد: <b data-f-sel>0</b></span></div>
   {% include "partials/pager.html" %}
 </section>
