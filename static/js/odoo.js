@@ -1,4 +1,4 @@
-/* odoo-version: rearranges existing subject sections only. No forms, links or data change. */
+/* odoo-version: HTML owns the subject layout; this script handles existing interactions only. */
 (function(){
   var lay=document.querySelector('.gh-layout'),nav=document.querySelector('[data-subject-nav]');
   if(!lay||!nav)return;
