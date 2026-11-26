@@ -1159,7 +1159,7 @@ def subject_preview_json(request, subject_id: int):
             "internal_number": subject.internal_number,
             "title": subject.title,
             "description": subject.description,
-            "status_label": subject.get_status_display(),
+            "status_label": SubjectService.get_current_stage_label(subject),
             "confidentiality": subject.confidentiality.name,
             "is_top_secret": subject.confidentiality.overrides_hierarchy,
             "priority": subject.priority.name,
