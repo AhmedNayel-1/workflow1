@@ -3,7 +3,7 @@
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=12">{% endblock %}
 {% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=20" defer></script>{% endblock %}
 {% block cp_extra %}<div class="od-cp-actions"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>{% if perms.can_refer %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
-{% if perms.can_act or perms.can_memo or perms.can_task or perms.can_annotate %}<div class="od-add" style="position:relative"><button type="button" class="btn sm" data-pop="od-add-pop" aria-haspopup="true">{% icon 'plus' 'sm' %} إضافة</button><div class="pop od-pop" id="od-add-pop" hidden>
+{% if not is_specialist_acting and (perms.can_act or perms.can_memo or perms.can_task or perms.can_annotate) %}<div class="od-add" style="position:relative"><button type="button" class="btn sm" data-pop="od-add-pop" aria-haspopup="true">{% icon 'plus' 'sm' %} إضافة</button><div class="pop od-pop" id="od-add-pop" hidden>
 {% if perms.can_act %}<a href="#action-upload" data-open-details>{% icon 'upload' 'sm' %}<span>إرفاق مستند</span></a>{% endif %}{% if perms.can_memo %}<a href="#action-memo" data-open-details>{% icon 'note' 'sm' %}<span>إعداد مذكرة</span></a>{% endif %}{% if perms.can_task %}<a href="#action-task" data-open-details>{% icon 'task' 'sm' %}<span>تكليف بمهمة</span></a>{% endif %}{% if perms.can_annotate %}<a href="#action-annotation" data-open-details>{% icon 'edit' 'sm' %}<span>إضافة تأشيرة</span></a>{% endif %}{% if perms.can_decide %}<a href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}<span>إعداد قرار</span></a>{% endif %}</div></div>{% endif %}</div>
 {% qs request as subject_detail_qs %}{% if pager %}<nav class="od-pager" aria-label="التنقل بين الموضوعات"><span class="num">{{ pager.pos }} / {{ pager.total }}</span>{% if pager.prev %}<a class="btn sm" href="{% url 'subjects:subject_detail' pager.prev %}{% if subject_detail_qs %}?{{ subject_detail_qs }}{% endif %}" aria-label="الموضوع السابق" title="السابق">&rsaquo;</a>{% else %}<span class="btn sm dis" aria-hidden="true">&rsaquo;</span>{% endif %}{% if pager.next %}<a class="btn sm" href="{% url 'subjects:subject_detail' pager.next %}{% if subject_detail_qs %}?{{ subject_detail_qs }}{% endif %}" aria-label="الموضوع التالي" title="التالي">&lsaquo;</a>{% else %}<span class="btn sm dis" aria-hidden="true">&lsaquo;</span>{% endif %}</nav>{% endif %}
 <ol class="od-statusbar" aria-label="مراحل السير">{% for st in workflow_steps %}<li class="{% if st.done %}done{% endif %}{% if st.current %} now{% endif %}">{{ st.title }}</li>{% endfor %}</ol>{% endblock %}
@@ -13,9 +13,60 @@
 
 
 
-<div class="layout-3 gh-layout">
+<div class="layout-3 gh-layout{% if is_specialist_acting %} specialist-mode{% endif %}">
 <div class="col" style="gap:16px;min-width:0">
-  <div class="mt sd-guide">{% include "partials/guide.html" with guide=guide %}</div>
+  {% if is_specialist_acting %}
+  <section class="panel specialist-action-menu" aria-label="إجراءات الموظف المختص">
+    <div class="panel-h"><h3>إجراء</h3><span class="muted xs">اختر الإجراء لفتح نافذة التنفيذ</span></div>
+    <div class="panel-b">
+      <label class="fld full"><span>إجراء</span><select class="in" data-specialist-action-select>
+        <option value="">— اختر الإجراء —</option>
+        {% if pending_recipient %}<option value="receive">استلام</option><option value="complete">إتمام التنفيذ</option><option value="return">إرجاع للمحيل</option>{% elif perms.can_close %}<option value="complete">إتمام التنفيذ</option>{% endif %}
+        {% if perms.can_decide %}<option value="decision">قرار جديد</option>{% endif %}
+        {% if perms.can_suspend %}<option value="suspension">{% if active_suspension %}تعليق (استئناف بعد التعليق){% else %}تعليق{% endif %}</option>{% endif %}
+      </select></label>
+      <small class="muted">إتمام الرد وإغلاق الموضوع عمليتان منفصلتان؛ إتمام الرد لا يغلق الموضوع تلقائياً.</small>
+    </div>
+  </section>
+  <div class="specialist-action-launchers" hidden>
+    {% if pending_recipient %}<a href="#action-specialist-receive" data-open-details data-specialist-launch="receive"></a><a href="#action-specialist-return" data-open-details data-specialist-launch="return"></a>{% endif %}
+    {% if pending_recipient or perms.can_close %}<a href="#action-specialist-complete" data-open-details data-specialist-launch="complete"></a>{% endif %}
+    {% if perms.can_decide %}<a href="#action-specialist-decision" data-open-details data-specialist-launch="decision"></a>{% endif %}
+    {% if perms.can_suspend %}<a href="#action-specialist-suspension" data-open-details data-specialist-launch="suspension"></a>{% endif %}
+  </div>
+  {% else %}<div class="mt sd-guide">{% include "partials/guide.html" with guide=guide %}</div>{% endif %}
+
+  {% if is_specialist_acting %}
+  <div class="specialist-action-sources" hidden>
+    {% if pending_recipient %}
+    <details class="dd" id="action-specialist-receive"><summary>استلام</summary><div class="dd-b col">
+      <p>تأكيد استلام الإحالة على الموضوع {{ subject.internal_number }}.</p>
+      <form method="post" action="{% url 'workflow:referral_respond' pending_recipient.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input type="hidden" name="action" value="acknowledge"><button class="btn primary" type="submit">تأكيد الاستلام</button></form>
+    </div></details>
+    <details class="dd" id="action-specialist-return"><summary>إرجاع للمحيل</summary><form class="dd-b col" method="post" action="{% url 'workflow:referral_reject' pending_recipient.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><label class="fld full"><span>سبب الإرجاع (إجباري)</span><textarea class="in" name="reason" rows="3" required minlength="1" placeholder="اكتب سبب الإرجاع"></textarea></label><button class="btn line-bad" type="submit">إرجاع للمحيل</button></form></details>
+    {% endif %}
+    {% if pending_recipient or perms.can_close %}
+    <details class="dd" id="action-specialist-complete"><summary>إتمام التنفيذ</summary><div class="dd-b col">
+      {% if pending_recipient %}
+        <h4>إتمام الرد — خطوة مستقلة</h4>
+        {% if perms.can_upload_document %}<form class="col" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="upload_attachment"><b>رفع مستند (اختياري)</b><label class="fld"><span>عنوان المستند</span><input class="in" name="doc_title" placeholder="يؤخذ من اسم الملف إن تُرك فارغاً"></label><label class="fld"><span>تصنيف المستند</span><select class="in" name="doc_type_id" required>{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label><label class="fld full"><span>ملخص</span><input class="in" name="doc_summary"></label><label class="fld full"><span>الملفات</span><input class="in" type="file" name="attachment_file" multiple required></label><button class="btn" type="submit">رفع المستند فقط</button></form><hr>{% endif %}
+        <form class="col" method="post" action="{% url 'workflow:referral_respond' pending_recipient.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input type="hidden" name="action" value="complete"><label class="fld full"><span>ملاحظات الرد / ما تم إنجازه</span><textarea class="in" name="response_notes" rows="3" placeholder="اكتب ما تم تنفيذه"></textarea></label><label class="chk"><input type="checkbox" name="force_complete_parallel" value="on"> إنهاء الإحالة المتوازية قسرياً (للمنسق — وفق الصلاحية الحالية)</label><button class="btn ok" type="submit">إتمام الرد</button></form>
+      {% else %}
+        <h4>إغلاق الموضوع — عملية مستقلة عن إتمام الرد</h4>
+        <form class="col" method="post" data-confirm="سيُغلق الموضوع ويُؤرشف. هل أنت متأكد؟" data-danger>{% csrf_token %}<input type="hidden" name="action" value="close_subject"><input type="hidden" name="version_lock" value="{{ subject.version_lock }}"><label class="fld full"><span>ملاحظات الإغلاق</span><textarea class="in" name="closure_notes" rows="3"></textarea></label>{% if perms.can_exceptional_close %}<label class="chk"><input type="checkbox" name="exceptional"> إغلاق استثنائي (تجاوز المتطلبات)</label>{% endif %}<button class="btn dark" type="submit">إغلاق الموضوع وأرشفته</button></form>
+      {% endif %}
+    </div></details>
+    {% endif %}
+    {% if perms.can_decide %}<details class="dd" id="action-specialist-decision"><summary>قرار جديد</summary><div class="dd-b col"><p>إنشاء قرار جديد مرتبط بالموضوع {{ subject.internal_number }}. لا يؤدي إنشاء القرار إلى إغلاق الموضوع.</p><a class="btn primary" href="{% url 'decisions:decision_create' subject.id %}">فتح نموذج القرار</a></div></details>{% endif %}
+    {% if perms.can_suspend %}<details class="dd" id="action-specialist-suspension"><summary>تعليق</summary>
+      {% if active_suspension %}
+      <form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="fulfill_suspension"><input type="hidden" name="suspension_id" value="{{ active_suspension.id }}"><h4>استئناف بعد التعليق</h4><label class="fld"><span>الحالة بعد الاستئناف</span><select class="in" name="resume_status">{% for v, l in resume_status_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></label><label class="fld"><span>تصنيف المستند المستوفى</span><select class="in" name="fulfillment_doc_type_id">{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label><label class="fld full"><span>ملاحظات الاستيفاء</span><textarea class="in" name="fulfillment_notes" rows="2"></textarea></label><label class="fld full"><span>المستند المستوفى (اختياري)</span><input class="in" type="file" name="fulfillment_attachment"></label><button class="btn ok" type="submit">استئناف العمل</button></form>
+      {% else %}
+      <form class="dd-b col" method="post" data-confirm="تعليق الموضوع حتى استيفاء المطلوب؟">{% csrf_token %}<input type="hidden" name="action" value="suspend"><label class="fld"><span>سبب التعليق</span><select class="in" name="reason_ref_id"><option value="">— سبب التعليق —</option>{% for r in suspension_reasons %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select></label><label class="fld full"><span>تفاصيل السبب / المطلوب الناقص</span><textarea class="in" name="reason_details" rows="3" placeholder="اكتب المستندات أو البيانات الناقصة" required></textarea></label><input class="in" name="required_item" placeholder="المستند / الإجراء المطلوب"><input class="in" name="required_from" placeholder="المطلوب من (جهة)"><select class="in" name="committee_id"><option value="">— اللجنة (اختياري) —</option>{% for c in committee_choices %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select><input class="in" type="date" name="expected_follow_up_date"><button class="btn bad" type="submit">تعليق الموضوع</button></form>
+      {% endif %}
+    </details>{% endif %}
+  </div>
+  {% endif %}
   <div class="od-sheet">
 <section class="panel case-h sd-head">
   <div class="row between wrap sd-head-top"><h2>{{ subject.title }}</h2><div class="row wrap gap-s"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a></div></div>
@@ -102,7 +153,7 @@
 </div></section>
 
 {# ====================== الإحالات ====================== #}
-<section class="panel" id="sec-referrals"><div class="panel-h"><h3>{% icon 'share' %} الإحالات وخط السير</h3>{% if perms.can_refer %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">{% icon 'plus' 'sm' %}إحالة جديدة</a>{% endif %}</div><div class="panel-b">
+<section class="panel" id="sec-referrals"><div class="panel-h"><h3>{% icon 'share' %} الإحالات وخط السير</h3>{% if perms.can_refer and not is_specialist_acting %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">{% icon 'plus' 'sm' %}إحالة جديدة</a>{% endif %}</div><div class="panel-b">
   {% for ref in referrals %}<div class="item" style="flex-direction:column"><div class="row between wrap" style="width:100%"><div class="row gap-s"><span class="avatar sm">{{ ref.referred_by|initials }}</span><b>{{ ref.referred_by }}</b><span class="pill brand nodot">{{ ref.get_purpose_display }}</span><span class="tag">{{ ref.get_routing_mode_display }}</span>{% if ref.is_withdrawn %}<span class="pill nodot">مسحوبة</span>{% elif ref.is_completed %}<span class="pill ok">مكتملة</span>{% endif %}</div><span class="muted xs num">{{ ref.created_at|date:"Y-m-d H:i" }}{% if ref.due_date %} · الاستحقاق {{ ref.due_date|date:"Y-m-d" }}{% endif %}</span></div>
     {% if ref.notes %}<p class="muted sm">{{ ref.notes }}</p>{% endif %}
     <div class="col" style="width:100%;gap:6px">{% for rec in ref.recipients.all %}<div class="row between wrap note" style="margin:0"><span class="row gap-s">{% if rec.target_user %}<span class="avatar sm">{{ rec.target_user|initials }}</span>{{ rec.target_user }}{% else %}{% icon 'tree' 'sm' %}{{ rec.target_unit }}{% endif %}{% if ref.routing_mode != "DIRECT" %}<span class="muted xs">#{{ rec.sequence_order }}</span>{% endif %}</span><span class="row gap-s"><span class="pill {{ rec.status|tone }}">{{ rec.get_status_display }}</span>{% if rec.response_notes %}<span class="muted xs" title="{{ rec.response_notes }}">{% icon 'chat' 'sm' %}</span>{% endif %}</span></div>{% endfor %}</div>
@@ -119,7 +170,7 @@
 </div></section>
 
 {# ====================== المهام والقرارات ====================== #}
-<section class="panel" id="sec-tasks"><div class="panel-h"><h3>{% icon 'task' %} المهام والقرارات</h3>{% if perms.can_decide %}<a class="btn sm" href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}قرار جديد</a>{% endif %}</div><div class="panel-b">
+<section class="panel" id="sec-tasks"><div class="panel-h"><h3>{% icon 'task' %} المهام والقرارات</h3>{% if perms.can_decide and not is_specialist_acting %}<a class="btn sm" href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}قرار جديد</a>{% endif %}</div><div class="panel-b">
   <h4 class="sm muted mb">القرارات</h4>
   {% for d in decisions %}<a class="item" href="{% url 'decisions:decision_detail' d.id %}" style="color:inherit"><div class="ficon">{% icon 'gavel' %}</div><div class="grow"><div class="row between"><h5>{{ d.title }}</h5><span class="pill {{ d.status|tone }}">{{ d.get_status_display }}</span></div><span class="tag code">{{ d.decision_number }}</span> <span class="muted xs">{{ d.execution_items.all|length }} بند تنفيذ</span></div></a>{% empty %}<p class="muted sm mb">لا توجد قرارات مرتبطة.</p>{% endfor %}
   {% if committee_items %}<h4 class="sm muted mb mt">العرض على اللجان</h4>{% for ci in committee_items %}<a class="item" href="{% url 'committees:meeting_detail' ci.meeting_id %}" style="color:inherit"><div class="ficon">{% icon 'calendar' %}</div><div class="grow"><h5>{{ ci.meeting.committee.name }} — جلسة {{ ci.meeting.meeting_number }}</h5><span class="muted xs num">{{ ci.meeting.meeting_date|date:"Y-m-d" }}</span> {% if ci.resolution_type %}<span class="pill info nodot">{{ ci.resolution_type }}</span>{% endif %}</div></a>{% endfor %}{% endif %}
@@ -160,7 +211,7 @@
   {% if perms.can_reopen %}<details class="dd"><summary>{% icon 'refresh' 'sm' %} إعادة فتح الموضوع {% icon 'chevd' 'sm' %}</summary><form class="dd-b col" method="post" data-confirm="إعادة فتح الموضوع؟">{% csrf_token %}<input type="hidden" name="action" value="reopen_subject"><textarea class="in" name="reopen_reason" rows="2" placeholder="سبب إعادة الفتح" required></textarea><div><button class="btn primary" type="submit">إعادة الفتح</button></div></form></details>{% endif %}{% endif %}
   {% if perms.can_manage_access %}<details class="dd mt"><summary>{% icon 'lock' 'sm' %} منح / منع صلاحية اطلاع {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post">{% csrf_token %}<input type="hidden" name="action" value="grant_access"><label class="fld"><span>المستخدم</span><select class="in" name="target_user_id">{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label><label class="fld"><span>الإجراء</span><select class="in" name="access_type"><option value="GRANT">منح</option><option value="DENY">منع</option></select></label><label class="fld full"><span>السبب</span><input class="in" name="access_reason" required></label><div class="full"><button class="btn primary" type="submit">تنفيذ</button></div></form></details>{% endif %}
 </div></section>
-<div class="gh-compose" id="gh-compose">  <div class="case-actions" aria-label="إجراءات سريعة للموضوع">
+{% if not is_specialist_acting %}<div class="gh-compose" id="gh-compose">  <div class="case-actions" aria-label="إجراءات سريعة للموضوع">
     <span class="case-actions-label">إضافة إلى الموضوع</span>
     {% if perms.can_act %}<a class="btn sm" href="#action-upload" data-open-details>إرفاق مستند</a>{% endif %}
     {% if perms.can_memo %}<a class="btn sm" href="#action-memo" data-open-details>إعداد مذكرة</a>{% endif %}
@@ -169,7 +220,7 @@
     {% if perms.can_refer %}<a class="btn sm" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
     {% if perms.can_decide %}<a class="btn sm" href="{% url 'decisions:decision_create' subject.id %}">إعداد قرار</a>{% endif %}
   </div>
-</div>
+</div>{% endif %}
 </div>
 
 <div class="od-chatter" id="od-chatter">
