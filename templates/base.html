@@ -50,7 +50,7 @@
   <div id="server-msgs" hidden>{% for m in messages %}<span data-t="{% if 'error' in m.tags %}error{% elif 'warning' in m.tags %}warning{% elif 'success' in m.tags %}success{% else %}info{% endif %}">{{ m }}</span>{% endfor %}</div>
   {% endif %}
   <script src="{% static 'js/app.js' %}?v=10" defer></script>
-  <script src="{% static 'js/experience.js' %}?v=16" defer></script>
+  <script src="{% static 'js/experience.js' %}?v=17" defer></script>
   <script src="{% static 'js/path.js' %}?v=12" defer></script>
   <script src="{% static 'js/datepicker.js' %}?v=2" defer></script>
   <script>setTimeout(function(){var css=getComputedStyle(document.documentElement).getPropertyValue("--ui-version").trim(),js=window.UI_VERSION,bad=[];if(css!=="4")bad.push(css?"ملف التنسيق app.css قديم":"لم يُحمَّل app.css");if(js!==4)bad.push(js?"ملف app.js قديم":"لم يُحمَّل app.js أو توقف بخطأ (F12 ثم Console)");if(!bad.length)return;var d=document.createElement("div");d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#b00020;color:#fff;padding:10px 16px;text-align:center;font:14px Tahoma,sans-serif";d.textContent=bad.join(" · ")+" — يُقدَّم من مسار static قديم أو من الكاش. نفّذ collectstatic ثم Ctrl+F5.";document.body.insertBefore(d,document.body.firstChild)},2500)</script>
