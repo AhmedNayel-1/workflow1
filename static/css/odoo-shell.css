@@ -770,3 +770,85 @@ html:has(.subject-form){scroll-padding-bottom:84px}
     align-self:flex-start;
   }
 }
+
+
+/* Phase 4 follow-up — control-panel sizing and visible horizontal-scroll affordances */
+.odoo-ui .od-cp:has(.od-document-statusbar)>a.btn{
+  grid-area:acts;
+  justify-self:start;
+  align-self:center;
+  width:max-content!important;
+  max-width:100%;
+  flex:0 0 auto!important;
+}
+.odoo-ui .od-cp:has(.od-document-statusbar)>.od-document-statusbar{
+  grid-area:stages;
+  justify-self:end;
+  min-width:0;
+}
+@media(max-width:760px){
+  .odoo-ui .od-cp:has(.od-document-statusbar){
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-areas:"crumb" "acts" "stages"!important;
+    align-items:start;
+  }
+  .odoo-ui .od-cp:has(.od-document-statusbar)>a.btn{
+    justify-self:start;
+    width:max-content!important;
+    max-width:100%;
+  }
+  .odoo-ui .od-cp:has(.od-document-statusbar)>.od-document-statusbar{
+    justify-self:stretch;
+    width:100%;
+    max-width:100%;
+  }
+  .odoo-ui .od-cp:has(> .od-statusbar):not(:has(.od-document-statusbar)){
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-areas:"crumb" "pager" "stages"!important;
+  }
+  .odoo-ui .od-cp:has(> .od-statusbar):not(:has(.od-document-statusbar))>.od-statusbar,
+  .odoo-ui .od-cp:has(.od-document-statusbar)>.od-document-statusbar{
+    grid-area:stages;
+    justify-self:stretch!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden;
+    scrollbar-width:auto!important;
+    scrollbar-color:#8b929a #e9ecef;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
+    padding:7px 12px 10px!important;
+    box-sizing:border-box;
+    background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,0) 14px,rgba(255,255,255,0) calc(100% - 14px),#fff 100%);
+  }
+  .odoo-ui .od-cp .od-statusbar::-webkit-scrollbar,
+  .odoo-ui .od-cp .od-statusbar::-webkit-scrollbar{height:7px}
+  .odoo-ui .od-cp .od-statusbar::-webkit-scrollbar-track{background:#e9ecef;border-radius:8px}
+  .odoo-ui .od-cp .od-statusbar::-webkit-scrollbar-thumb{background:#8b929a;border-radius:8px}
+  .odoo-ui .od-cp .od-statusbar li{scroll-snap-align:start}
+  /* Secondary actions in the guide remain individually visible and can be swiped. */
+  .odoo-ui .sd-guide .ui-guide .alts{
+    flex-wrap:nowrap!important;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow-x:auto!important;
+    overflow-y:hidden;
+    scrollbar-width:auto!important;
+    scrollbar-color:#8b929a #e9ecef;
+    overscroll-behavior-x:contain;
+    padding:10px 2px 12px!important;
+    box-sizing:border-box;
+    -webkit-overflow-scrolling:touch;
+  }
+  .odoo-ui .sd-guide .ui-guide .alts>span,
+  .odoo-ui .sd-guide .ui-guide .alts>.alt{
+    flex:0 0 auto!important;
+    white-space:nowrap;
+  }
+  .odoo-ui .sd-guide .ui-guide .alts::-webkit-scrollbar{height:7px}
+  .odoo-ui .sd-guide .ui-guide .alts::-webkit-scrollbar-track{background:#e9ecef;border-radius:8px}
+  .odoo-ui .sd-guide .ui-guide .alts::-webkit-scrollbar-thumb{background:#8b929a;border-radius:8px}
+}
