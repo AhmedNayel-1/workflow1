@@ -4,7 +4,7 @@
 {% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 {% include "partials/breadcrumbs.html" with current="مركز الإشعارات" %}
-<div class="page-h"><div><h2>مركز الإشعارات</h2><p>مستوى الإشعارات لحسابك: <span class="tag code">{{ user_level }}</span></p></div><form method="post" data-confirm="تعليم كل الإشعارات كمقروءة؟">{% csrf_token %}<input type="hidden" name="action" value="mark_all_read"><button class="btn" type="submit">{% icon 'check' 'sm' %}تعليم الكل كمقروء</button></form></div>
+<div class="page-h od-list-heading"><div><h2>مركز الإشعارات</h2><p>مستوى الإشعارات لحسابك: <span class="tag code">{{ user_level }}</span></p></div><form method="post" data-confirm="تعليم كل الإشعارات كمقروءة؟">{% csrf_token %}<input type="hidden" name="action" value="mark_all_read"><button class="btn" type="submit">{% icon 'check' 'sm' %}تعليم الكل كمقروء</button></form></div>
 <div class="chips od-filter-chips mb">
   <a class="chip {% if cat_filter == 'ALL' %}on{% endif %}" href="?cat=ALL">الكل</a><a class="chip {% if cat_filter == 'INCOMING_REFERRAL' %}on{% endif %}" href="?cat=INCOMING_REFERRAL">إحالات واردة</a><a class="chip {% if cat_filter == 'DECISION_TASK' %}on{% endif %}" href="?cat=DECISION_TASK">قرارات ومهام</a><a class="chip {% if cat_filter == 'DEADLINE' %}on{% endif %}" href="?cat=DEADLINE">مواعيد</a><a class="chip {% if cat_filter == 'ESCALATION_OVERDUE' %}on{% endif %}" href="?cat=ESCALATION_OVERDUE">تصعيد وتأخير</a><a class="chip {% if cat_filter == 'SUSPENSION' %}on{% endif %}" href="?cat=SUSPENSION">تعليق واستيفاء</a><a class="chip {% if cat_filter == 'REPLY_MEMO' %}on{% endif %}" href="?cat=REPLY_MEMO">ردود ومذكرات</a>
 </div>
