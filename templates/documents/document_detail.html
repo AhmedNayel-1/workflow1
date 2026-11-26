@@ -44,7 +44,7 @@
   </nav>
 
   <nav class="od-record-nav" aria-label="أقسام المستند">
-    <a href="#document-versions">{% icon 'files' 'sm' %} النسخ والمرفقات</a>
+    <a href="#document-versions">{% icon 'file' 'sm' %} النسخ والمرفقات</a>
     <a href="#document-linked-subjects">{% icon 'link' 'sm' %} الموضوعات المرتبطة</a>
     <a href="#document-timeline">{% icon 'clock' 'sm' %} السجل الزمني</a>
   </nav>
@@ -52,7 +52,7 @@
   <div class="od-record-grid">
     <div class="col od-record-main">
       <section class="panel" id="document-versions">
-        <div class="panel-h"><h3>{% icon 'files' %} النسخ والمرفقات</h3><span class="muted xs">{{ attachment_count }} مرفق</span></div>
+        <div class="panel-h"><h3>{% icon 'file' %} النسخ والمرفقات</h3><span class="muted xs">{{ attachment_count }} مرفق</span></div>
         <div class="panel-b">
           {% for row in versions_data %}
           <div class="item document-version" data-document-version>
@@ -95,7 +95,7 @@
           <details class="dd mt-s">
             <summary>{% icon 'clip' 'sm' %} إضافة مرفق للنسخة الحالية {% icon 'chevd' 'sm' %}</summary>
             <form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_attachment">
-              <input type="hidden" name="version_id" value="{{ doc.versions.first.id }}">
+              {% if current_version %}<input type="hidden" name="version_id" value="{{ current_version.id }}">{% endif %}
               <label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" multiple required></label>
               <label class="fld"><span>الوصف</span><input class="in" name="attachment_description"></label>
               <div class="full"><button class="btn primary" type="submit">إضافة</button></div>
