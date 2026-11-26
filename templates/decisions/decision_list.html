@@ -3,8 +3,9 @@
 {% block heading %}القرارات الإدارية{% endblock %}
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
+{% include "partials/breadcrumbs.html" with current="القرارات" %}
 <div class="page-h"><div><h2>القرارات الإدارية</h2><p>القرارات المرتبطة بالموضوعات المتاحة لك.</p></div></div>
-<section class="panel decision-workbench" data-decision-root data-odoo-list><div class="toolbar decision-tools">
+<section class="panel od-list-view decision-workbench" data-decision-root data-odoo-list><div class="toolbar od-list-toolbar decision-tools">
   <label class="search-in decision-search">{% icon 'search' 'sm' %}<input class="in sm" data-decision-search type="search" placeholder="ابحث برقم القرار أو العنوان أو الموضوع…" aria-label="البحث في القرارات"></label>
   <select class="in sm decision-filter" data-decision-type aria-label="تصفية حسب نوع القرار"><option value="">كل الأنواع</option></select>
   <select class="in sm decision-filter" data-decision-status aria-label="تصفية حسب حالة القرار"><option value="">كل الحالات</option></select>
