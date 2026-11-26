@@ -303,6 +303,8 @@ def document_detail(request, doc_id: int):
         })
     timeline_events.sort(key=lambda event: event["date"], reverse=True)
 
+    current_version = next((row["ver"] for row in versions_data if row["ver"].version_number == doc.current_version_number), None)
+
     visible_subjects = PermissionService.filter_visible_subjects(Subject.objects.all(), request.user)
     can_approve_doc = PermissionService.user_has_permission(
         request.user,
@@ -318,6 +320,7 @@ def document_detail(request, doc_id: int):
             "doc": doc,
             "versions_data": versions_data,
             "attachment_count": attachment_count,
+            "current_version": current_version,
             "linked_subjects": linked_subjects,
             "linked_subject_count": len(linked_subjects),
             "timeline_events": timeline_events,
