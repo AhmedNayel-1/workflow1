@@ -23,6 +23,13 @@
   <div class="sd-head-meta muted sm"><b>{{ subject.created_by.get_full_name|default:subject.created_by.username }}</b> سجّل الموضوع في <span class="num">{{ subject.created_at|date:"Y-m-d H:i" }}</span></div>
 </section>
 
+<nav class="od-statbar od-subject-statbar" aria-label="ملخص الموضوع">
+  <a class="od-stat" href="#sec-documents" data-jump="sec-documents"><span class="od-stat-label">المستندات</span><b class="od-stat-value num">{{ doc_links|length }}</b></a>
+  <a class="od-stat" href="#sec-memos" data-jump="sec-memos"><span class="od-stat-label">المذكرات</span><b class="od-stat-value num">{{ memos|length }}</b></a>
+  <a class="od-stat" href="#sec-referrals" data-jump="sec-referrals"><span class="od-stat-label">الإحالات</span><b class="od-stat-value num">{{ referrals|length }}</b></a>
+  <a class="od-stat" href="#sec-timeline" data-jump="sec-timeline"><span class="od-stat-label">مراحل وسجل النشاط</span><b class="od-stat-value num">{{ workflow_stages|length|add:activity_logs.count }}</b></a>
+</nav>
+
 <nav class="subnav" aria-label="أقسام الموضوع" data-subject-nav><a href="#sec-documents" data-jump="sec-documents">المستندات <span class="cnt">{{ doc_links|length }}</span></a><a href="#sec-memos" data-jump="sec-memos">المذكرات <span class="cnt">{{ memos|length }}</span></a><a href="#sec-referrals" data-jump="sec-referrals">الإحالات <span class="cnt">{{ referrals|length }}</span></a><a href="#sec-tasks" data-jump="sec-tasks">المهام والقرارات</a><a href="#sec-closure" data-jump="sec-closure">التأشيرات والتعليق والإغلاق</a><a href="#sec-stages" data-jump="sec-stages" data-gh-first>التفاصيل</a></nav>
 
   </div>
