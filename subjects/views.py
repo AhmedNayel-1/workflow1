@@ -425,15 +425,21 @@ def subject_detail(request, subject_id: int):
                     action_type="MEMO_APPROVED",
                     actor_user=request.user,
                     description=f"تم اعتماد المذكرة رقم {memo.memo_number}",
+                    metadata={"action": "اعتماد مذكرة العرض", "status": subject.get_status_display(), "status_code": subject.status, "memo_status": memo.get_status_display()},
                 )
-                if memo.author_id != request.user.id:
+                notify_targets = {}
+                if memo.author_id and memo.author_id != request.user.id:
+                    notify_targets[memo.author_id] = memo.author
+                if subject.current_owner_id and subject.current_owner_id not in (request.user.id, memo.author_id):
+                    notify_targets[subject.current_owner_id] = subject.current_owner
+                for target in notify_targets.values():
                     NotificationService.notify(
-                        recipient=memo.author,
+                        recipient=target,
                         subject=subject,
                         category=Notification.Category.DECISION_TASK,
                         priority=getattr(subject.priority, "code", "NORMAL"),
-                        title=f"تم اعتماد المذكرة {memo.memo_number}",
-                        message=f"اعتمد {request.user} المذكرة «{memo.title}» على الموضوع {subject.internal_number}.",
+                        title=f"اكتملت مذكرة العرض {memo.memo_number}",
+                        message=f"اعتمد {request.user} المذكرة «{memo.title}» على الموضوع {subject.internal_number}. المرحلة الحالية: {subject.get_status_display()}.",
                         link_url=f"/subjects/{subject.id}/",
                     )
                 messages.success(request, "تم اعتماد المذكرة بنجاح.")
