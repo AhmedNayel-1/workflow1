@@ -332,6 +332,7 @@ class SubjectService:
             action_type="SUBJECT_SUSPENDED",
             actor_user=user,
             description=f"تم تعليق الموضوع لحين استيفاء ({required_item})" + (f" من ({required_from})" if required_from else "") + f". السبب: {reason_details}",
+            metadata={"action": "تعليق", "status": subject.get_status_display(), "status_code": subject.status},
         )
         return suspension
 
@@ -368,6 +369,7 @@ class SubjectService:
             action_type="SUSPENSION_FULFILLED",
             actor_user=user,
             description=f"تم استيفاء المطلوب ({suspension.required_item}): {fulfillment_notes}",
+            metadata={"action": "استئناف بعد التعليق", "status": subject.get_status_display(), "status_code": subject.status},
         )
         return subject
 
@@ -468,6 +470,7 @@ class SubjectService:
             action_type="SUBJECT_CLOSED",
             actor_user=user,
             description=f"تم {'إغلاق الموضوع استثنائياً وأرشفته' if exceptional else 'إغلاق الموضوع رسمياً وأرشفته'}. {closure_notes}",
+            metadata={"action": "إغلاق الموضوع", "status": subject.get_status_display(), "status_code": subject.status},
         )
         AuditService.log_audit(
             actor=user,
