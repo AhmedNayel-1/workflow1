@@ -358,6 +358,21 @@ class DocumentService:
         ver = DocumentVersion.objects.select_for_update().select_related("document").get(id=version.id)
         if ver.is_approved:
             raise PermissionDenied("لا يمكن إضافة أو استبدال مرفق داخل نسخة معتمدة؛ يجب إنشاء نسخة جديدة بإجراء رسمي.")
+
+        # فرض العهدة التنفيذية في طبقة الخدمة حتى لا يمكن تجاوزها باستدعاء مباشر خارج الـ View.
+        from accounts.services import PermissionService
+        doc = ver.document
+        linked_subjects = [
+            link.subject
+            for link in SubjectDocumentLink.objects.filter(document=doc).select_related("subject")
+        ]
+        if linked_subjects:
+            if not getattr(user, "is_superuser", False) and not any(
+                PermissionService.can_act_on_subject(user, subject) for subject in linked_subjects
+            ):
+                raise PermissionDenied("لا يمكنك إضافة مرفقات لمستند مرتبط بموضوع ليس في عهدتك التنفيذية.")
+        elif not getattr(user, "is_superuser", False) and doc.created_by_id != user.id:
+            raise PermissionDenied("إضافة مرفقات المستند المستقل متاحة لمنشئه أو مدير النظام فقط.")
         if not uploaded_files:
             raise ValidationError("يجب اختيار ملف واحد على الأقل للرفع.")
         created = cls._create_attachments_for_version(

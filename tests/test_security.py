@@ -514,6 +514,33 @@ class SecurityAndIsolationTests(TestCase):
         recipient.refresh_from_db()
         self.assertEqual(recipient.target_user, recipient_user)
 
+    def test_supervisor_cannot_add_attachment_without_subject_custody(self):
+        """المشرف الذي يستطيع رؤية المستند لكنه لا يملك عهدة موضوعه يُمنع من إضافة مرفق."""
+        supervisor = User.objects.get(username="transfers_sup")
+        creator = User.objects.get(username="hr_head")
+        subject = Subject.objects.filter(applicant_name="محمد محمود علي").first()
+        self.assertFalse(PermissionService.can_act_on_subject(supervisor, subject))
+        doc = DocumentService.register_document(
+            title="مستند لاختبار منع الإضافة دون عهدة",
+            doc_type=DocumentType.objects.first(),
+            confidentiality=ConfidentialityLevel.objects.get(code="NORMAL"),
+            created_by=creator, subject=subject,
+        )
+        version = doc.versions.first()
+        client = Client()
+        client.force_login(supervisor)
+        response = client.post(
+            reverse("documents:document_detail", args=[doc.id]),
+            {
+                "action": "add_attachment",
+                "version_id": version.id,
+                "attachment_description": "اختبار أمني",
+                "attachment_file": SimpleUploadedFile("unauthorized.pdf", b"%PDF-1.4 test", content_type="application/pdf"),
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(version.attachments.count(), 0)
+
     # =========================================================================
     # 4. فرض صلاحيات الإحالة على المستخدمين والوحدات التنظيمية معاً
     # =========================================================================
