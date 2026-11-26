@@ -1,25 +1,147 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}{{ doc.internal_number }}{% endblock %}
-{% block heading %}<span class="crumb">المستندات /</span> <span class="num">{{ doc.internal_number }}</span>{% endblock %}
-{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
+{% block heading %}<a class="crumb" href="{% url 'documents:document_list' %}">المستندات</a><span class="crumb-sep" aria-hidden="true">/</span> <span class="num">{{ doc.internal_number }}</span>{% endblock %}
+{% block cp_extra %}
+<a class="btn sm" href="{% url 'documents:document_export_pdf' doc.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>
+<ol class="od-statusbar od-document-statusbar" aria-label="حالة المستند">
+  <li class="{% if doc.status == 'DRAFT' %}now{% elif doc.status == 'REGISTERED' or doc.status == 'APPROVED' or doc.status == 'ARCHIVED' %}done{% endif %}">مسودة</li>
+  <li class="{% if doc.status == 'REGISTERED' %}now{% elif doc.status == 'APPROVED' or doc.status == 'ARCHIVED' %}done{% endif %}">مسجل</li>
+  <li class="{% if doc.status == 'APPROVED' %}now{% elif doc.status == 'ARCHIVED' %}done{% endif %}">معتمد</li>
+  <li class="{% if doc.status == 'ARCHIVED' %}now{% endif %}">مؤرشف</li>
+</ol>
+{% endblock %}
 {% block content %}
-<nav class="document-detail-nav" aria-label="أقسام المستند"><a href="#document-versions">النسخ والمرفقات</a><a href="#document-linked-subjects">المواضيع المرتبطة</a></nav><section class="panel case-h"><div class="row between wrap"><div class="row wrap gap-s"><span class="tag code">{{ doc.internal_number }}</span><span class="pill info nodot">{{ doc.doc_type.name }}</span><span class="pill {{ doc.status|tone }}">{{ doc.get_status_display }}</span>{% if doc.confidentiality.overrides_hierarchy %}<span class="pill bad nodot">{% icon 'lock' 'sm' %}{{ doc.confidentiality.name }}</span>{% else %}<span class="pill nodot">{{ doc.confidentiality.name }}</span>{% endif %}</div><a class="btn sm" href="{% url 'documents:document_export_pdf' doc.id %}">{% icon 'download' 'sm' %}تصدير PDF</a></div>
-  <h2>{{ doc.title }}</h2>
-  <div class="case-meta"><div><small>المصدر</small><b>{{ doc.get_source_type_display }}</b></div><div><small>تاريخ المستند</small><b class="num">{{ doc.document_date|date:"Y-m-d" }}</b></div>{% if doc.received_date %}<div><small>تاريخ الاستلام</small><b class="num">{{ doc.received_date|date:"Y-m-d" }}</b></div>{% endif %}{% if doc.external_in_out_number %}<div><small>الرقم الخارجي</small><b>{{ doc.external_in_out_number }}</b></div>{% endif %}{% if doc.sender_entity %}<div><small>المرسل</small><b>{{ doc.sender_entity }}</b></div>{% endif %}{% if doc.receiver_entity %}<div><small>المستلم</small><b>{{ doc.receiver_entity }}</b></div>{% endif %}<div><small>أنشأه</small><b>{{ doc.created_by.get_full_name|default:doc.created_by.username }}</b></div><div><small>النسخة الحالية</small><b class="num">v{{ doc.current_version_number }}</b></div></div>
-  {% if doc.summary %}<p class="muted mt">{{ doc.summary }}</p>{% endif %}
-</section>
-<div class="layout-3 mt"><div class="col" style="gap:16px;min-width:0">
-  <section class="panel" id="document-versions"><div class="panel-h"><h3>{% icon 'clock' %} النسخ والمرفقات</h3></div><div class="panel-b">
-    {% for row in versions_data %}<div class="item document-version" data-document-version><div class="row between wrap" style="width:100%"><div class="row gap-s"><b>النسخة <span class="num">{{ row.ver.version_number }}</span></b>{% if row.ver.version_number == doc.current_version_number %}<span class="pill brand nodot">الحالية</span>{% endif %}{% if row.ver.is_approved %}<span class="pill ok">معتمدة</span>{% else %}<span class="pill warn">غير معتمدة</span>{% endif %}</div><span class="muted xs num">{{ row.ver.created_at|date:"Y-m-d H:i" }}</span></div>
-      {% if row.ver.change_reason %}<p class="muted sm">{{ row.ver.change_reason }}</p>{% endif %}
-      {% for r in row.attachments %}{% with att=r.att %}<div class="row between wrap note document-attachment" style="width:100%;margin:0" data-doc-attachment tabindex="0" aria-label="معاينة {{ att.original_filename|escape }}" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}" style="cursor:pointer"><span class="row gap-s trunc">{% icon 'clip' 'sm' %}<b class="trunc">{{ att.original_filename }}</b><span class="muted xs">{{ att.file_size|fsize }}</span></span><span class="row gap-s">{% if r.integrity.ok %}<span class="pill ok">سليم</span>{% else %}<span class="pill bad" title="{{ r.integrity.label }}">{{ r.integrity.label|short:28 }}</span>{% endif %}<span class="btn sm">{% icon 'eye' 'sm' %}معاينة</span><a class="btn sm" href="{% url 'documents:attachment_download' att.id %}">{% icon 'download' 'sm' %}</a></span></div>{% endwith %}{% endfor %}
-      {% if can_approve_doc and not row.ver.is_approved %}<form method="post" class="row gap-s" data-confirm="اعتماد النسخة {{ row.ver.version_number }}؟">{% csrf_token %}<input type="hidden" name="action" value="approve_version"><input type="hidden" name="version_id" value="{{ row.ver.id }}"><button class="btn sm ok" type="submit">{% icon 'check' 'sm' %}اعتماد النسخة</button></form>{% endif %}
-    </div>{% endfor %}
-    <details class="dd mt"><summary>{% icon 'upload' 'sm' %} إصدار نسخة جديدة {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="new_version"><label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" required></label><label class="fld"><span>سبب التعديل</span><input class="in" name="change_reason" required></label><label class="chk full"><input type="checkbox" name="is_approved"> اعتماد النسخة مباشرة</label><div class="full"><button class="btn primary" type="submit">إصدار</button></div></form></details>
-    <details class="dd mt-s"><summary>{% icon 'clip' 'sm' %} إضافة مرفق للنسخة الحالية {% icon 'chevd' 'sm' %}</summary><form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_attachment"><label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" required></label><label class="fld"><span>الوصف</span><input class="in" name="attachment_description"></label><div class="full"><button class="btn primary" type="submit">إضافة</button></div></form></details>
-  </div></section></div>
-  <aside class="col" style="gap:16px"><section class="panel" id="document-linked-subjects"><div class="panel-h"><h3>{% icon 'link' %} المواضيع المرتبطة</h3></div><div class="panel-b">
-    {% for l in doc.subjectdocumentlink_set.all %}<a class="item" href="{% url 'subjects:subject_detail' l.subject_id %}" style="color:inherit"><div class="grow"><h5>{{ l.subject.title|short:60 }}</h5><span class="tag code">{{ l.subject.internal_number }}</span> <span class="muted xs">{{ l.get_relation_type_display }}</span></div></a>{% empty %}<p class="muted sm">غير مرتبط بأي موضوع.</p>{% endfor %}
-    <form method="post" class="col mt" style="gap:8px">{% csrf_token %}<input type="hidden" name="action" value="link_subject"><select class="in sm" name="subject_id" required><option value="">— ربط بموضوع —</option>{% for s in visible_subjects %}<option value="{{ s.id }}">{{ s.internal_number }} — {{ s.title|short:40 }}</option>{% endfor %}</select><select class="in sm" name="relation_type"><option value="SUPPORTING">مستند داعم</option><option value="PRIMARY">مستند أساسي</option><option value="GENERAL_DECISION">قرار عام مرتبط</option><option value="OUTPUT">مخرج تنفيذي</option></select><button class="btn sm" type="submit">ربط</button></form>
-  </div></section></aside></div>
+<div class="od-record od-document-record">
+  <section class="panel case-h od-record-head">
+    <div class="row between wrap">
+      <div class="row wrap gap-s">
+        <span class="tag code">{{ doc.internal_number }}</span>
+        <span class="pill info nodot">{{ doc.doc_type.name }}</span>
+        <span class="pill {{ doc.status|tone }}">{{ doc.get_status_display }}</span>
+        {% if doc.confidentiality.overrides_hierarchy %}<span class="pill bad nodot">{% icon 'lock' 'sm' %}{{ doc.confidentiality.name }}</span>{% else %}<span class="pill nodot">{{ doc.confidentiality.name }}</span>{% endif %}
+      </div>
+      <span class="muted xs">النسخة الحالية <b class="num">v{{ doc.current_version_number }}</b></span>
+    </div>
+    <h2>{{ doc.title }}</h2>
+    {% if doc.summary %}<p class="od-record-summary">{{ doc.summary }}</p>{% endif %}
+    <div class="case-meta od-record-meta">
+      <div><small>المصدر</small><b>{{ doc.get_source_type_display }}</b></div>
+      <div><small>تاريخ المستند</small><b class="num">{{ doc.document_date|date:"Y-m-d"|default:"—" }}</b></div>
+      {% if doc.received_date %}<div><small>تاريخ الاستلام</small><b class="num">{{ doc.received_date|date:"Y-m-d" }}</b></div>{% endif %}
+      {% if doc.external_in_out_number %}<div><small>الرقم الخارجي</small><b>{{ doc.external_in_out_number }}</b></div>{% endif %}
+      {% if doc.sender_entity %}<div><small>المرسل</small><b>{{ doc.sender_entity }}</b></div>{% endif %}
+      {% if doc.receiver_entity %}<div><small>المستلم</small><b>{{ doc.receiver_entity }}</b></div>{% endif %}
+      <div><small>أنشأه</small><b>{{ doc.created_by.get_full_name|default:doc.created_by.username }}</b></div>
+      <div><small>تاريخ التسجيل</small><b class="num">{{ doc.created_at|date:"Y-m-d H:i" }}</b></div>
+    </div>
+  </section>
+
+  <nav class="od-statbar" aria-label="ملخص المستند">
+    <a class="od-stat" href="#document-versions"><span class="od-stat-label">النسخ</span><b class="od-stat-value num">{{ versions_data|length }}</b></a>
+    <a class="od-stat" href="#document-versions"><span class="od-stat-label">المرفقات</span><b class="od-stat-value num">{{ attachment_count }}</b></a>
+    <a class="od-stat" href="#document-linked-subjects"><span class="od-stat-label">الموضوعات المرتبطة</span><b class="od-stat-value num">{{ linked_subject_count }}</b></a>
+    <a class="od-stat" href="#document-timeline"><span class="od-stat-label">أحداث السجل</span><b class="od-stat-value num">{{ timeline_events|length }}</b></a>
+  </nav>
+
+  <nav class="od-record-nav" aria-label="أقسام المستند">
+    <a href="#document-versions">{% icon 'files' 'sm' %} النسخ والمرفقات</a>
+    <a href="#document-linked-subjects">{% icon 'link' 'sm' %} الموضوعات المرتبطة</a>
+    <a href="#document-timeline">{% icon 'clock' 'sm' %} السجل الزمني</a>
+  </nav>
+
+  <div class="od-record-grid">
+    <div class="col od-record-main">
+      <section class="panel" id="document-versions">
+        <div class="panel-h"><h3>{% icon 'files' %} النسخ والمرفقات</h3><span class="muted xs">{{ attachment_count }} مرفق</span></div>
+        <div class="panel-b">
+          {% for row in versions_data %}
+          <div class="item document-version" data-document-version>
+            <div class="row between wrap" style="width:100%">
+              <div class="row gap-s">
+                <b>النسخة <span class="num">{{ row.ver.version_number }}</span></b>
+                {% if row.ver.version_number == doc.current_version_number %}<span class="pill brand nodot">الحالية</span>{% endif %}
+                {% if row.ver.is_approved %}<span class="pill ok">معتمدة</span>{% else %}<span class="pill warn">غير معتمدة</span>{% endif %}
+              </div>
+              <span class="muted xs num">{{ row.ver.created_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            {% if row.ver.change_reason %}<p class="muted sm">{{ row.ver.change_reason }}</p>{% endif %}
+            {% for r in row.attachments %}
+              {% with att=r.att %}
+              <div class="row between wrap note document-attachment" style="width:100%;margin:0" data-doc-attachment tabindex="0" aria-label="معاينة {{ att.original_filename|escape }}" data-pv data-pv-name="{{ att.original_filename }}" data-pv-url="{% url 'documents:attachment_download' att.id %}?inline=1&mode=stream" data-pv-dl="{% url 'documents:attachment_download' att.id %}" data-pv-page="{% url 'documents:attachment_preview' att.id %}" data-pv-kind="{{ att.preview_kind }}">
+                <span class="row gap-s trunc"><b class="trunc">{{ att.original_filename }}</b><span class="muted xs">{{ att.file_size|fsize }}</span></span>
+                <span class="row gap-s">
+                  {% if r.integrity.ok %}<span class="pill ok">سليم</span>{% else %}<span class="pill bad" title="{{ r.integrity.label }}">{{ r.integrity.label|short:28 }}</span>{% endif %}
+                  <span class="btn sm">{% icon 'eye' 'sm' %}معاينة</span>
+                  <a class="btn sm" href="{% url 'documents:attachment_download' att.id %}" aria-label="تنزيل {{ att.original_filename }}">{% icon 'download' 'sm' %}</a>
+                </span>
+              </div>
+              {% endwith %}
+            {% empty %}<p class="muted sm">لا توجد مرفقات في هذه النسخة.</p>{% endfor %}
+            {% if can_approve_doc and not row.ver.is_approved %}
+              <form method="post" class="row gap-s mt-s" data-confirm="اعتماد النسخة {{ row.ver.version_number }}؟">{% csrf_token %}<input type="hidden" name="action" value="approve_version"><input type="hidden" name="version_id" value="{{ row.ver.id }}"><button class="btn sm ok" type="submit">{% icon 'check' 'sm' %}اعتماد النسخة</button></form>
+            {% endif %}
+          </div>
+          {% empty %}<p class="muted sm">لا توجد نسخ مسجلة لهذا المستند.</p>{% endfor %}
+
+          <details class="dd mt">
+            <summary>{% icon 'upload' 'sm' %} إصدار نسخة جديدة {% icon 'chevd' 'sm' %}</summary>
+            <form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="new_version">
+              <label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" multiple required></label>
+              <label class="fld"><span>سبب التعديل</span><input class="in" name="change_reason" required></label>
+              <label class="chk full"><input type="checkbox" name="is_approved"> اعتماد النسخة مباشرة</label>
+              <div class="full"><button class="btn primary" type="submit">إصدار</button></div>
+            </form>
+          </details>
+          <details class="dd mt-s">
+            <summary>{% icon 'clip' 'sm' %} إضافة مرفق للنسخة الحالية {% icon 'chevd' 'sm' %}</summary>
+            <form class="dd-b form" method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="add_attachment">
+              <input type="hidden" name="version_id" value="{{ doc.versions.first.id }}">
+              <label class="fld"><span>الملف</span><input class="in" type="file" name="attachment_file" multiple required></label>
+              <label class="fld"><span>الوصف</span><input class="in" name="attachment_description"></label>
+              <div class="full"><button class="btn primary" type="submit">إضافة</button></div>
+            </form>
+          </details>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col od-record-aside">
+      <section class="panel" id="document-linked-subjects">
+        <div class="panel-h"><h3>{% icon 'link' %} الموضوعات المرتبطة</h3></div>
+        <div class="panel-b">
+          {% for l in linked_subjects %}
+            <a class="item" href="{% url 'subjects:subject_detail' l.id %}" style="color:inherit">
+              <div class="grow"><h5>{{ l.title|short:60 }}</h5><span class="tag code">{{ l.internal_number }}</span></div>
+              <span class="muted xs">{{ l.document_relation_label|default:"مرتبط" }}</span>
+            </a>
+          {% empty %}<p class="muted sm">غير مرتبط بأي موضوع.</p>{% endfor %}
+          <form method="post" class="col mt" style="gap:8px">{% csrf_token %}<input type="hidden" name="action" value="link_subject">
+            <label class="fld"><span>الموضوع</span><select class="in sm" name="subject_id" required><option value="">— ربط بموضوع —</option>{% for s in visible_subjects %}<option value="{{ s.id }}">{{ s.internal_number }} — {{ s.title|short:40 }}</option>{% endfor %}</select></label>
+            <label class="fld"><span>طبيعة العلاقة</span><select class="in sm" name="relation_type"><option value="SUPPORTING">مستند داعم</option><option value="PRIMARY">مستند أساسي</option><option value="GENERAL_DECISION">قرار عام مرتبط</option><option value="OUTPUT">مخرج تنفيذي</option></select></label>
+            <button class="btn sm" type="submit">ربط</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel od-timeline-panel" id="document-timeline">
+        <div class="panel-h"><h3>{% icon 'clock' %} السجل الزمني</h3><span class="muted xs">{{ timeline_events|length }} حدث</span></div>
+        <div class="panel-b">
+          <div class="od-timeline">
+            {% for event in timeline_events %}
+              <article class="od-timeline-item">
+                <span class="od-timeline-marker" aria-hidden="true"></span>
+                <div class="od-timeline-body">
+                  <div class="row between wrap"><b>{{ event.title }}</b><time class="muted xs num" datetime="{{ event.date|date:'c' }}">{{ event.date|date:"Y-m-d H:i" }}</time></div>
+                  {% if event.description %}<p>{{ event.description }}</p>{% endif %}
+                  {% if event.actor %}<small class="muted">{{ event.actor }}</small>{% endif %}
+                </div>
+              </article>
+            {% empty %}<p class="muted sm">لا توجد أحداث مسجلة بعد.</p>{% endfor %}
+          </div>
+          <p class="muted xs od-timeline-note">يعرض هذا السجل أحداث إنشاء المستند وإصداراته ومرفقاته وارتباطاته المسجلة.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
 {% endblock %}
