@@ -139,7 +139,6 @@ def create_user_account(actor, *, username, password, full_name, job_title="", e
     from core.models import SystemSequence
     from organization.models import PositionAssignment
     is_full_admin = bool(actor.is_superuser or actor.is_system_admin)
-    forbidden_roles_for_scoped = {"SYSTEM_ADMIN", "CHAIRMAN", "SECTOR_DIR_ADMIN"}
     if not is_full_admin:
         if unit_obj is None:
             raise PermissionDenied("يجب تحديد الوحدة التنظيمية داخل نطاقك عند إنشاء المستخدم.")
@@ -149,8 +148,8 @@ def create_user_account(actor, *, username, password, full_name, job_title="", e
             target_unit_id=unit_obj.id,
         ):
             raise PermissionDenied("لا يمكنك إنشاء مستخدم خارج نطاق قطاعك أو إدارتك العامة.")
-        if role_obj and role_obj.code in forbidden_roles_for_scoped:
-            raise PermissionDenied("لا يمكنك إسناد دور قيادي أعلى أو مسؤول نظام.")
+        if role_obj and not PermissionService.can_assign_role(actor, role_obj.code):
+            raise PermissionDenied("لا يمكنك إسناد دور أعلى من مستواك أو مساوٍ له.")
 
     with transaction.atomic():
         emp_obj = None
@@ -218,8 +217,6 @@ def users_list(request):
 
     is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
     bounds = PermissionService.get_scoped_admin_boundaries(request.user)
-    forbidden_roles_for_scoped = {"SYSTEM_ADMIN", "CHAIRMAN", "SECTOR_DIR_ADMIN"}
-
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "create_user":
@@ -269,8 +266,8 @@ def users_list(request):
                     request.user, target_user=user_obj, target_sector_id=sector_id, target_unit_id=unit_id
                 ):
                     raise PermissionDenied("لا يمكنك تعديل أدوار مستخدم خارج نطاقك.")
-                if role_obj.code in forbidden_roles_for_scoped:
-                    raise PermissionDenied("لا يمكنك إسناد هذا الدور في مستواك.")
+                if not PermissionService.can_assign_role(request.user, role_obj.code, target_user=user_obj):
+                    raise PermissionDenied("لا يمكنك إسناد دور أعلى من مستواك أو مساوٍ له، ولا تعديل أدوار حسابك الشخصي.")
             UserRoleAssignment.objects.create(
                 user=user_obj,
                 role=role_obj,
@@ -385,7 +382,7 @@ def users_list(request):
             u for u in all_users
             if not u.is_superuser and not u.is_system_admin and PermissionService.can_manage_target_user(request.user, target_user=u)
         ]
-        roles = Role.objects.exclude(code__in=forbidden_roles_for_scoped)
+        roles = [role for role in Role.objects.all() if PermissionService.can_assign_role(request.user, role.code)]
         sectors = Sector.objects.filter(id__in=bounds["sector_ids"])
         org_units = OrgUnit.objects.filter(id__in=bounds["unit_ids"]).select_related("sector", "unit_type", "parent")
 

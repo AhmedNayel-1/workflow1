@@ -21,7 +21,6 @@ SAMPLE = [
     ["أحمد محمد علي", "ahmed.ali", "ChangeMe#1", "مدير الإدارة", "UNIT_PERSONNEL_GD", "", "EMP-1001", "لا"],
     ["منى حسن", "mona.hassan", "ChangeMe#2", "سكرتير", "قسم التنقلات", "", "", "نعم"],
 ]
-FORBIDDEN = {"SYSTEM_ADMIN", "CHAIRMAN", "SECTOR_DIR_ADMIN"}
 
 
 def _guard(user):
@@ -100,8 +99,8 @@ def _validate(actor, rows):
             role = r_code.get(role_s.lower()) or r_name.get(role_s.strip())
             if role is None:
                 errs.append("دور غير معروف")
-            elif not is_full and role.code in FORBIDDEN:
-                errs.append("لا يمكنك إسناد هذا الدور")
+            elif not PermissionService.can_assign_role(actor, role.code):
+                errs.append("لا يمكنك إسناد دور أعلى من مستواك أو مساوٍ له")
         if unit is not None and not is_full and not PermissionService.can_manage_target_user(
             actor, target_sector_id=unit.sector_id, target_unit_id=unit.id
         ):

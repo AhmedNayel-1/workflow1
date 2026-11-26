@@ -17,6 +17,30 @@ def _active_ids(ids):
 
 
 class PermissionService:
+    # مستوى أعلى = سلطة إدارية أعلى. الدور غير المدرج لا يمكن لمسؤول النطاق إسناده.
+    ROLE_ASSIGNMENT_LEVELS = {
+        "SYSTEM_ADMIN": 1000, "CHAIRMAN": 900, "SECTOR_HEAD": 800,
+        "GENERAL_MANAGER": 700, "SECTOR_DIR_ADMIN": 600, "SUPERVISOR": 500,
+        "SPECIALIST": 400, "SECRETARIAT": 300,
+    }
+
+    @classmethod
+    def can_assign_role(cls, actor: User, role_code: str, target_user: Optional[User] = None) -> bool:
+        """مسؤول النطاق لا يسند دوراً أعلى أو مساوياً لمستواه ولا يعدّل أدوار حسابه الشخصي."""
+        if not actor or not actor.is_authenticated or not actor.is_active:
+            return False
+        if actor.is_superuser or actor.is_system_admin:
+            return True
+        if not cls.can_manage_users(actor):
+            return False
+        if target_user is not None and target_user.id == actor.id:
+            return False
+        target_level = cls.ROLE_ASSIGNMENT_LEVELS.get(role_code)
+        if target_level is None:
+            return False
+        actor_codes = cls.get_effective_role_codes(actor)
+        actor_levels = [cls.ROLE_ASSIGNMENT_LEVELS[code] for code in actor_codes if code in cls.ROLE_ASSIGNMENT_LEVELS]
+        return bool(actor_levels) and target_level < max(actor_levels)
     @staticmethod
     def is_manager(user: User) -> bool:
         return CorrespondenceAccessPolicy.is_manager(user)

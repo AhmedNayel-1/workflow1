@@ -105,6 +105,47 @@ class SecurityAndIsolationTests(TestCase):
         self.assertEqual(resp_rm.status_code, 302)
         self.assertFalse(UserRoleAssignment.objects.filter(id=assignment.id).exists())
 
+    def test_scoped_admin_cannot_assign_equal_or_higher_role_or_self(self):
+        """مسؤول النطاق لا يسند دوراً أعلى ولا يعدّل أدوار حسابه؛ وينطبق ذلك على الإنشاء والاستيراد الجماعي."""
+        from accounts.bulk import _validate as validate_bulk_rows
+        from accounts.views import create_user_account
+
+        actor = User.objects.get(username="hr_sector_admin")
+        sector_head = Role.objects.get(code="SECTOR_HEAD")
+        client = Client()
+        client.force_login(actor)
+
+        # مسؤول القطاع يحاول إسناد SECTOR_HEAD لنفسه.
+        response = client.post(
+            reverse("accounts:users_list"),
+            {
+                "action": "assign_role",
+                "user_id": actor.id,
+                "role_id": sector_head.id,
+                "sector_id": actor.current_sector.id,
+                "org_unit_id": actor.current_unit.id,
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(UserRoleAssignment.objects.filter(user=actor, role=sector_head, is_active=True).exists())
+
+        # نفس القاعدة تمنع إنشاء حساب جديد بدور أعلى من مستوى المنشئ.
+        with self.assertRaises(PermissionDenied):
+            create_user_account(
+                actor, username="scoped_escalation_attempt", password="Password@1",
+                full_name="محاولة تصعيد دور", unit_obj=actor.current_unit,
+                sector_obj=actor.current_sector, role_obj=sector_head,
+            )
+        self.assertFalse(User.objects.filter(username="scoped_escalation_attempt").exists())
+
+        # الاستيراد الجماعي يرفض الصف في مرحلة المعاينة.
+        rows = [[
+            "موظف اختبار", "bulk_escalation_attempt", "Password@1", "رئيس قطاع",
+            actor.current_unit.code, "SECTOR_HEAD", "", "لا",
+        ]]
+        checked = validate_bulk_rows(actor, rows)
+        self.assertIn("لا يمكنك إسناد دور أعلى من مستواك أو مساوٍ له", checked[0]["errors"])
+
     # =========================================================================
     # 2. تشديد صلاحيات المهام (Tasks) والقرارات (Decisions)
     # =========================================================================
