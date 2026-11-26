@@ -892,6 +892,7 @@
           if (control.type === "checkbox") control.checked = false; else control.value = "";
           control.dispatchEvent(new Event("input", { bubbles: true }));
           control.dispatchEvent(new Event("change", { bubbles: true }));
+          if (control.form && control.form.method.toLowerCase() === "get" && control.form.dataset.auto === undefined) control.form.requestSubmit();
           update();
         });
         holder.append(chip);
