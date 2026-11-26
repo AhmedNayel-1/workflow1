@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% load ui_extras static %}
 {% block title %}{{ subject.internal_number }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=12">{% endblock %}
-{% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=20" defer></script>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=13">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=22" defer></script>{% endblock %}
 {% block cp_extra %}<div class="od-cp-actions"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>{% if perms.can_refer and not is_specialist_acting %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
 {% if not is_specialist_acting %}{% if perms.can_act or perms.can_memo or perms.can_task or perms.can_annotate %}<div class="od-add" style="position:relative"><button type="button" class="btn sm" data-pop="od-add-pop" aria-haspopup="true">{% icon 'plus' 'sm' %} إضافة</button><div class="pop od-pop" id="od-add-pop" hidden>
 {% if perms.can_act %}<a href="#action-upload" data-open-details>{% icon 'upload' 'sm' %}<span>إرفاق مستند</span></a>{% endif %}{% if perms.can_memo %}<a href="#action-memo" data-open-details>{% icon 'note' 'sm' %}<span>إعداد مذكرة</span></a>{% endif %}{% if perms.can_task %}<a href="#action-task" data-open-details>{% icon 'task' 'sm' %}<span>تكليف بمهمة</span></a>{% endif %}{% if perms.can_annotate %}<a href="#action-annotation" data-open-details>{% icon 'edit' 'sm' %}<span>إضافة تأشيرة</span></a>{% endif %}{% if perms.can_decide %}<a href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}<span>إعداد قرار</span></a>{% endif %}</div></div>{% endif %}{% endif %}</div>
