@@ -70,7 +70,7 @@ def dashboard(request):
         first_att_id=first_att_id_subq,
         first_att_name=first_att_name_subq,
         first_att_mime=first_att_mime_subq,
-    ).prefetch_related("referrals__referred_by", "referrals__recipients", "memos", "decisions")
+    ).prefetch_related("referrals__referred_by")
 
     if q:
         all_subjects_qs = all_subjects_qs.filter(
@@ -112,7 +112,6 @@ def dashboard(request):
         s.has_pending_ref = s.pending_ref_id is not None
         s.can_act = is_admin or (s.current_owner_id == request.user.id) or (s.id in active_recip_subject_ids) or (s.current_owner_id in delegator_ids)
         refs = list(s.referrals.all())
-        s.current_stage_label = SubjectService.get_current_stage_label(s)
         s.sender_label = str(refs[0].referred_by) if refs else str(s.current_owner)
         if getattr(s, "first_att_id", None):
             s.first_att = {
