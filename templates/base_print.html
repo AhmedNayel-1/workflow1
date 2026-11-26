@@ -13,7 +13,8 @@
     .sheet th{background:#f1f1f1;width:22%}
     .sheet .sign{display:flex;justify-content:space-between;gap:24px;margin-top:48px}.sheet .sign div{flex:1;text-align:center;border-top:1px solid #555;padding-top:8px}
     .bar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;padding:10px;background:#f4f4f8;border-bottom:1px solid #ddd}
-    @media print{.bar{display:none}.sheet{padding:0;max-width:none}@page{size:A4;margin:14mm}}
+    .bar{background:#f6f7f8;border-bottom:1px solid #d3d6da;border-radius:0;height:auto;min-height:0;overflow:visible;align-items:center;z-index:5}.bar .btn{height:30px;min-height:30px;padding:0 14px;border-radius:3px;border:1px solid #cfd2d6;background:#fff;color:#1f2328;box-shadow:none;font-size:13.5px;transition:background-color .12s ease}.bar .btn:hover{background:#f0f1f3}.bar .btn.primary{background:#714b67;border-color:#714b67;color:#fff}.bar .btn.primary:hover{background:#5f3f56}
+    @media print{tr{break-inside:avoid;page-break-inside:avoid}thead{display:table-header-group}.bar{display:none}.sheet{padding:0;max-width:none}@page{size:A4;margin:14mm}}
   </style>
   {% block extra_head %}{% endblock %}
 </head>

@@ -44,7 +44,9 @@ from workflow.services import WorkflowEngineService, apply_template
 class CorrespondenceSystemTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        call_command("seed_demo_data")
+        # الإشعارات تُنشأ داخل transaction.on_commit، وTestCase لا ينفذها إلا بهذا السياق
+        with cls.captureOnCommitCallbacks(execute=True):
+            call_command("seed_demo_data")
 
     def test_scenario_5_top_secret_overrides_hierarchy(self):
         """
@@ -63,11 +65,15 @@ class CorrespondenceSystemTests(TestCase):
         self.assertTrue(PermissionService.can_view_subject(hr_sec, top_secret_subject))
 
         # المدير العام يجب أن يُمنع تماماً رغم تبعيته الهرمية
-        self.assertFalse(PermissionService.can_view_subject(personnel_gm, top_secret_subject))
+        # المدير العام الأعلى من الموظف المنفذ يرى الموضوع (تعليمات أحمد الأحدث)، أما المشرف وسكرتارية القسم والمدير العام فلا
+        self.assertTrue(PermissionService.can_view_subject(personnel_gm, top_secret_subject))
+        self.assertFalse(PermissionService.can_view_subject(User.objects.get(username="transfers_sup"), top_secret_subject))
+        self.assertFalse(PermissionService.can_view_subject(User.objects.get(username="gm_sec"), top_secret_subject))
+        self.assertFalse(PermissionService.can_view_subject(User.objects.get(username="transfers_sec"), top_secret_subject))
 
-        # التحقق من أن البحث لا يكشف الموضوع للمدير العام
+        # موظف في إدارة أخرى لا يرى الموضوع في البحث
         client = Client()
-        client.force_login(personnel_gm)
+        client.force_login(User.objects.get(username="housing_sup"))
         resp = client.get("/search/?q=الجهاز المركزي")
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, top_secret_subject.internal_number)
@@ -280,10 +286,10 @@ class CorrespondenceSystemTests(TestCase):
     def test_quick_archive_search_isolation(self):
         """البحث السريع في العناوين والملخصات لا يكشف السري للغاية لغير المصرح لهم."""
         client = Client()
-        personnel_gm = User.objects.get(username="personnel_gm")
+        personnel_gm = User.objects.get(username="transfers_sup")
         hr_head = User.objects.get(username="hr_head")
 
-        # المدير العام يبحث عن كلمة في عنوان/ملخص الموضوع السري للغاية: يجب ألا يظهر
+        # مشرف القسم يبحث عن كلمة في عنوان/ملخص الموضوع السري للغاية: يجب ألا يظهر
         client.force_login(personnel_gm)
         resp_gm = client.get("/archive-search/?q=الجهاز المركزي")
         self.assertEqual(resp_gm.status_code, 200)
@@ -316,11 +322,11 @@ class CorrespondenceSystemTests(TestCase):
         """التنبيهات عند تجاوز تاريخ الاستحقاق تظهر للمصرح لهم فقط ولا تكشف السري للغاية لغير المصرح."""
         from core.context_processors import get_user_overdue_alerts
 
-        personnel_gm = User.objects.get(username="personnel_gm")
+        personnel_gm = User.objects.get(username="housing_sup")
         hr_head = User.objects.get(username="hr_head")
         top_secret_subject = Subject.objects.get(confidentiality__code="TOP_SECRET")
 
-        # المدير العام لا يرى تنبيه الاستحقاق الخاص بالموضوع السري للغاية
+        # من لا يرى الموضوع السري للغاية لا يرى تنبيه الاستحقاق الخاص به
         gm_alerts = get_user_overdue_alerts(personnel_gm)
         self.assertFalse(any(a["subject_id"] == top_secret_subject.id for a in gm_alerts))
 
@@ -392,14 +398,15 @@ class CorrespondenceSystemTests(TestCase):
         # المدير العام أو سكرتاريته: ممنوع التخطي للموظف مباشرة، ومسموح التوجيه لمشرف القسم
         gm_targets = list(PermissionService.get_allowed_referral_targets(gm_sec, subj))
         self.assertIn(transfers_sup, gm_targets)
-        self.assertNotIn(transfers_emp, gm_targets)
+        self.assertIn(transfers_emp, gm_targets)  # الإحالة المباشرة للموظف المختص مسموحة (احتمال 2)
+        self.assertNotIn(User.objects.get(username="housing_emp"), gm_targets)
         with self.assertRaises(ValidationError):
             WorkflowEngineService.create_referral(
                 subject=subj,
                 referred_by=gm_sec,
                 routing_mode=Referral.RoutingMode.DIRECT,
                 purpose=Referral.Purpose.FOR_EXECUTION,
-                target_users=[transfers_emp],
+                target_users=[User.objects.get(username="housing_emp")],
             )
 
         WorkflowEngineService.create_referral(
@@ -960,7 +967,8 @@ class CorrespondenceSystemTests(TestCase):
         )
 
         # التشغيل الأول لـ process_sla
-        call_command("process_sla")
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command("process_sla")
 
         ref_due_soon.refresh_from_db()
         ref_overdue.refresh_from_db()
@@ -997,7 +1005,8 @@ class CorrespondenceSystemTests(TestCase):
         self.assertFalse(overdue_items[0]["is_live_escalation"])
 
         # التشغيل الثاني لـ process_sla: لا يكرر أي تذكير أو تصعيد أو ActivityLog
-        call_command("process_sla")
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command("process_sla")
         self.assertEqual(
             Notification.objects.filter(
                 subject=subj_due_soon,

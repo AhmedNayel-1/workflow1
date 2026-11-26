@@ -106,13 +106,7 @@ class DecisionService:
         distribution_units: list,
         execution_assignments: list[dict],
     ) -> Decision:
-        if not PermissionService.user_has_permission(
-            user,
-            "DECISION_APPROVE",
-            sector=decision.subject.sector,
-            confidentiality_rank=decision.subject.confidentiality.rank,
-            subject=decision.subject,
-        ):
+        if not PermissionService.can_distribute_decision(user, decision):
             raise PermissionDenied("ليس لديك صلاحية توزيع القرار أو تكليف جهات التنفيذ.")
 
         if decision.status not in (

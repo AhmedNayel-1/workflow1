@@ -192,6 +192,14 @@ class SubjectSuspension(models.Model):
     )
     reason_details = models.TextField("تفاصيل سبب التعليق")
     required_from = models.CharField("الجهة أو الشخص المطلوب منه الاستيفاء", max_length=180)
+    committee = models.ForeignKey(
+        "committees.Committee",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="incoming_suspensions",
+        verbose_name="اللجنة (اختياري)",
+    )
     required_item = models.CharField("المستند أو الإجراء المطلوب", max_length=255)
     suspended_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -340,9 +348,92 @@ class Annotation(models.Model):
         choices=ExecutionState.choices,
         default=ExecutionState.PENDING,
     )
+    class Outcome(models.TextChoices):
+        PERSONNEL_COMMITTEE = "PERSONNEL_COMMITTEE", "عرض على لجنة شئون العاملين"
+        GRIEVANCE_COMMITTEE = "GRIEVANCE_COMMITTEE", "عرض على لجنة التظلمات"
+        VERBAL_NOTICE = "VERBAL_NOTICE", "إخطار شفهي"
+        WRITTEN_NOTICE = "WRITTEN_NOTICE", "إخطار كتابي"
+        REJECT = "REJECT", "رفض"
+        RETURN_FOR_AMENDMENT = "RETURN_FOR_AMENDMENT", "إرجاع للتعديل"
+        OTHER = "OTHER", "أخرى (يُكتب النص)"
+
+    # اختياري: توصيف توجيه التأشيرة. لا يحدد مساراً ولا يفرض خطوة ولا يغيّر الصلاحيات؛ نص التأشيرة هو المرجع.
+    outcome = models.CharField("نتيجة/توجيه التأشيرة", max_length=30, choices=Outcome.choices, blank=True, default="")
+    outcome_other = models.CharField("توجيه آخر (نص حر)", max_length=255, blank=True, default="")
     annotation_date = models.DateTimeField("تاريخ التأشيرة", auto_now_add=True)
 
     class Meta:
         verbose_name = "تأشيرة إدارية"
         verbose_name_plural = "التأشيرات الإدارية"
         ordering = ["-annotation_date"]
+
+
+class NoticeRecord(models.Model):
+    """
+    سجل إخطار فعلي لصاحب الشأن. يوثق أن الإخطار تم (وبأي وسيلة) بواسطة من سجله؛
+    لا يُنشأ تلقائياً من نص التأشيرة، ولا يغيّر حالة الموضوع أو صلاحياته.
+    """
+    class Method(models.TextChoices):
+        VERBAL = "VERBAL", "شفهي"
+        WRITTEN = "WRITTEN", "كتابي"
+        PHONE = "PHONE", "هاتفي"
+        OTHER = "OTHER", "أخرى"
+
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="notice_records", verbose_name="الموضوع")
+    annotation = models.ForeignKey(Annotation, on_delete=models.SET_NULL, null=True, blank=True, related_name="notice_records", verbose_name="التأشيرة المرتبطة")
+    recipient_name = models.CharField("المُخطَر", max_length=255)
+    method = models.CharField("وسيلة الإخطار", max_length=10, choices=Method.choices)
+    method_other = models.CharField("وسيلة أخرى", max_length=120, blank=True, default="")
+    notes = models.TextField("ملاحظات", blank=True, default="")
+    notified_at = models.DateTimeField("وقت الإخطار")
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="notice_records", verbose_name="سجّله")
+    recorded_at = models.DateTimeField("وقت التسجيل", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "سجل إخطار"
+        verbose_name_plural = "سجلات الإخطار"
+        ordering = ["-notified_at", "-id"]
+
+
+class OutgoingCorrespondence(models.Model):
+    """
+    مراسلة صادرة مسجلة على الموضوع (النظام لا يرسل شيئاً لأي طرف خارجي؛ يوثق ما تم إرساله فعلاً).
+    - REQUEST: طلب بيان/رد من جهة؛ يبقى الموضوع مفتوحاً بانتظار الرد حتى يُسجَّل الرد/الاستيفاء.
+    - FOLLOWUP: استعجال مرتبط بطلب أصلي (parent) على نفس الموضوع؛ لا يغلق شيئاً ولا يحدد موعداً.
+    - RESPONSE: رد صادر على طلب وارد (بيان وارد انتهى فخرج كصادر) ضمن نفس الموضوع؛ لا ينتظر رداً.
+    """
+    class Kind(models.TextChoices):
+        REQUEST = "REQUEST", "طلب بيان/رد (بانتظار الرد)"
+        FOLLOWUP = "FOLLOWUP", "استعجال"
+        RESPONSE = "RESPONSE", "رد صادر على وارد"
+
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="outgoing_items", verbose_name="الموضوع")
+    kind = models.CharField("النوع", max_length=10, choices=Kind.choices)
+    parent = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="followups", verbose_name="الطلب الأصلي")
+    recipient_entity = models.CharField("الجهة", max_length=255)
+    title = models.CharField("موضوع المراسلة", max_length=255)
+    notes = models.TextField("ملاحظات", blank=True, default="")
+    document = models.ForeignKey("documents.Document", on_delete=models.SET_NULL, null=True, blank=True, related_name="+", verbose_name="المستند الصادر")
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="outgoing_recorded", verbose_name="سجّله")
+    recorded_at = models.DateTimeField("وقت التسجيل", auto_now_add=True)
+    is_origin = models.BooleanField("بدأ بها الموضوع", default=False)
+    # مسودة/معدّة إن كان فارغاً؛ يُسجَّل بتأكيد بشري صريح بعد الإرسال الفعلي (النظام لا يرسل)
+    sent_at = models.DateTimeField("وقت تسجيل الإرسال الفعلي", null=True, blank=True)
+    sent_marked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="outgoing_sent_marked", verbose_name="أكّد الإرسال")
+    # للطلبات فقط
+    reply_received_at = models.DateTimeField("وقت تسجيل الرد/الاستيفاء", null=True, blank=True)
+    reply_notes = models.TextField("ملاحظات الرد", blank=True, default="")
+    reply_marked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="outgoing_reply_marked", verbose_name="سجّل الرد")
+
+    @property
+    def is_draft(self) -> bool:
+        return self.sent_at is None
+
+    @property
+    def awaiting_reply(self) -> bool:
+        return self.kind == self.Kind.REQUEST and self.sent_at is not None and self.reply_received_at is None
+
+    class Meta:
+        verbose_name = "مراسلة صادرة"
+        verbose_name_plural = "المراسلات الصادرة"
+        ordering = ["recorded_at", "id"]

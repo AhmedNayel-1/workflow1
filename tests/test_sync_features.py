@@ -145,10 +145,8 @@ class SyncFeaturesTestSuite(TestCase):
         html_detail = resp_detail.content.decode("utf-8")
         for label in (
             "التسجيل والمرفقات",
-            "توجيه القطاع والمدير العام",
-            "التوزيع على القسم والمختص",
-            "إعداد المذكرة والقرار",
-            "الاعتماد والإغلاق والأرشفة",
+            "الحالة الحالية",
+            "الإغلاق والأرشفة",
         ):
             self.assertIn(label, html_detail)
 

@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}إدارة قاعدة البيانات{% endblock %}
 {% block heading %}إدارة قاعدة البيانات{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 <div class="page-h"><div><h2>إدارة قاعدة البيانات</h2><p>محرك القاعدة: <span class="tag code">{{ db_vendor }}</span> · فحص السلامة: <b>{{ integrity_result }}</b></p></div>
   <form method="post">{% csrf_token %}<input type="hidden" name="action" value="export_json"><button class="btn" type="submit">{% icon 'download' 'sm' %}تصدير JSON</button></form></div>

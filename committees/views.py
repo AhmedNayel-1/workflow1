@@ -41,6 +41,14 @@ def committee_list(request):
     can_manage = PermissionService.user_has_permission(
         request.user, "COMMITTEE_MANAGE", sector=request.user.current_sector
     )
+    # فهرس الموضوعات المرتبطة بكل لجنة (رابط منظَّم اختياري على قرار اللجنة الوارد)، مفلتر بصلاحية رؤية الموضوع
+    from subjects.models import SubjectSuspension
+    linked = {}
+    for sp in SubjectSuspension.objects.filter(committee__in=committees).select_related("subject", "subject__confidentiality").order_by("-suspended_at"):
+        if PermissionService.can_view_subject(request.user, sp.subject):
+            linked.setdefault(sp.committee_id, []).append(sp)
+    for c in committees:
+        c.linked_topics = linked.get(c.id, [])
     return render(
         request,
         "committees/committee_list.html",

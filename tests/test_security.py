@@ -233,7 +233,7 @@ class SecurityAndIsolationTests(TestCase):
         with self.assertRaises(PermissionDenied):
             DecisionService.distribute_and_assign_execution(
                 decision=decision,
-                user=transfers_emp,
+                user=User.objects.get(username="penalties_emp"),
                 distribution_units=[u_transfers],
                 execution_assignments=[],
             )
@@ -333,8 +333,10 @@ class SecurityAndIsolationTests(TestCase):
             uploaded_file=s5_pdf,
         )
         s5_att = s5_doc.versions.first().attachments.first()
-        self.assertFalse(PermissionService.can_view_document(personnel_gm, s5_doc))
+        # المدير العام الأعلى من الموظف المنفذ يرى المستند (الاطلاع) لكنه لا يملك تنزيل مرفقات السري للغاية
+        self.assertTrue(PermissionService.can_view_document(personnel_gm, s5_doc))
         self.assertFalse(PermissionService.can_download_attachment(personnel_gm, s5_att))
+        self.assertFalse(PermissionService.can_view_document(User.objects.get(username="transfers_sup"), s5_doc))
         self.assertTrue(PermissionService.can_download_attachment(transfers_emp, s5_att))
 
         # د) منع إصدار نسخة جديدة أو ربط مستند بموضوع لا يملك المستخدم عهدته
@@ -431,7 +433,10 @@ class SecurityAndIsolationTests(TestCase):
 
         # الموظف المختص لا يملك أي مستخدمين أو وحدات مسموح بالإحالة إليها
         s_emp = Subject.objects.filter(applicant_name="محمد محمود علي").first()
-        self.assertEqual(PermissionService.get_allowed_referral_targets(transfers_emp, s_emp).count(), 0)
+        # الموظف المختص لا يحيل للأسفل؛ يعيد العهدة فقط لمن أحال الموضوع في السلسلة
+        emp_targets = set(PermissionService.get_allowed_referral_targets(transfers_emp, s_emp).values_list("username", flat=True))
+        self.assertTrue(emp_targets <= {"hr_head", "personnel_gm", "transfers_sup", "chairman", "hr_sec", "gm_sec", "transfers_sec"}, emp_targets)
+        self.assertNotIn("penalties_emp", emp_targets)
         self.assertEqual(PermissionService.get_allowed_referral_units(transfers_emp, s_emp).count(), 0)
 
     # =========================================================================

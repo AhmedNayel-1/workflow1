@@ -1,0 +1,600 @@
+/* odoo-version shell: horizontal navbar + control panel + flat sheets (references: user's Odoo screenshots/videos) */
+:root{--brand:#714B67;--brand-h:#5d3d54;--brand-soft:#f1e9ef;--brand-ink:#fff;--bg:#f9fafb;--panel:#fff;--panel-2:#f9fafb;--line:#d8dadd;--line-2:#e4e6e9;--ink:#212529;--ink-2:#374151;--muted:#6b7280;--soft:#868e96;--info:#017e84;--info-soft:#e0f2f2;--ok:#28a745;--ok-soft:#e6f5ea;--r:4px;--r-sm:3px;--r-lg:6px;--top:46px;--sh-1:none;--sh-2:0 4px 14px rgba(0,0,0,.12)}
+body{background:var(--bg)}
+.shell{display:block!important}
+.rail,#scrim{display:none!important}
+.main{min-width:0}
+header.top{height:46px;background:#fff!important;border-bottom:1px solid var(--line);backdrop-filter:none;padding:0 12px;gap:4px;position:sticky;top:0;z-index:60}
+.od-brand{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:700;margin-inline-end:10px;white-space:nowrap}
+.od-logo{background:var(--brand);color:#fff;border-radius:4px;width:30px;height:30px;display:grid;place-items:center;font-size:13px;font-weight:700}
+.od-menus{display:flex;align-items:center;gap:0;min-width:0;overflow:visible}
+.od-menu{position:relative}
+.od-mb{background:none;border:0;color:var(--ink-2);padding:0 11px;height:46px;display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent}
+.od-mb:hover{background:var(--panel-2);color:var(--ink)}
+.od-mb.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:700}
+.od-cnt{background:var(--brand);color:#fff;border-radius:10px;padding:0 6px;font-size:12px;line-height:18px}
+.od-pop{position:absolute;top:46px;inset-inline-start:0;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:4px;box-shadow:var(--sh-2);padding:4px 0;z-index:100}
+.od-pop a{display:flex;align-items:center;gap:9px;padding:8px 14px;color:var(--ink);font-size:14.5px}
+.od-pop a:hover{background:var(--brand-soft)}
+.od-pop a em{margin-inline-start:auto;font-style:normal;background:var(--brand);color:#fff;border-radius:10px;padding:0 7px;font-size:12px}
+.od-pop a em.bad{background:var(--bad)}
+.od-spacer{flex:1}
+.top .search-trigger{min-width:200px;border-radius:4px;height:32px}
+.top .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;height:32px}
+.od-cp{background:#fff;border-bottom:1px solid var(--line);padding:8px 16px;min-height:44px;display:flex;align-items:center}
+.od-crumb{margin:0;font-size:18px;font-weight:500;color:var(--ink)}
+.od-crumb .crumb{color:var(--info)}
+.page{max-width:none!important;padding:12px 16px 24px!important}
+/* flat sheets and cards */
+.panel,.card{border-radius:4px!important;box-shadow:none!important;border:1px solid var(--line-2)!important}
+.layout-3 .panel>.panel-h,.panel>.panel-h{background:#fff!important;border-bottom:1px solid var(--line-2)}
+.btn{border-radius:4px;border-color:var(--line);background:#fff;color:var(--ink-2);font-weight:500}
+.btn:hover{background:var(--panel-2)}
+.btn.primary{background:var(--brand)!important;border-color:var(--brand)!important;color:#fff!important}
+.btn.primary:hover{background:var(--brand-h)!important}
+.pill{border-radius:10px}
+a{color:var(--info)}
+.subnav{background:#fff!important;border-bottom:1px solid var(--line)!important}
+.subnav a.gh-cur{border-bottom-color:var(--brand)!important;color:var(--brand)!important}
+.case-h{border-radius:0!important;border-inline:0!important;border-top:0!important;background:#fff!important}
+/* control panel: breadcrumb right, actions + status bar */
+.od-cp{gap:14px;flex-wrap:wrap}
+.od-cp-actions{display:flex;gap:6px;margin-inline-start:6px}
+.od-statusbar{list-style:none;margin:0;margin-inline-start:auto;padding:0;display:flex;direction:rtl}
+.od-statusbar li{position:relative;background:#e9ecef;color:var(--ink-2);font-size:13.5px;padding:6px 18px 6px 22px;margin-inline-start:-6px;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);white-space:nowrap}
+.od-statusbar li.done{background:#d6e4dc;color:#256b3f}
+.od-statusbar li.now{background:var(--brand);color:#fff;font-weight:700}
+/* subject: sheet-like layout; stages live in the status bar */
+.odoo-ui .subnav{margin-top:0!important}
+.odoo-ui #sec-stages .sd-bar,.odoo-ui #sec-stages .steps{display:none}
+.odoo-ui #sec-stages .case-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;padding:6px 16px 14px}
+.odoo-ui #sec-stages .case-meta>div,.odoo-ui #sec-stages .sd-side-sec{display:grid;grid-template-columns:130px 1fr;align-items:baseline;gap:8px;padding:8px 0!important;border-top:0!important;border-bottom:1px solid var(--line-2);background:transparent!important}
+.odoo-ui #sec-stages .sd-side-sec{padding:8px 16px!important}
+.odoo-ui #sec-stages small{font-weight:600;color:var(--muted)}
+.odoo-ui .case-h{border:0!important;background:transparent!important;padding:6px 2px 0!important}
+.odoo-ui .case-h h2{font-size:24px;font-weight:600}
+.odoo-ui .sd-guide .ui-guide,.odoo-ui .sd-guide .note{border-radius:4px}
+/* v3: sheet + chatter as messages */
+.odoo-ui .case-h .sd-head-top .btn{display:none}
+.odoo-ui .case-h{background:#fff!important;border:1px solid var(--line-2)!important;border-bottom:0!important;padding:18px 22px 6px!important;margin:0!important}
+.odoo-ui .subnav{background:#fff!important;border:1px solid var(--line-2)!important;border-top:0!important;margin:0 0 12px!important;padding:0 14px!important}
+.odoo-ui .sd-guide{margin:0 0 12px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item{display:flex!important;flex-direction:row!important;gap:10px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item>.avatar{display:grid!important;position:static!important;flex:none;width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;place-items:center;margin:2px 0 0!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item>.chronology-marker{display:grid!important;flex:none;width:32px;height:32px;border-radius:50%;background:var(--info-soft);color:var(--info);place-items:center;margin:2px 0 0!important;position:static!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b{flex:1!important;min-width:0}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{font-size:14px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p{color:var(--ink-2)!important;font-size:14px}
+.odoo-ui .od-chatter .sd-stream .chronology-day{font-size:12px;color:var(--muted)}
+/* v4: dedupe + compact guide + responsive navbar */
+.od-burger{display:none}
+.odoo-ui .gh-compose{display:none!important}
+.odoo-ui .sd-guide a[href*="/pdf"],.odoo-ui .sd-guide a[href*="export"]{display:none!important}
+.odoo-ui .sd-guide .ui-guide,.odoo-ui .sd-guide>*{padding:6px 12px!important;min-height:0}
+.odoo-ui .sd-guide .ui-guide p{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.odoo-ui .sd-guide .ui-guide:hover p,.odoo-ui .sd-guide .ui-guide:focus-within p{-webkit-line-clamp:unset}
+.od-cp-actions .od-pop{inset-inline-start:auto;inset-inline-end:0}
+@media (max-width:1380px){
+  .od-burger{display:inline-grid}
+  .od-menus{display:none;position:absolute;top:46px;inset-inline-start:0;inset-inline-end:0;flex-direction:column;align-items:stretch;background:#fff;border-bottom:1px solid var(--line);box-shadow:var(--sh-2);z-index:90;padding:6px 0}
+  .od-menus.open{display:flex}
+  .od-menus .od-mb{height:40px;border-bottom:0;width:100%;justify-content:flex-start}
+  .od-menus .od-menu .od-pop{position:static;box-shadow:none;border:0;border-inline-start:3px solid var(--line-2);margin-inline-start:14px}
+  .top .search-trigger span,.top .search-trigger .kbd{display:none}
+  .top .search-trigger{min-width:0;width:38px}
+}
+/* v5: one continuous sheet, compact chatter, compact overflow nav */
+.odoo-ui .gh-layout .od-chatter .sd-fields,.odoo-ui .od-chatter .sd-caption,.odoo-ui .od-chatter .sd-creation{display:none!important}
+.odoo-ui .case-h{border-radius:6px 6px 0 0!important;padding:14px 20px 4px!important}
+.odoo-ui .case-h h2{font-size:22px}
+.odoo-ui .subnav{margin:0!important;border-radius:0!important;border-bottom:1px solid var(--line-2)!important}
+.odoo-ui .od-detail{border-top:0!important;border-radius:0 0 6px 6px!important;margin-top:0!important}
+.odoo-ui .sd-guide{margin:0 0 10px!important}
+@media (max-width:1380px){
+  .od-burger{display:inline-grid}
+  .od-menus{inset-inline-start:auto;inset-inline-end:auto;right:auto;left:auto;width:230px;border:1px solid var(--line);border-radius:6px;top:44px;padding:4px 0!important}
+  .od-menus .od-mb{height:34px;padding:0 14px;font-size:14px}
+  .od-menus .od-menu .od-pop{display:block;position:static;border:0;padding:0}
+}
+.top .search-trigger{min-width:0;width:210px}
+.odoo-ui .sd-has-card .sd-caption,.odoo-ui .sd-has-card .sd-fields{display:none!important}
+.odoo-ui .sd-has-card{background:transparent!important;border:0!important}
+.odoo-ui .sd-has-card .sd-ch{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:transparent;border:0;padding:0}
+/* v6: real sheet container */
+.odoo-ui .od-sheet{background:#fff;border:1px solid var(--line-2);border-bottom:0;border-radius:6px 6px 0 0}
+.odoo-ui .od-sheet .case-h{border:0!important;border-radius:0!important;padding:16px 22px 6px!important}
+.odoo-ui .od-sheet .subnav{border:0!important;border-bottom:1px solid var(--line-2)!important;padding:0 14px!important}
+.odoo-ui .od-sheet~section.panel.od-on{margin-top:-16px!important;border-top:0!important;border-radius:0 0 6px 6px!important}
+.odoo-ui .od-sheet~section.panel.od-on>.panel-h{border-top:0}
+/* v7: compact chatter rows (author, time, event on one line; text below) */
+.odoo-ui .od-chatter .sd-stream .chronology-item{display:flex!important;flex-direction:row!important;align-items:flex-start;padding:8px 14px!important;gap:10px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b{display:flex!important;flex-direction:row!important;flex-wrap:wrap;align-items:baseline;gap:1px 10px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small,.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.sd-ch,.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.activity-heading{margin:0!important;display:inline-flex;gap:8px;align-items:baseline;width:auto!important;font-size:13px!important;border:0!important;padding:0!important;background:transparent!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{font-weight:700;color:var(--ink)}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p,.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.chronology-route{flex:1 0 100%;margin:2px 0 0!important;font-size:13.5px!important;line-height:1.5}
+.odoo-ui .od-chatter .sd-stream .chronology-item>.avatar,.odoo-ui .od-chatter .sd-stream .chronology-item>.chronology-marker{width:28px!important;height:28px!important;font-size:12px!important}
+.odoo-ui .od-chatter .sd-has-card .fi-b,.odoo-ui .od-chatter .sd-has-card .sd-ch{border:0!important;box-shadow:none!important;background:transparent!important}
+.odoo-ui .od-chatter .sd-has-card .sd-ch{display:contents!important}
+/* v8: thin buttons, near-straight corners, subtle borders, small connected chevrons, transitions */
+.od-cp{padding:6px 16px;min-height:42px;gap:10px}
+.odoo-ui .btn,.od-cp .btn,.odoo-ui .od-chatter .btn{height:28px!important;min-height:0;padding:0 11px!important;border-radius:3px!important;border:1px solid #d3d6da!important;background:#fff;color:#2b2f33;font-size:13.5px!important;font-weight:500!important;line-height:26px;box-shadow:none!important;gap:5px;transition:background-color .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+.odoo-ui .btn:hover,.od-cp .btn:hover{background:#f1f3f5;border-color:#b8bdc3!important;color:#111}
+.odoo-ui .btn:active,.od-cp .btn:active{background:#e5e8eb;transition-duration:.05s}
+.odoo-ui .btn:focus-visible,.od-cp .btn:focus-visible{outline:0;box-shadow:0 0 0 2px rgba(113,75,103,.35)!important}
+.odoo-ui .btn.primary,.od-cp .btn.primary{background:#714b67;border-color:#714b67!important;color:#fff}
+.odoo-ui .btn.primary:hover,.od-cp .btn.primary:hover{background:#5f3f56;border-color:#5f3f56!important;color:#fff}
+.odoo-ui .btn.primary:active,.od-cp .btn.primary:active{background:#4e3347}
+.odoo-ui .btn svg,.od-cp .btn svg{width:14px;height:14px}
+.od-cp-actions{gap:4px;margin-inline-start:0}
+.od-statusbar{gap:0}
+.od-statusbar li{background:#eceef0;color:#5b6168;font-size:13px;font-weight:500;height:28px;display:inline-flex;align-items:center;padding:0 14px 0 18px;margin-inline-start:-5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%,7px 50%);transition:background-color .15s ease,color .15s ease}
+.od-statusbar li:hover{background:#dfe2e5}
+.od-statusbar li.done{background:#e6ecea;color:#3d5f52}
+.od-statusbar li.now{background:#714b67;color:#fff;font-weight:600}
+.od-statusbar li:first-child{padding-inline-end:18px}
+.odoo-ui .subnav a{transition:color .15s ease,border-color .15s ease,background-color .15s ease}
+.odoo-ui .subnav a:hover{background:#f6f7f8}
+/* v9: notebook tabs joined to content */
+.odoo-ui .od-sheet .subnav{display:flex;align-items:flex-end;gap:0;padding:6px 14px 0!important;border:0!important;border-bottom:1px solid #d3d6da!important;background:#fff!important;overflow:visible!important;margin:0!important}
+.odoo-ui .od-sheet .subnav a{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 18px!important;margin:0 0 -1px 0;margin-inline-end:-1px;border:1px solid #d3d6da!important;border-radius:4px 4px 0 0!important;background:#f3f4f6!important;color:#4d545b!important;font-size:14px;font-weight:500;position:relative;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.odoo-ui .od-sheet .subnav a:hover{background:#fff!important;color:#222!important}
+.odoo-ui .od-sheet .subnav a.gh-cur{background:#fff!important;color:#1f2328!important;border-top:2px solid #714b67!important;border-bottom-color:#fff!important;z-index:2}
+.odoo-ui .od-sheet .subnav a:focus-visible{outline:0;box-shadow:inset 0 0 0 2px rgba(113,75,103,.4)}
+.odoo-ui .od-sheet .subnav a .cnt{background:#e4e6e9;border-radius:9px;font-size:11.5px;padding:0 6px;color:#444}
+.odoo-ui .od-sheet~section.panel.od-on{border-top:0!important;margin-top:-16px!important;animation:odfade .18s ease}
+@keyframes odfade{from{opacity:.0;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.odoo-ui .od-sheet~section.panel.od-on{animation:none}}
+/* v10: chatter header tightness */
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b{row-gap:0!important;column-gap:8px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{order:0;flex:0 0 100%!important;line-height:1.35!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.activity-heading{order:1;flex:0 0 100%;line-height:1.35;font-size:12px!important;color:var(--muted)}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.activity-heading *{font-size:12px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p{order:2;margin-top:4px!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item{padding:10px 14px!important}
+.od-pager{display:inline-flex;align-items:center;gap:4px;margin-inline-start:8px;color:var(--muted);font-size:13px}
+.od-pager .btn{width:28px;padding:0!important;justify-content:center;font-size:16px;line-height:24px}
+.od-pager .btn.dis{opacity:.4;pointer-events:none}
+.od-pager .num{direction:ltr;unicode-bidi:isolate}
+/* v11: details as a compact two-column form; chatter header on one line */
+.odoo-ui #sec-stages .panel-b{padding:6px 8px 10px!important}
+.odoo-ui #sec-stages .sd-side-sec{display:grid!important;grid-template-columns:140px 1fr;gap:8px;align-items:baseline;padding:7px 14px!important;border:0!important}
+.odoo-ui #sec-stages .sd-bar{margin:0 14px 6px!important;height:4px}
+.odoo-ui #sec-stages .case-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 36px;padding:2px 14px 6px!important}
+.odoo-ui #sec-stages .case-meta>div{display:grid!important;grid-template-columns:130px 1fr;gap:8px;align-items:baseline;padding:7px 0!important;border:0!important;border-bottom:1px solid #eceef0!important}
+.odoo-ui #sec-stages .case-meta small,.odoo-ui #sec-stages .sd-side-sec small{color:#6b7178;font-size:13px;font-weight:500}
+.odoo-ui #sec-stages .case-meta b,.odoo-ui #sec-stages .sd-side-sec b{font-size:14px;font-weight:600;color:#1f2328}
+.odoo-ui #sec-stages .sd-full{grid-column:1/-1;border:0!important}
+.odoo-ui #sec-stages .sd-full summary{display:none}
+.odoo-ui #sec-stages .sd-full-b{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 36px;padding:0!important;margin:0!important}
+.odoo-ui #sec-stages .sd-full-b>div{display:grid!important;grid-template-columns:130px 1fr;gap:8px;align-items:baseline;padding:7px 0!important;border:0!important;border-bottom:1px solid #eceef0!important}
+/* chatter: author and time on line 1; event type and text below */
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.activity-heading{display:contents!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{flex:0 0 auto!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b .activity-heading time{order:1;font-size:12px;color:var(--muted);margin:0}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b .activity-type{order:2;flex:0 0 100%;background:transparent;padding:0;font-size:12px;color:#5b6168;margin-top:2px}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p{order:3}
+.odoo-ui #sec-stages .sd-full details{display:block;width:100%}
+.odoo-ui #sec-stages .sd-full-b{width:100%}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b .activity-heading time{flex:0 0 auto!important;margin:0!important;width:auto!important;text-align:start}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{max-width:62%}
+.odoo-ui #sec-stages .case-meta>div.sd-full{display:block!important;grid-column:1/-1;padding:0!important;border:0!important}
+/* v12: chatter item = avatar | (author time / type / text) grid */
+.odoo-ui .od-chatter .sd-stream article.chronology-item{display:grid!important;grid-template-columns:30px minmax(0,1fr)!important;column-gap:10px!important;align-items:start!important;padding:10px 14px!important}
+.odoo-ui .od-chatter .sd-stream article.chronology-item>.avatar,.odoo-ui .od-chatter .sd-stream article.chronology-item>.chronology-marker{grid-column:1;grid-row:1;margin:0!important}
+.odoo-ui .od-chatter .sd-stream article.chronology-item>.fi-b{grid-column:2;grid-row:1;display:grid!important;grid-template-columns:auto 1fr!important;column-gap:8px!important;row-gap:1px!important;align-items:baseline;min-width:0}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b>small{grid-column:1;grid-row:1;max-width:none!important;flex:none!important}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b .activity-heading{display:contents!important}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b .activity-heading time{grid-column:2;grid-row:1;justify-self:start}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b .activity-type{grid-column:1/-1;grid-row:2}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b>p,.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b>.chronology-route{grid-column:1/-1;grid-row:3}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b>.sd-ch{display:contents!important}
+.odoo-ui .od-chatter .sd-stream article.chronology-item .fi-b>small{font-weight:700!important;color:var(--ink)!important;font-size:13px!important}
+
+/* v9: one joined card, record form + activity column separated by a thin divider (direction from Ahmed's reference files) */
+@media (min-width:1201px){
+  .odoo-ui .gh-layout{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-top:12px;align-items:stretch!important}
+  .odoo-ui .gh-layout>.col:first-child{padding:14px 20px 16px;min-height:calc(100vh - var(--top) - 40px)}
+  .odoo-ui .gh-layout .od-sheet{border:0;border-radius:0;background:transparent}
+  .odoo-ui .gh-layout .od-sheet .panel.od-detail,.odoo-ui .gh-layout .col:first-child>section.panel{border-inline:0}
+  .odoo-ui .od-chatter{position:relative;top:auto;height:0;min-height:100%;border:0;border-inline-start:1px solid #e3e5e8;border-radius:0;background:#fff}
+  .odoo-ui .od-chatter>section.panel{background:transparent}
+}
+@media (min-width:1201px){
+  .odoo-ui .gh-layout .od-sheet section.panel{border-inline:0;border-bottom:0;border-radius:0;box-shadow:none}
+  .odoo-ui .gh-layout .od-sheet .subnav{margin-inline:0}
+}
+@media (min-width:1201px){
+  .odoo-ui .gh-layout .od-sheet .panel,.odoo-ui .gh-layout .od-sheet .panel-b{border:0!important;box-shadow:none!important;border-radius:0!important;background:transparent}
+}
+@media (min-width:1201px){
+  .odoo-ui .gh-layout>.col:first-child section.panel,.odoo-ui .gh-layout>.col:first-child section.panel>.panel-b{border:0!important;box-shadow:none!important;border-radius:0!important;background:transparent}
+}
+
+/* v10: remaining subject tabs follow the same thin, near-straight look (presentation only) */
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail){--r:3px}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) :is(.item,details.dd,.note,.attachment-file-row,.memo-tools,.memo-draft-preview){border-radius:4px!important;box-shadow:none!important}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) .item{border:1px solid #dfe2e5;background:#fff;padding:10px 12px!important}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) :is(.pill,.chip,.tag,.tag.code){border-radius:3px!important;font-size:12.5px;padding:1px 8px;font-weight:500}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) .ficon{border-radius:3px!important;width:30px;height:30px}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) :is(input.in,select.in,.in.sm){border-radius:3px!important;border:1px solid #d3d6da;min-height:28px;height:28px;padding:0 9px;font-size:13.5px;box-shadow:none;transition:border-color .15s ease,box-shadow .15s ease}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) textarea.in{border-radius:3px!important;border:1px solid #d3d6da;box-shadow:none;font-size:13.5px}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) :is(input.in,select.in,textarea.in):focus{border-color:#714b67;box-shadow:0 0 0 2px rgba(113,75,103,.15);outline:0}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) details.dd{border:1px solid #dfe2e5;background:#fff;margin-top:10px}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) details.dd>summary{padding:8px 12px;font-size:14px}
+.odoo-ui .gh-layout>.col:first-child section.panel:not(.od-detail) .note{padding:8px 12px}
+.odoo-ui .gh-layout>.col:first-child section.panel input[type=file]{font-size:13px;color:#5b6168;height:auto;padding:4px 6px}
+.odoo-ui .gh-layout>.col:first-child section.panel input[type=file]::file-selector-button{height:26px;padding:0 11px;margin-inline-end:10px;border:1px solid #d3d6da;border-radius:3px;background:#fff;color:#2b2f33;font:inherit;font-weight:500;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
+.odoo-ui .gh-layout>.col:first-child section.panel input[type=file]::file-selector-button:hover{background:#f3f4f6;border-color:#bfc3c8}
+.odoo-ui .gh-layout>.col:first-child section.panel .grid.g2:has(>details.dd){align-items:start}
+.od-err{margin:0 0 10px;padding:8px 12px;border:1px solid #e3b8bd;border-inline-start:3px solid #b3404a;border-radius:3px;background:#fbefef;color:#7a2530;font-size:13.5px;line-height:1.5;grid-column:1/-1}
+.od-err:focus{outline:0;box-shadow:0 0 0 2px rgba(179,64,74,.2)}
+.od-file{display:inline-flex;align-items:center;gap:10px}
+.od-file-in{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+.od-file{position:relative}
+
+/* narrow screens: keep the page inside the viewport; statusbar and tabs scroll inside their own box */
+@media (max-width:640px){
+  .top .search-trigger{min-width:0;width:32px;flex:0 0 auto;padding:0;justify-content:center}
+  .top .search-trigger span,.top .search-trigger kbd{display:none}
+  .top .iconbtn,.top .btn,.top .od-user{flex:none}
+  .top .od-spacer{display:none}
+  .top .od-brandname{display:none}
+  .item form.row.wrap>select.in,.item form.row.wrap>input.in{flex:1 1 100%;max-width:none!important;width:100%;min-width:0}
+  .item form.row.wrap>.btn{flex:1 1 100%}
+  .page-h{flex-wrap:wrap;min-width:0}
+  .page-h>div{min-width:0;max-width:100%}
+  .page-h h2.trunc{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  .attachment-preview-meta b,.attachment-preview-meta span{overflow-wrap:anywhere;min-width:0}
+  .odoo-ui .od-cp{max-width:100%;min-width:0}
+  .odoo-ui .od-statusbar{max-width:100%;min-width:0;overflow-x:auto;scrollbar-width:thin;margin-inline-start:0}
+  .odoo-ui .od-statusbar{padding-inline:8px}
+  .odoo-ui .od-statusbar li{flex:none;white-space:nowrap}
+  .odoo-ui .od-sheet .subnav,.odoo-ui .subnav{max-width:100%;min-width:0;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:thin}
+  .odoo-ui .od-sheet .subnav a{flex:none;white-space:nowrap}
+  .odoo-ui .od-sheet .subnav{top:46px!important}
+  .odoo-ui .gh-layout>.col,.odoo-ui .od-sheet{min-width:0;max-width:100%}
+}
+
+/* docked copy of the notebook tabs (shown only while the real row is scrolled under the header) */
+.od-tabdock{position:fixed;z-index:55;display:flex;align-items:flex-end;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;background:#fff;border:1px solid #d3d6da;border-top:0;border-radius:0 0 4px 4px;padding:4px 14px 0;box-shadow:0 2px 6px rgba(0,0,0,.08);direction:rtl}
+.od-tabdock[hidden]{display:none}
+.od-tabdock a{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 16px;margin-inline-end:-1px;border:1px solid #d3d6da;border-bottom:0;border-radius:4px 4px 0 0;background:#f3f4f6;color:#555;font-size:13.5px;white-space:nowrap}
+.od-tabdock a:hover{background:#fff;color:#222}
+.od-tabdock a.gh-cur{background:#fff;color:#1f2328;border-top:2px solid #714b67}
+.od-tabdock a .cnt{background:#e4e6e9;border-radius:9px;font-size:11.5px;padding:0 6px;color:#444}
+.od-tabdock a:focus-visible{outline:0;box-shadow:inset 0 0 0 2px rgba(113,75,103,.4)}
+
+/* pinned document viewer stays beside the page while it scrolls */
+@media (min-width:1300px){
+  .odoo-ui.od-viewing .gh-layout{align-items:start!important}
+  .odoo-ui.od-viewing #od-chatter{position:sticky;top:calc(var(--top,46px) + 8px);align-self:start;height:calc(100vh - var(--top,46px) - 20px);min-height:0;max-height:none}
+  .odoo-ui.od-viewing .gh-layout>.col:first-child{align-self:stretch}
+}
+
+/* subjects list: Odoo-style list view (presentation only; same data, filters, links) */
+.odoo-ui .page-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--line-2)}
+.odoo-ui .page-h h2{font-size:18px;font-weight:600;margin:0;display:inline}
+.odoo-ui .page-h p{display:inline;margin:0 12px 0 0;font-size:13px;color:var(--muted)}
+.odoo-ui .page-h>div{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.odoo-ui [data-subject-list]{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none}
+.odoo-ui [data-subject-list] .toolbar{padding:8px 12px;gap:8px;border-bottom:1px solid var(--line-2);background:#fff}
+.odoo-ui [data-subject-list] .toolbar .in,.odoo-ui [data-subject-list] .toolbar .btn{height:28px;font-size:13.5px;border-radius:3px;border:1px solid #d3d6da;box-shadow:none}
+.odoo-ui [data-subject-list] .toolbar .search-in{min-width:260px}
+.odoo-ui [data-subject-list] .toolbar .search-in .in{padding-inline-start:30px}
+.odoo-ui [data-subject-list] .tbl{border-collapse:collapse;font-size:13.5px}
+.odoo-ui [data-subject-list] .tbl thead th{background:#f6f7f8;color:#4a4f55;font-weight:600;font-size:13px;padding:6px 10px;border-bottom:1px solid #d3d6da;text-transform:none;letter-spacing:0;white-space:nowrap}
+.odoo-ui [data-subject-list] .tbl tbody td{padding:5px 10px;border-bottom:1px solid #eceef0;vertical-align:middle;line-height:1.35}
+.odoo-ui [data-subject-list] .tbl tbody tr{transition:background-color .12s ease}
+.odoo-ui [data-subject-list] .tbl tbody tr:hover{background:#f3f4f6}
+.odoo-ui [data-subject-list] .tbl .title{font-weight:500;color:#1f2328}
+.odoo-ui [data-subject-list] .tbl .title:hover{color:var(--brand)}
+.odoo-ui [data-subject-list] .tbl .tag.code{font-size:12.5px;padding:0;background:transparent;border:0;color:#4a4f55}
+.odoo-ui [data-subject-list] .tbl .pill{font-size:12px;padding:1px 8px;border-radius:3px}
+.odoo-ui [data-subject-list] .tbl td.sm,.odoo-ui [data-subject-list] .tbl .muted.xs{font-size:12.5px}
+.odoo-ui [data-subject-list] .tbl .w-chk{width:34px}
+
+/* create-subject form: Odoo-style sheet (presentation only; same fields, names and steps) */
+.odoo-ui .subject-form-nav{display:flex;gap:0;margin:0;padding:6px 12px 0;background:#fff;border:1px solid #d8dadd;border-bottom:1px solid #d3d6da;border-radius:4px 4px 0 0}
+.odoo-ui .subject-form-nav a{padding:0 16px;height:34px;display:inline-flex;align-items:center;font-size:13.5px;color:#555;background:#f3f4f6;border:1px solid #d3d6da;border-bottom:0;border-radius:3px 3px 0 0;margin-inline-end:-1px;transition:background-color .15s ease,color .15s ease}
+.odoo-ui .subject-form-nav a:hover,.odoo-ui .subject-form-nav a.on,.odoo-ui .subject-form-nav a[aria-current]{background:#fff;color:#1f2328}
+.odoo-ui .subject-form-preview{display:flex;align-items:center;gap:10px;padding:8px 14px;margin:0;background:#fff;border:1px solid #d8dadd;border-top:0;border-radius:0;box-shadow:none}
+.odoo-ui .subject-form-preview-mark{width:28px;height:28px;border-radius:50%;font-size:13px}
+.odoo-ui .subject-form-preview b{font-size:14px}
+.odoo-ui .subject-form-preview small,.odoo-ui .subject-form-preview span{font-size:12px}
+.odoo-ui .subject-form{gap:0!important;background:#fff;border:1px solid #d8dadd;border-top:0;border-radius:0 0 4px 4px}
+.odoo-ui .subject-form>section.panel{border:0;border-bottom:1px solid #eceef0;border-radius:0;box-shadow:none;background:transparent;margin:0}
+.odoo-ui .subject-form>section.panel>.panel-h{padding:10px 16px;border-bottom:0;background:#f6f7f8}
+.odoo-ui .subject-form>section.panel>.panel-h h3{font-size:14px;font-weight:600;margin:0}
+.odoo-ui .subject-form .panel-b.form{padding:14px 16px;gap:12px 20px}
+.odoo-ui .subject-form .fld>span{font-size:13px;font-weight:600;color:#4a4f55}
+.odoo-ui .subject-form .in{height:30px;min-height:0;border:1px solid #d3d6da;border-radius:3px;background-color:#fff;box-shadow:none;font-size:13.5px;padding:0 10px;transition:border-color .15s ease,box-shadow .15s ease}
+.odoo-ui .subject-form textarea.in{height:auto;padding:6px 10px}
+.odoo-ui .subject-form .in:focus{border-color:#714b67;box-shadow:0 0 0 2px rgba(113,75,103,.15);outline:0}
+.odoo-ui .subject-form>.row.end{padding:10px 16px;background:#f6f7f8;gap:8px}
+.odoo-ui .subject-form .btn.lg{height:30px;font-size:13.5px}
+
+/* referrals inbox: Odoo list style */
+.odoo-ui .referral-tools[data-referral-page]{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none;padding:8px 12px;gap:8px}
+.odoo-ui .referral-tools[data-referral-page] .in,.odoo-ui .referral-tools[data-referral-page] select{height:28px;font-size:13.5px;border-radius:3px;border:1px solid #d3d6da;box-shadow:none}
+.odoo-ui [data-referral-page] .panel,.odoo-ui .panel[data-pane]{background:#fff;border:1px solid #d8dadd;border-radius:0 0 4px 4px;box-shadow:none}
+.odoo-ui [data-referral-page] .tbl{border-collapse:collapse;font-size:13.5px}
+.odoo-ui [data-referral-page] .tbl thead th{background:#f6f7f8;color:#4a4f55;font-weight:600;font-size:13px;padding:6px 10px;border-bottom:1px solid #d3d6da;text-transform:none;letter-spacing:0;white-space:nowrap}
+.odoo-ui [data-referral-page] .tbl tbody td{padding:5px 10px;border-bottom:1px solid #eceef0;vertical-align:middle;line-height:1.35}
+.odoo-ui [data-referral-page] .tbl tbody tr{transition:background-color .12s ease}
+.odoo-ui [data-referral-page] .tbl tbody tr:hover{background:#f3f4f6}
+.odoo-ui [data-referral-page] .tbl .title{font-weight:500;color:#1f2328}
+.odoo-ui [data-referral-page] .tbl .tag.code{font-size:12.5px;padding:0;background:transparent;border:0;color:#4a4f55}
+.odoo-ui [data-referral-page] .tbl .pill{font-size:12px;padding:1px 8px;border-radius:3px}
+.odoo-ui [data-referral-page] .tbl .btn.sm{height:24px;padding:0 10px;font-size:12.5px;border-radius:3px}
+
+/* generic Odoo list pages: tasks, decisions */
+.odoo-ui [data-odoo-list]{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none}
+.odoo-ui [data-odoo-list] .toolbar{padding:8px 12px;gap:8px;border-bottom:1px solid var(--line-2);background:#fff}
+.odoo-ui [data-odoo-list] .toolbar .in,.odoo-ui [data-odoo-list] .toolbar .btn,.odoo-ui [data-odoo-list] .toolbar select{height:28px;font-size:13.5px;border-radius:3px;border:1px solid #d3d6da;box-shadow:none}
+.odoo-ui [data-odoo-list] .tbl{border-collapse:collapse;font-size:13.5px}
+.odoo-ui [data-odoo-list] .tbl thead th{background:#f6f7f8;color:#4a4f55;font-weight:600;font-size:13px;padding:6px 10px;border-bottom:1px solid #d3d6da;text-transform:none;letter-spacing:0;white-space:nowrap}
+.odoo-ui [data-odoo-list] .tbl tbody td{padding:5px 10px;border-bottom:1px solid #eceef0;vertical-align:middle;line-height:1.35}
+.odoo-ui [data-odoo-list] .tbl tbody tr{transition:background-color .12s ease}
+.odoo-ui [data-odoo-list] .tbl tbody tr:hover{background:#f3f4f6}
+.odoo-ui [data-odoo-list] .tbl .title{font-weight:500;color:#1f2328}
+.odoo-ui [data-odoo-list] .tbl .tag.code,.odoo-ui [data-odoo-list] .tbl .code{font-size:12.5px;padding:0;background:transparent;border:0;color:#4a4f55}
+.odoo-ui [data-odoo-list] .tbl .pill{font-size:12px;padding:1px 8px;border-radius:3px}
+.odoo-ui [data-odoo-list] .tbl .in,.odoo-ui [data-odoo-list] .tbl select.in{height:26px;font-size:13px;border-radius:3px;border:1px solid #d3d6da;box-shadow:none;padding:0 8px}
+.odoo-ui [data-odoo-list] .tbl .btn.sm{height:26px;padding:0 10px;font-size:12.5px;border-radius:3px}
+@media(min-width:900px){
+.odoo-ui section[data-table][data-odoo-list]:has(.task-tools) .tbl td form{flex-wrap:nowrap;max-width:none;row-gap:0}
+.odoo-ui section[data-table][data-odoo-list]:has(.task-tools) .tbl td form select.in{flex:0 0 120px;width:120px!important}
+.odoo-ui section[data-table][data-odoo-list]:has(.task-tools) .tbl td form input.in{flex:1 1 90px;width:90px!important;max-width:130px}
+}
+
+.odoo-ui [data-docs] .dcard{border:1px solid #e1e3e6;border-radius:3px;box-shadow:none;transition:background-color .12s ease,border-color .12s ease}
+.odoo-ui [data-docs] .dcard:hover{background:#f3f4f6;border-color:#c9ccd0}
+.odoo-ui [data-docs] .dcard:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.odoo-ui [data-docs] .dcard .btn.sm{height:24px;padding:0 10px;font-size:12.5px;border-radius:3px}
+.odoo-ui [data-docs] .dcard .pill,.odoo-ui [data-docs] .dcard .tag.code{border-radius:3px;font-size:12px}
+.odoo-ui [data-docs] .pv-tools .btn{height:26px;border-radius:3px}
+
+/* committees */
+.odoo-ui .committee-tools{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none;padding:8px 12px}
+.odoo-ui .committee-tools .in{height:28px;font-size:13.5px;border-radius:3px;border:1px solid #d3d6da;box-shadow:none}
+.odoo-ui .grid.g-main-r .panel{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none}
+.odoo-ui .grid.g-main-r .panel-h{padding:8px 12px;border-bottom:1px solid #d3d6da;background:#f6f7f8}
+.odoo-ui .grid.g-main-r .panel-h h3{font-size:13.5px;font-weight:600}
+.odoo-ui .cal .btn,.odoo-ui .cal .iconbtn{height:26px;border-radius:3px;box-shadow:none}
+.odoo-ui a.meet{background:#fff;border:1px solid #d8dadd;border-radius:3px;box-shadow:none;padding:8px 12px;margin-bottom:6px;transition:background-color .12s ease,border-color .12s ease}
+.odoo-ui a.meet:hover{background:#f3f4f6;border-color:#c9ccd0}
+.odoo-ui a.meet .meet-d{border-radius:3px}
+.odoo-ui .grid.g-main-r .item{border-radius:3px;box-shadow:none}
+/* notebook tabs on dashboard + referrals */
+.odoo-ui .tabs.mb{display:flex;gap:0;background:transparent;border:0;border-bottom:1px solid #d3d6da;border-radius:0;padding:0;box-shadow:none;margin-bottom:12px}
+.odoo-ui .tabs.mb .tab{height:32px;padding:0 16px;margin-inline-end:-1px;margin-bottom:-1px;border:1px solid transparent;border-bottom:0;border-radius:3px 3px 0 0;background:transparent;color:#4a4f55;box-shadow:none;display:inline-flex;align-items:center;gap:6px;transition:background-color .12s ease,color .12s ease}
+.odoo-ui .tabs.mb .tab:hover{background:#f3f4f6}
+.odoo-ui .tabs.mb .tab.on{background:#fff;color:#1f2328;border-color:#d3d6da;border-top:2px solid #714b67;border-bottom:1px solid #fff}
+.odoo-ui .grid.g4 .stat{border:1px solid #d8dadd;border-radius:4px;box-shadow:none}
+
+/* search + reports pages */
+.odoo-pg main .panel,.odoo-pg .report-catalog-tools,.odoo-pg .search-results-summary{background:#fff;border:1px solid #d8dadd;border-radius:4px;box-shadow:none}
+.odoo-pg .panel-h{padding:8px 12px;background:#f6f7f8;border-bottom:1px solid #d3d6da}
+.odoo-pg .in,.odoo-pg select.in,.odoo-pg .btn{border-radius:3px;box-shadow:none}
+.odoo-pg .in,.odoo-pg select.in{height:30px;font-size:13.5px;border:1px solid #d3d6da}
+.odoo-pg .btn{height:30px;font-size:13.5px}
+.odoo-pg .btn.sm{height:26px;font-size:12.5px}
+.odoo-pg .search-in .in{padding-inline-start:30px}
+.odoo-pg .fld>span,.odoo-pg .fld>label{font-size:12.5px;color:#4a4f55}
+.odoo-pg .tbl{border-collapse:collapse;font-size:13.5px}
+.odoo-pg .tbl thead th{background:#f6f7f8;color:#4a4f55;font-weight:600;font-size:13px;padding:6px 10px;border-bottom:1px solid #d3d6da;text-transform:none;letter-spacing:0;white-space:nowrap}
+.odoo-pg .tbl tbody td{padding:5px 10px;border-bottom:1px solid #eceef0;vertical-align:middle;line-height:1.35}
+.odoo-pg .tbl tbody tr:hover{background:#f3f4f6}
+.odoo-pg .tbl .pill,.odoo-pg .pill{border-radius:3px;font-size:12px;padding:1px 8px}
+.odoo-pg .tbl .tag.code{font-size:12.5px;padding:0;background:transparent;border:0;color:#4a4f55}
+.odoo-pg .chips .chip,.odoo-pg [data-chip],.odoo-pg .seg button{border-radius:3px}
+.odoo-pg .report-catalog>*{transition:background-color .12s ease}
+.odoo-pg .report-catalog>*:hover{background:#f3f4f6}
+/* templates / org / delegations */
+.odoo-pg .toolbar,.odoo-pg .panel-b>.search-in{border-radius:4px}
+.odoo-pg .toolbar{background:#fff;border:1px solid #d8dadd;box-shadow:none;padding:8px 12px}
+.odoo-pg .tbl td .tag{border-radius:3px;font-size:12px;padding:1px 6px}
+.odoo-pg .tbl td form .in{height:26px;font-size:13px}
+.odoo-pg .tbl td form .btn{height:26px;font-size:12.5px}
+.odoo-pg .tbl td form{flex-wrap:nowrap}
+@media(min-width:900px){.odoo-pg .tbl tbody td{white-space:normal}}
+.odoo-pg .org-unit,.odoo-pg [class*="org-"] .card,.odoo-pg [class*="unit-card"],.odoo-pg [class*="tpl-"]{border-radius:3px;box-shadow:none}
+.odoo-pg .tbl td.num,.odoo-pg .tbl td .num,.odoo-pg .tbl td:nth-child(4){white-space:nowrap}
+.odoo-pg .panel>.toolbar{border:0;border-bottom:1px solid #eceef0;border-radius:4px 4px 0 0}
+/* dialogs on odoo-ui pages */
+.odoo-ui .overlay{background:rgba(30,25,35,.45);backdrop-filter:none}
+.odoo-ui .modal{border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.22);border:1px solid #d3d6da}
+.odoo-ui .modal-h{padding:10px 16px;background:#f6f7f8;border-bottom:1px solid #d3d6da}
+.odoo-ui .modal-h h3{font-size:15px;font-weight:600}
+.odoo-ui .modal-b{padding:16px}
+.odoo-ui .modal-f{padding:10px 16px;background:#f6f7f8;border-top:1px solid #d3d6da}
+.odoo-ui .modal .in,.odoo-ui .modal select.in{border-radius:3px;box-shadow:none;border:1px solid #d3d6da;height:30px;font-size:13.5px}
+.odoo-ui .modal .btn{border-radius:3px;height:30px;font-size:13.5px;box-shadow:none}
+.odoo-ui .modal .iconbtn{border-radius:3px;box-shadow:none}
+.odoo-ui .modal .fld>span{font-size:12.5px;color:#4a4f55}
+/* anchor navs on detail/form pages as flat notebook-style tab strips */
+.odoo-pg .document-detail-nav,.odoo-pg .document-form-nav,.odoo-pg .subnav.decision-subnav{overflow:visible;position:static;display:flex;gap:0;padding:0;background:#fff;border:0;border-bottom:1px solid #d3d6da;border-radius:0;box-shadow:none;margin:0 0 12px}
+.odoo-pg .document-detail-nav a,.odoo-pg .document-form-nav a,.odoo-pg .subnav.decision-subnav a{height:32px;padding:0 16px;display:inline-flex;align-items:center;margin-bottom:-1px;margin-inline-end:-1px;border:1px solid transparent;border-bottom:0;border-radius:3px 3px 0 0;background:transparent;color:#4a4f55;font-size:13.5px;font-weight:500;transition:background-color .12s ease,color .12s ease}
+.odoo-pg .document-detail-nav a:hover,.odoo-pg .document-form-nav a:hover,.odoo-pg .subnav.decision-subnav a:hover,.odoo-pg .document-detail-nav a:focus-visible,.odoo-pg .document-form-nav a:focus-visible,.odoo-pg .subnav.decision-subnav a:focus-visible{background:#f3f4f6;color:#1f2328}
+.odoo-pg .document-detail-nav a.active,.odoo-pg .subnav.decision-subnav a.active,.odoo-pg .document-detail-nav a[aria-current],.odoo-pg .subnav.decision-subnav a[aria-current]{background:#fff;border-color:#d3d6da;border-top:2px solid #714b67}
+/* pager */
+.odoo-ui .pager .pg{border-radius:3px;min-width:30px;height:30px;box-shadow:none;font-size:13px}
+.odoo-ui .pager .pg.on{background:#714b67;border-color:#714b67;color:#fff}
+/* quick-create wizard: only the active step is visible */
+#compose [data-wz-pane]:not(.on){display:none}
+/* compact full subject form (all fields kept) */
+.odoo-ui .subject-form{gap:8px !important}
+.odoo-ui .subject-form .panel-h{padding:8px 14px;min-height:0}
+.odoo-ui .subject-form .panel-h h3{font-size:14px}
+.odoo-ui .subject-form .panel-b.form{padding:10px 14px;gap:8px 12px}
+.odoo-ui .subject-form .fld{gap:3px}
+.odoo-ui .subject-form .fld>span{font-size:12.5px}
+.odoo-ui .subject-form .in{height:30px;min-height:30px;padding-top:0;padding-bottom:0;font-size:13.5px}
+.odoo-ui .subject-form textarea.in{height:auto;min-height:56px;padding:6px 10px}
+.odoo-ui .subject-form .subject-field-hint{margin:0;line-height:1.1}
+.odoo-ui .subject-form-preview{padding:6px 12px;border-radius:3px;gap:10px}
+.odoo-ui .subject-form-preview-mark{flex:0 0 26px;height:26px;border-radius:3px}
+.odoo-ui .subject-form-preview>div{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+/* tab panes: inactive pane stays hidden even when a layout class sets display */
+[data-tabs-root] [data-pane]:not(.on){display:none !important}
+/* nested detail cards: near-straight corners */
+.odoo-pg .item,.odoo-pg .note,.odoo-pg .item.document-version,.odoo-pg .committee-agenda-tools,.odoo-pg .committee-agenda-item,.odoo-pg details.dd,.odoo-pg .panel.case-h{border-radius:3px}
+.odoo-pg .tag,.odoo-pg .tag.code{border-radius:3px}
+/* archive split preview: readable viewer height */
+.odoo-pg .docs-split{height:auto;min-height:0}
+.odoo-pg [data-docs] .pv-b iframe{display:block;width:100%;height:72vh;min-height:420px;border:0}
+.odoo-pg [data-docs] .pv-b img{max-width:100%}
+.odoo-ui .grid.g2:has(>details.dd[name=subject-act]){grid-template-columns:1fr;gap:0}
+.odoo-ui .od-chatter .sd-stream article.chronology-stage .fi-b>.chronology-route{grid-row:3}.odoo-ui .od-chatter .sd-stream article.chronology-stage .fi-b>p{grid-row:4}
+
+/* new-subject form as one Odoo-style sheet: joined sections, field groups in two columns, action bar that stays in view */
+.subject-form{gap:0!important;background:var(--panel);border:1px solid var(--line);border-radius:3px}
+.subject-form>.panel{border:0;border-radius:0;box-shadow:none;border-bottom:1px solid var(--line-2);background:transparent}
+.subject-form>.panel .panel-h{background:var(--panel-2);border-bottom:1px solid var(--line-2);padding:8px 16px}
+.subject-form>.panel .panel-h h3{font-size:13px;font-weight:700;color:var(--brand)}
+.subject-form>.panel .panel-b.form{padding:14px 16px}
+.subject-form>details.dd{margin:0;border:0;border-bottom:1px solid var(--line-2);border-radius:0}
+.subject-form>.row.end{position:sticky;bottom:0;z-index:6;justify-content:flex-start;gap:8px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -2px 6px rgba(0,0,0,.05)}
+html:has(.subject-form){scroll-padding-bottom:84px}
+.subject-form{padding-bottom:0}
+
+/* committees: space between the linked-topics panel and the sessions list, no dead space under the last group */
+.odoo-ui [data-committee-topics]{margin-bottom:12px}
+.odoo-ui [data-committee-topics] .panel-b{padding:10px 14px}
+.odoo-ui [data-committee-topics] [data-committee-topic-group]:last-child{margin-bottom:0}
+
+/* dashboard: the stat cards repeated the tab counts, so the inbox now starts higher and fills the screen without page scroll */
+.odoo-ui .panel.inbox{height:calc(100vh - var(--top) - 178px);min-height:420px}
+
+/* new-subject form in the Odoo form-view pattern: control panel, sheet with status row, big title, two field groups with side labels, notebook */
+.odoo-ui .nf{display:block;margin:0}
+.nf-cp{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 10px}
+.nf-crumb{font-size:16px;color:var(--muted)}.nf-crumb b{color:var(--ink);font-weight:600}.nf-crumb a{color:var(--brand)}
+.nf-actions{display:flex;gap:6px}
+.nf-sheet{background:var(--panel);border:1px solid var(--line);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.05);max-width:1100px}
+.nf-statusbar{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--panel-2);border-bottom:1px solid var(--line)}
+.nf-seg{display:inline-flex;cursor:pointer}.nf-seg input{position:absolute;opacity:0;pointer-events:none}
+.nf-seg span{padding:3px 16px;border:1px solid var(--line);border-radius:3px;background:#fff;font-size:13.5px}
+.nf-seg input:checked+span{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.nf-seg input:focus-visible+span{outline:2px solid var(--brand);outline-offset:1px}
+.nf-hint{color:var(--muted);font-size:12px;margin-inline-start:auto}
+.nf-body{padding:20px 26px 24px}
+.nf-title{display:block;width:100%;border:0;border-bottom:1px solid transparent;background:transparent;font:inherit;font-size:26px;font-weight:600;color:var(--ink);padding:4px 0 6px;outline:0}
+.nf-title::placeholder{color:#b4b9bf;font-weight:400}.nf-title:hover{border-bottom-color:var(--line)}.nf-title:focus{border-bottom-color:var(--brand)}
+.nf-groups{display:grid;grid-template-columns:1fr 1fr;gap:0 48px;margin-top:18px}
+.nf-group{min-width:0}
+.nf-f{display:grid;grid-template-columns:130px minmax(0,1fr);align-items:center;gap:10px;padding:3px 0}
+.nf-f>span{font-weight:600;font-size:13.5px;color:var(--ink-2)}
+.nf-f input:not([type=file]),.nf-f select,.nf-f textarea{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;font:inherit;font-size:14px;padding:5px 2px;min-height:30px;outline:0}
+.nf-f textarea{resize:vertical;align-self:start}
+.nf-f input:hover,.nf-f select:hover,.nf-f textarea:hover{border-bottom-color:#9aa0a6}
+.nf-f input:focus,.nf-f select:focus,.nf-f textarea:focus{border-bottom:2px solid var(--brand);padding-bottom:4px}
+.nf-wide{grid-template-columns:130px minmax(0,1fr)}
+.nf-book{margin-top:22px}
+.nf-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
+.nf-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 16px;font:inherit;font-size:14px;color:var(--ink-2);cursor:pointer;margin-bottom:-1px}
+.nf-tabs button small{color:var(--muted);font-size:11.5px}
+.nf-tabs button:hover{color:var(--brand)}.nf-tabs button.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:700}
+.nf-pane{padding:12px 0 0}.nf-pane[hidden]{display:none}
+@media (max-width:1000px){.nf-groups{grid-template-columns:1fr}}
+.odoo-ui .nf{max-width:1100px;margin-inline:auto}
+.odoo-ui .nf .nf-sheet{max-width:none}
+.odoo-ui .nf .nf-title{border:0;border-bottom:1px solid transparent;border-radius:0;box-shadow:none;background:transparent;height:auto;min-height:0;padding:4px 0 6px}
+.odoo-ui .nf .nf-title:hover{border-bottom-color:var(--line)}
+.odoo-ui .nf .nf-title:focus{border-bottom:2px solid var(--brand);box-shadow:none;padding-bottom:5px}
+.odoo-ui .nf .nf-f :is(input,select,textarea){box-shadow:none;border-radius:0;height:auto}
+
+/* saved subject: control panel in the Odoo record pattern. Row 1: breadcrumb and record pager. Row 2: action buttons beside the stage path. */
+.odoo-ui .od-cp:has(.od-statusbar){display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"crumb pager" "acts stages";align-items:center;gap:6px 14px;padding:6px 16px 8px}
+.odoo-ui .od-cp:has(.od-statusbar) .od-crumb{grid-area:crumb}
+.odoo-ui .od-cp:has(.od-statusbar) .od-pager{grid-area:pager;justify-self:end;margin:0}
+.odoo-ui .od-cp:has(.od-statusbar) .od-cp-actions{grid-area:acts}
+.odoo-ui .od-cp:has(.od-statusbar) .od-statusbar{grid-area:stages;justify-self:end;margin:0;max-width:100%;overflow-x:auto;scrollbar-width:thin}
+.odoo-ui .od-cp:has(.od-statusbar) .od-cp-actions .btn{height:30px!important}
+
+/* date fields: underlined input with a calendar popup anchored under it */
+.odoo-ui input.dp-in{direction:ltr;text-align:right}
+.dp-pop{position:absolute;z-index:400;width:290px;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(33,37,41,.2);padding:10px 12px 12px;font-size:14px}
+.dp-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.dp-t{font-weight:700;color:var(--ink-2)}
+.dp-nav{border:0;background:none;width:28px;height:28px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;color:var(--ink-2)}
+.dp-nav:hover,.dp-nav:focus-visible{background:var(--brand-soft);color:var(--brand);outline:0}
+.dp-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.dp-w{font-size:11.5px;color:var(--muted);padding:4px 0}
+.dp-d{border:0;background:none;height:32px;border-radius:50%;cursor:pointer;font:inherit;color:var(--ink)}
+.dp-d:hover{background:var(--brand-soft)}.dp-d:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.dp-d.today{font-weight:700;box-shadow:inset 0 0 0 1px var(--brand)}
+.dp-d.sel{background:var(--brand);color:#fff;font-weight:700}
+.dp-d[disabled]{color:#c4c8cc;cursor:default;background:none}
+.dp-f{display:flex;gap:6px;justify-content:flex-start;margin-top:10px;padding-top:8px;border-top:1px solid var(--line-2)}
+.dp-f .dp-apply{margin-inline-start:auto}
+
+/* subject tags as solid colored pills (display only: urgent red, secret purple, other levels blue, normal priority gray) */
+.odoo-ui .sd-tag{color:#fff!important;border:0!important;border-radius:11px!important;padding:2px 12px!important;font-weight:600;font-size:12.5px;background:#6c757d}
+.odoo-ui .sd-tag[data-prio^="عاجل"]{background:#dc3545}
+.odoo-ui .sd-tag[data-prio="عادي"],.odoo-ui .sd-tag[data-prio="منخفض"]{background:#6c757d}
+.odoo-ui .sd-tag[data-prio="مرتفع"],.odoo-ui .sd-tag[data-prio="هام"]{background:#e8912d}
+.odoo-ui .sd-tag-secret{background:#7a3fb5}
+.odoo-ui .sd-tag-conf{background:#2f6fb5}
+.odoo-ui .sd-tag svg{vertical-align:-2px}
+
+/* subject list: compact Odoo list + side panel (display only) */
+.odoo-ui .sl-wrap{display:flex;align-items:stretch}
+.odoo-ui .sl-wrap .tbl-wrap{flex:1;min-width:0}
+.odoo-ui .sl-tbl thead th{padding:5px 8px}
+.odoo-ui [data-subject-list] .sl-tbl tbody td{padding:2px 8px!important;white-space:nowrap;height:30px}
+.odoo-ui .sl-tbl tbody tr{cursor:pointer;height:34px}
+.odoo-ui .sl-tbl tbody tr.is-sel{background:#e9f1f4}
+.odoo-ui .sl-tbl tbody tr:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.odoo-ui .w-ic{width:26px;padding:0 2px!important}
+.odoo-ui .sl-ic{color:#8a9097;display:inline-flex}
+.odoo-ui .sl-title{max-width:380px;overflow:hidden;text-overflow:ellipsis}
+.odoo-ui .sl-title .title{margin-inline-end:8px}
+.odoo-ui .sl-sub{color:#8a9097;font-size:12px}
+.odoo-ui .sl-ref{color:#4a4f55;font-size:12.5px;font-variant-numeric:tabular-nums}
+.odoo-ui .sl-owner{font-size:12.5px;max-width:170px;overflow:hidden;text-overflow:ellipsis}
+.odoo-ui .sl-due{font-size:12.5px}
+.odoo-ui .sl-due.is-late{color:var(--bad);font-weight:600}
+.odoo-ui .sl-tags{display:flex;gap:4px;align-items:center}
+.odoo-ui .sl-tags .sd-tag{font-size:11.5px;padding:1px 9px!important;line-height:1.5}
+.odoo-ui .sl-side{width:290px;flex:none;border-inline-start:1px solid #d3d6da;background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.odoo-ui .sl-side[hidden]{display:none}
+.odoo-ui .sl-side-h{display:flex;justify-content:space-between;align-items:center;color:#6c757d;font-size:12.5px}
+.odoo-ui .sl-side h3{margin:0;font-size:15px;line-height:1.5}
+.odoo-ui .sl-side-tags{display:flex;gap:4px;flex-wrap:wrap}
+.odoo-ui .sl-side dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px}
+.odoo-ui .sl-side dt{color:#6c757d}.odoo-ui .sl-side dd{margin:0}
+.odoo-ui .sl-foot{display:flex;gap:26px;padding:7px 14px;border-top:1px solid #d3d6da;background:#f6f7f8;font-size:13px;color:#4a4f55}
+.odoo-ui .sl-wrap.has-side .sl-tbl tr>:nth-child(4),.odoo-ui .sl-wrap.has-side .sl-tbl tr>:nth-child(5){display:none}
+.odoo-ui [data-subject-list] .sl-tbl tbody td{line-height:1.2}
+.odoo-ui .sl-tags .sd-tag{margin:0!important;display:inline-block}
+.odoo-ui .sl-tbl .pill{margin:0}
+.odoo-ui .sl-side{overflow-y:auto;max-height:calc(100vh - var(--top) - 190px)}
+.odoo-ui .sl-sec{border-top:1px solid #eceef0;padding-top:8px;margin-top:6px}
+.odoo-ui .sl-sec h4{margin:0 0 4px;font-size:13px;color:#4a4f55;display:flex;gap:6px;align-items:center}
+.odoo-ui .sl-cnt{background:#eceef0;border-radius:9px;padding:0 7px;font-size:11.5px;color:#4a4f55}
+.odoo-ui .sl-sec ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.odoo-ui .sl-m{color:#8a9097;font-size:11.5px}
+.odoo-ui .sl-none{margin:0;color:#8a9097;font-size:12px}
+.odoo-ui .sl-desc{margin:0;font-size:12.5px;line-height:1.55;max-height:5.5em;overflow:hidden}
+.odoo-ui .sl-side .btn.primary{flex:none;align-self:flex-start}
+
+/* Org tree (display only): collapse, level badges, deputy band, totals */
+.odoo-pg .org-branch.collapsed>.org-kids{display:none}
+.odoo-pg .org-tools.searching~#org-root .org-branch.collapsed>.org-kids{display:block}
+.odoo-pg .org-node{padding:7px 12px;margin:4px 0;border-radius:3px}
+.odoo-pg .org-tog{width:22px;height:22px;border:1px solid var(--line);border-radius:3px;background:var(--panel);cursor:pointer;line-height:1;font-size:15px;padding:0}
+.odoo-pg .org-tog.ph{border:0;background:none;cursor:default}
+.odoo-pg .org-lvl{font-size:11px;padding:1px 8px;border-radius:10px;background:#e8eef5;color:#2b4a6b;border:1px solid #cdd9e6}
+.odoo-pg .org-lvl.lv-L1{background:#4b2e83;color:#fff;border-color:#4b2e83}
+.odoo-pg .org-lvl.lv-L2{background:#e1ecf8;color:#124a8a;border-color:#b9d1ee}
+.odoo-pg .org-lvl.lv-L3{background:#e3f4ea;color:#1b6b3a;border-color:#b8e0c6}
+.odoo-pg .org-lvl.lv-L4{background:#fdf1dc;color:#8a5a00;border-color:#f0d9a8}
+.odoo-pg .org-lvl.lv-L5{background:#f1f1f1;color:#555;border-color:#ddd}
+.odoo-pg .org-usersbtn{border:0;background:none;color:var(--brand);cursor:pointer;font-size:12px;padding:0}
+.odoo-pg .org-deputies{border:1px dashed #d8b45a;background:#fffaf0;border-radius:3px;padding:6px 10px;margin:6px 0}
+.odoo-pg .org-deputies-h{display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:2px}
+.odoo-pg .org-foot{display:flex;flex-wrap:wrap;gap:16px;align-items:center;border-top:1px solid var(--line);margin-top:12px;padding-top:8px;font-size:13px}
+.odoo-pg .org-acts{display:inline-flex;gap:6px}
+.odoo-pg .org-acts .btn.sm{padding:2px 8px;font-size:12px}
+.odoo-pg .org-usermove{border:1px solid var(--line);background:var(--panel);border-radius:3px;font-size:11px;cursor:pointer;margin-inline-start:6px;padding:0 6px}

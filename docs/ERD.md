@@ -1,6 +1,6 @@
 # مخطط قاعدة البيانات الشامل (ERD) — منظومة السكرتارية والمراسلات والأرشفة
 
-يعكس هذا المرجع البنية الفعلية لقاعدة البيانات في التطبيق (`Django 5.1.x`) عبر **12 تطبيقاً** و **49 نموذج بيانات (Model)** كما تم فحصها مباشرة من ملفات `models.py`، ويشمل المفاتيح الأساسية (`PK`) والخارجية (`FK`) وعلاقات `One-to-Many` و `Many-to-Many` وقواعد `on_delete` والفهارس وقيود التفرد (`unique_together`) وآلية الترقيم المتزامن والسجلات غير القابلة للحذف.
+يعكس هذا المرجع البنية الفعلية لقاعدة البيانات في التطبيق (`Django 5.1.x`) عبر **12 تطبيقاً** و **51 نموذج بيانات (Model)** كما تم فحصها مباشرة من ملفات `models.py`، ويشمل المفاتيح الأساسية (`PK`) والخارجية (`FK`) وعلاقات `One-to-Many` و `Many-to-Many` وقواعد `on_delete` والفهارس وقيود التفرد (`unique_together`) وآلية الترقيم المتزامن والسجلات غير القابلة للحذف.
 
 ---
 
@@ -44,6 +44,10 @@ erDiagram
     Subject ||--o{ Memo : "مذكرات"
     Subject ||--o{ Annotation : "تأشيرات إدارية"
     Document ||--o{ Annotation : "تأشيرة على مستند"
+    Subject ||--o{ NoticeRecord : "سجلات إخطار فعلي"
+    Annotation ||--o{ NoticeRecord : "تأشيرة مرتبطة (اختياري)"
+    Subject ||--o{ OutgoingCorrespondence : "مراسلات صادرة"
+    OutgoingCorrespondence ||--o{ OutgoingCorrespondence : "استعجال لطلب أصلي (parent)"
 
     DocumentType ||--o{ Document : "نوع مستند"
     ConfidentialityLevel ||--o{ Document : "سرية"
@@ -88,7 +92,7 @@ erDiagram
 
 ---
 
-## 2. تفاصيل الجداول والحقول حسب التطبيقات (49 نموذجاً)
+## 2. تفاصيل الجداول والحقول حسب التطبيقات (51 نموذجاً)
 
 ### 2.1 تطبيق البيانات المرجعية والنظام (`core`)
 
@@ -137,7 +141,9 @@ erDiagram
 | `SubjectSuspension` (`subjects_subjectsuspension`) | `id` (PK), `subject_id` (FK→`Subject`), `reason_ref_id` (FK→`SuspensionReason`, null), `reason_details` (Text), `required_from` (Char 180), `required_item` (Char 255), `suspended_by_id` (FK→`User`), `follow_up_owner_id` (FK→`User`), `suspended_at` (DateTime), `expected_follow_up_date` (Date, null), `is_fulfilled` (Bool), `fulfilled_at` (DateTime, null), `fulfilled_by_id` (FK→`User`, null), `fulfillment_notes` (Text) | `reason_ref`/`suspended_by`/`follow_up_owner`: `PROTECT`؛ سجل تاريخي للطلبات |
 | `SubjectStatusHistory` (`subjects_subjectstatushistory`) | `id` (PK), `subject_id` (FK→`Subject`), `from_status` (Char 30), `to_status` (Char 30), `changed_by_id` (FK→`User`), `reason` (Text), `changed_at` (DateTime) | `changed_by`: `PROTECT`؛ يحفظ تسلسل الإغلاق وإعادة الفتح |
 | `Memo` (`subjects_memo`) | `id` (PK), `subject_id` (FK→`Subject`), `memo_number` (Char 40, UNIQUE), `memo_type` (Char 30), `title` (Char 255), `directed_to` (Char 180), `body` (Text), `status` (Char 20), `author_id` (FK→`User`), `approved_by_id` (FK→`User`, null), `created_at` (DateTime), `updated_at` (DateTime) | `author`: `PROTECT`, `approved_by`: `SET_NULL` |
-| `Annotation` (`subjects_annotation`) | `id` (PK), `subject_id` (FK→`Subject`), `document_id` (FK→`Document`, null), `author_id` (FK→`User`), `recorded_by_id` (FK→`User`), `annotation_text` (Text), `required_action` (Char 255), `assigned_unit_id` (FK→`OrgUnit`, null), `execution_status` (Char 20), `annotation_date` (DateTime) | `author`/`recorded_by`: `PROTECT`, `document`/`assigned_unit`: `SET_NULL` |
+| `Annotation` (`subjects_annotation`) | `id` (PK), `subject_id` (FK→`Subject`), `document_id` (FK→`Document`, null), `author_id` (FK→`User`), `recorded_by_id` (FK→`User`), `annotation_text` (Text), `required_action` (Char 255), `assigned_unit_id` (FK→`OrgUnit`, null), `execution_status` (Char 20), `outcome` (Char 30, اختياري، توصيف التوجيه), `outcome_other` (Char 255), `annotation_date` (DateTime) | `author`/`recorded_by`: `PROTECT`, `document`/`assigned_unit`: `SET_NULL` |
+| `OutgoingCorrespondence` (`subjects_outgoingcorrespondence`) | `id` (PK), `subject_id` (FK→`Subject`), `kind` (`REQUEST`/`FOLLOWUP`/`RESPONSE`), `parent_id` (FK→`self`, null: الطلب الأصلي للاستعجال), `recipient_entity` (Char 255), `title` (Char 255), `notes` (Text), `document_id` (FK→`Document`, null), `recorded_by_id` (FK→`User`), `recorded_at` (DateTime), `is_origin` (Bool), `sent_at` (DateTime, null: مسودة حتى تأكيد الإرسال الفعلي), `sent_marked_by_id` (FK→`User`, null), `reply_received_at` (DateTime, null), `reply_notes` (Text), `reply_marked_by_id` (FK→`User`, null) | `subject`: `CASCADE`, `parent`: `PROTECT`, `recorded_by`: `PROTECT`؛ يوثق المراسلة فقط (لا إرسال)، والطلب المُؤكَّد إرساله بلا رد يمنع الإغلاق الرسمي (المسودة لا تمنعه) |
+| `NoticeRecord` (`subjects_noticerecord`) | `id` (PK), `subject_id` (FK→`Subject`), `annotation_id` (FK→`Annotation`, null), `recipient_name` (Char 255), `method` (`VERBAL`/`WRITTEN`/`PHONE`/`OTHER`), `method_other` (Char 120), `notes` (Text), `notified_at` (DateTime), `recorded_by_id` (FK→`User`), `recorded_at` (DateTime) | `subject`: `CASCADE`, `annotation`: `SET_NULL`, `recorded_by`: `PROTECT`؛ يوثق إخطاراً تم فعلاً ولا يُنشأ تلقائياً من نص التأشيرة |
 
 ### 2.5 تطبيق المستندات والنسخ والخزينة (`documents`)
 

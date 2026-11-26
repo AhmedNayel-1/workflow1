@@ -305,6 +305,7 @@ class SubjectService:
         follow_up_owner=None,
         reason_ref=None,
         expected_follow_up_date=None,
+        committee=None,
     ) -> SubjectSuspension:
         if subject.status == Subject.Status.CLOSED:
             raise ValidationError("لا يمكن تعليق موضوع مغلق؛ أعد فتحه أولاً بصلاحية مناسبة.")
@@ -313,7 +314,7 @@ class SubjectService:
             subject,
             Subject.Status.SUSPENDED,
             user,
-            reason=f"تعليق للاستيفاء: {required_item} ({required_from})",
+            reason=f"تعليق للاستيفاء: {required_item}" + (f" ({required_from})" if required_from else ""),
         )
         suspension = SubjectSuspension.objects.create(
             subject=subject,
@@ -321,6 +322,7 @@ class SubjectService:
             reason_details=reason_details,
             required_from=required_from,
             required_item=required_item,
+            committee=committee,
             suspended_by=user,
             follow_up_owner=follow_up_owner or user,
             expected_follow_up_date=expected_follow_up_date,
@@ -329,7 +331,7 @@ class SubjectService:
             subject=subject,
             action_type="SUBJECT_SUSPENDED",
             actor_user=user,
-            description=f"تم تعليق الموضوع لحين استيفاء ({required_item}) من ({required_from}). السبب: {reason_details}",
+            description=f"تم تعليق الموضوع لحين استيفاء ({required_item})" + (f" من ({required_from})" if required_from else "") + f". السبب: {reason_details}",
         )
         return suspension
 
@@ -397,6 +399,17 @@ class SubjectService:
                     ).exclude(execution_status="COMPLETED")
                     if incomplete_exec.exists() or DecisionExecutionItem.objects.filter(decision__in=decisions).count() == 0:
                         errors.append("لم يكتمل تسجيل تنفيذ القرار لدى جميع الجهات المكلفة.")
+
+        # طلب البيان الوارد يخرج في النهاية كرد صادر مرتبط بنفس الموضوع (قاعدة المستخدم: وطبعاً لو في بيان وارد وخلصته بطلعه في النهاية كصادر).
+        # لا ينطبق على موضوع بدأ صادراً. الإغلاق الاستثنائي يبقى متاحاً بصلاحيته؛ ولا تُفرض القاعدة على أنواع أخرى.
+        if getattr(subject.transaction_type, "code", "") == "EXTERNAL_REQUEST" and subject.pk:
+            items = subject.outgoing_items.all()
+            if not items.filter(is_origin=True).exists() and not items.filter(kind="RESPONSE", sent_at__isnull=False).exists():
+                errors.append("طلب البيان لم يخرج ردّه الصادر المرتبط بعد: سجّل الرد الصادر (بعد إرساله فعلاً) قبل الإغلاق.")
+
+        waiting = Subject.objects.filter(id=subject.id, outgoing_items__kind="REQUEST", outgoing_items__sent_at__isnull=False, outgoing_items__reply_received_at__isnull=True).values_list("outgoing_items__recipient_entity", flat=True)
+        for entity in waiting:
+            errors.append(f"الموضوع بانتظار رد/استيفاء من ({entity}) على مراسلة صادرة.")
 
         return errors
 

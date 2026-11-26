@@ -151,6 +151,34 @@ class SystemSequence(models.Model):
             seq.save(update_fields=["last_number"])
             return f"{seq.prefix}-{current_year}-{seq.last_number:05d}"
 
+    @classmethod
+    def sync_all(cls) -> dict:
+        """رفع العدادات إلى أعلى رقم موجود فعلاً حتى لا تتصادم الأرقام بعد إدخال بيانات يدوياً أو بالبذر."""
+        import re
+        from django.apps import apps
+        sources = [
+            ("SUBJECT", "SUB", "subjects.Subject", "internal_number"),
+            ("DOCUMENT", "DOC", "documents.Document", "internal_number"),
+            ("DECISION", "DEC", "decisions.Decision", "decision_number"),
+            ("MEMO", "MEM", "subjects.Memo", "memo_number"),
+        ]
+        result = {}
+        for key, prefix, model_label, field in sources:
+            model = apps.get_model(model_label)
+            best = {}
+            for value in model.objects.values_list(field, flat=True):
+                m = re.match(rf"^{prefix}-(\d{{4}})-(\d+)$", value or "")
+                if m:
+                    year, num = int(m.group(1)), int(m.group(2))
+                    best[year] = max(best.get(year, 0), num)
+            for year, num in best.items():
+                seq, _ = cls.objects.get_or_create(key=key, year=year, defaults={"prefix": prefix, "last_number": 0})
+                if seq.last_number < num:
+                    seq.last_number = num
+                    seq.save(update_fields=["last_number"])
+                    result[f"{key}-{year}"] = num
+        return result
+
 
 class SystemErrorLog(models.Model):
     """

@@ -96,7 +96,7 @@ class Command(BaseCommand):
             ("HR_HEAD", "السيد / رئيس قطاع الموارد البشرية"),
             ("PERSONNEL_GM", "السيد / مدير عام شئون الأفراد"),
             ("PERSONNEL_COM", "لجنة شئون العاملين"),
-            ("TRAINING_COM", "اللجنة العليا للتدريب"),
+            ("TRAINING_COM", "لجنة التدريب"),
             ("LEGAL_DIR", "الإدارة العامة للشئون القانونية"),
         ]:
             MemoRecipientRef.objects.get_or_create(code=r_code, defaults={"name": r_name, "is_active": True})
@@ -162,6 +162,19 @@ class Command(BaseCommand):
             code="UNIT_HOUSING", defaults={"name": "قسم الإسكان المصلحي", "unit_type": t_sec, "sector": sec_fin_hr, "parent": u_admin_gd}
         )
 
+        u_fin_hr_sec, _ = OrgUnit.objects.get_or_create(
+            code="UNIT_FIN_HR_SECTOR", defaults={"name": "رئاسة قطاع الشئون المالية والموارد البشرية", "unit_type": t_sector, "sector": sec_fin_hr, "parent": u_chair}
+        )
+        u_prod_sec, _ = OrgUnit.objects.get_or_create(
+            code="UNIT_PROD_SECTOR", defaults={"name": "رئاسة قطاع الإنتاج", "unit_type": t_sector, "sector": sec_prod, "parent": u_chair}
+        )
+
+        # طبقة نواب رئيس مجلس الإدارة (أدوار هيكلية فقط): بلا مستخدمين ولا صلاحيات ولا إعادة ربط لوحدات قائمة.
+        # أي ربط لقطاع بنائب أو رؤية/إحالة للنائب يحتاج قراراً صريحاً من المستخدم.
+        t_vice, _ = OrgUnitType.objects.get_or_create(code="VICE_CHAIRMAN", defaults={"name": "نائب رئيس مجلس الإدارة", "level_order": 2})
+        for _code, _name in (("UNIT_VICE_PROD", "نائب رئيس مجلس الإدارة لقطاعات الإنتاج"), ("UNIT_VICE_TECH", "نائب رئيس مجلس الإدارة للشئون الفنية"), ("UNIT_VICE_FIN_HR", "نائب رئيس مجلس الإدارة للشئون المالية والموارد البشرية")):
+            OrgUnit.objects.get_or_create(code=_code, defaults={"name": _name, "unit_type": t_vice, "sector": sec_board, "parent": u_chair})
+
         # 5. أنواع المعاملات
         tx_transfer, _ = TransactionType.objects.get_or_create(
             code="TRANSFER",
@@ -183,6 +196,17 @@ class Command(BaseCommand):
             code="URGENT_STATEMENT",
             defaults={"name": "بيان عاجل وسري لجهات رقابية", "sector": sec_hr, "requires_committee": False, "requires_decision": False, "requires_execution_proof": False},
         )
+        # أنواع معاملات وردت في شرح أحمد (17731215/17804617/17827052). لا لجنة ولا قرار ولا إثبات تنفيذ إلزامي؛ المسار يحدده التوجيه.
+        for _code, _name in (
+            ("COMPLAINT", "شكوى موظف"),
+            ("GRIEVANCE", "تظلم (من جزاء أو تقرير تقييم أداء)"),
+            ("RESIGNATION", "طلب استقالة"),
+            ("EXTERNAL_REQUEST", "طلب بيان (من جهة خارجية أو جهة داخلية)"),
+        ):
+            TransactionType.objects.get_or_create(
+                code=_code,
+                defaults={"name": _name, "sector": sec_hr, "requires_committee": False, "requires_decision": False, "requires_execution_proof": False},
+            )
 
         # 6. رموز الصلاحيات والأدوار
         perm_defs = [
@@ -203,6 +227,7 @@ class Command(BaseCommand):
             ("COMMITTEE_MANAGE", "إدارة اللجان وتسجيل قراراتها", "اللجان"),
             ("DECISION_CREATE", "إعداد مشروع قرار إداري", "القرارات"),
             ("DECISION_APPROVE", "اعتماد وإصدار القرارات", "القرارات"),
+            ("DECISION_DISTRIBUTE", "توزيع القرار ونشره وتكليف جهات التنفيذ", "القرارات"),
             ("ORG_VIEW", "عرض الهيكل التنظيمي", "التنظيم"),
             ("ORG_MANAGE", "إدارة الهيكل التنظيمي", "التنظيم"),
             ("USERS_MANAGE", "إدارة المستخدمين", "الإدارة"),
@@ -235,11 +260,11 @@ class Command(BaseCommand):
 
         all_codes = list(perms_map.keys())
         r_admin = make_role("SYSTEM_ADMIN", "مسؤول النظام", all_codes, hier=False, conf=False, top=False, dl_top=False)
-        r_chair = make_role("CHAIRMAN", "رئيس مجلس الإدارة", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_CLOSE", "SUBJECT_EXCEPTIONAL_CLOSE", "SUBJECT_REOPEN", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "APPROVAL_GRANT", "ANNOTATION_CREATE", "COMMITTEE_MANAGE", "DECISION_CREATE", "DECISION_APPROVE", "ORG_VIEW", "DELEGATION_MANAGE", "REPORTS_VIEW"], hier=True, conf=True, top=True, dl_top=True)
-        r_sector_head = make_role("SECTOR_HEAD", "رئيس قطاع", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "SUBJECT_CLOSE", "SUBJECT_REOPEN", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "APPROVAL_GRANT", "ANNOTATION_CREATE", "COMMITTEE_MANAGE", "DECISION_CREATE", "DECISION_APPROVE", "ORG_VIEW", "DELEGATION_MANAGE", "REPORTS_VIEW"], hier=True, conf=True, top=True, dl_top=True)
-        r_gm = make_role("GENERAL_MANAGER", "مدير عام", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "SUBJECT_CLOSE", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "ANNOTATION_CREATE", "DECISION_CREATE", "ORG_VIEW", "REPORTS_VIEW"], hier=True, conf=True, top=False, dl_top=False)
-        r_sup = make_role("SUPERVISOR", "مشرف / رئيس قسم", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "ORG_VIEW", "REPORTS_VIEW"], hier=True, conf=False, top=False, dl_top=False)
-        r_sec = make_role("SECRETARIAT", "سكرتارية", ["SUBJECT_VIEW", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "MEMO_CREATE", "ORG_VIEW"], hier=False, conf=False, top=False, dl_top=False)
+        r_chair = make_role("CHAIRMAN", "رئيس مجلس الإدارة", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_CLOSE", "SUBJECT_EXCEPTIONAL_CLOSE", "SUBJECT_REOPEN", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "APPROVAL_GRANT", "ANNOTATION_CREATE", "COMMITTEE_MANAGE", "DECISION_CREATE", "DECISION_APPROVE", "ORG_VIEW", "DELEGATION_MANAGE", "REPORTS_VIEW", "DECISION_DISTRIBUTE"], hier=True, conf=True, top=True, dl_top=True)
+        r_sector_head = make_role("SECTOR_HEAD", "رئيس قطاع", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "SUBJECT_CLOSE", "SUBJECT_REOPEN", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "APPROVAL_GRANT", "ANNOTATION_CREATE", "COMMITTEE_MANAGE", "DECISION_CREATE", "DECISION_APPROVE", "ORG_VIEW", "DELEGATION_MANAGE", "REPORTS_VIEW", "DECISION_DISTRIBUTE"], hier=True, conf=True, top=True, dl_top=True)
+        r_gm = make_role("GENERAL_MANAGER", "مدير عام", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "SUBJECT_CLOSE", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "ANNOTATION_CREATE", "DECISION_CREATE", "ORG_VIEW", "REPORTS_VIEW", "DECISION_DISTRIBUTE"], hier=True, conf=True, top=True, dl_top=False)
+        r_sup = make_role("SUPERVISOR", "مشرف / رئيس قسم", ["SUBJECT_CREATE", "SUBJECT_VIEW", "SUBJECT_EDIT", "SUBJECT_SUSPEND", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "REFERRAL_CREATE", "TASK_CREATE", "MEMO_CREATE", "ORG_VIEW", "REPORTS_VIEW", "DECISION_DISTRIBUTE", "SUBJECT_CLOSE"], hier=True, conf=False, top=False, dl_top=False)
+        r_sec = make_role("SECRETARIAT", "سكرتارية", ["SUBJECT_VIEW", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "MEMO_CREATE", "ORG_VIEW", "DECISION_DISTRIBUTE"], hier=False, conf=False, top=False, dl_top=False)
         r_sector_admin = make_role(
             "SECTOR_DIR_ADMIN",
             "مسؤول قطاع / إدارة عامة (سكرتارية ومستخدمين)",
@@ -249,7 +274,7 @@ class Command(BaseCommand):
             top=False,
             dl_top=False,
         )
-        r_emp = make_role("SPECIALIST", "موظف مختص تنفيذي", ["SUBJECT_VIEW", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "MEMO_CREATE", "DECISION_CREATE", "ORG_VIEW", "REPORTS_VIEW"], hier=False, conf=True, top=True, dl_top=True)
+        r_emp = make_role("SPECIALIST", "موظف مختص تنفيذي", ["SUBJECT_VIEW", "DOCUMENT_CREATE", "ATTACHMENT_DOWNLOAD", "MEMO_CREATE", "DECISION_CREATE", "ORG_VIEW", "REPORTS_VIEW", "DECISION_DISTRIBUTE", "REFERRAL_CREATE", "SUBJECT_SUSPEND", "SUBJECT_CLOSE", "ANNOTATION_CREATE"], hier=False, conf=True, top=True, dl_top=True)
 
         # 7. إنشاء الموظفين والمستخدمين لكل مستوى
         def make_user(username, full_name, emp_no, job_title, unit, role, sector=None, is_admin=False, is_sec=False):
@@ -257,9 +282,13 @@ class Command(BaseCommand):
                 employee_number=emp_no,
                 defaults={"full_name": full_name, "job_title": job_title, "current_unit": unit},
             )
-            PositionAssignment.objects.get_or_create(
-                employee=emp, org_unit=unit, position_title=job_title, defaults={"start_date": timezone.localdate(), "is_current": True}
-            )
+            # لا نستخدم get_or_create هنا: سجل التنقلات التاريخي قد يحتوي صفوفاً متعددة
+            # لنفس الموظف/الوحدة/المنصب (نقل ثم عودة)، وهذا سليم ولا يجب أن يكسر التهيئة.
+            if not PositionAssignment.objects.filter(employee=emp).exists():
+                PositionAssignment.objects.create(
+                    employee=emp, org_unit=unit, position_title=job_title,
+                    start_date=timezone.localdate(), is_current=True,
+                )
             u, created = User.objects.get_or_create(
                 username=username,
                 defaults={
@@ -293,7 +322,15 @@ class Command(BaseCommand):
         penalties_emp = make_user("penalties_emp", "أ. شريف مختص جزاءات", "EMP-008", "أخصائي جزاءات", u_penalties, r_emp, sector=sec_hr)
         settlements_emp = make_user("settlements_emp", "أ. منى مختص تسويات", "EMP-009", "أخصائي تسويات", u_settlements, r_emp, sector=sec_hr)
         housing_emp = make_user("housing_emp", "أ. كريم مختص شئون إدارية", "EMP-010", "أخصائي إسكان إداري", u_housing_sec, r_emp, sector=sec_fin_hr)
+        fin_hr_head = make_user("fin_hr_head", "أ. ماجد رئيس قطاع الشئون المالية والموارد البشرية", "EMP-017", "رئيس قطاع الشئون المالية والموارد البشرية", u_fin_hr_sec, r_sector_head, sector=sec_fin_hr)
+        admin_gm = make_user("admin_gm", "أ. وائل مدير عام الشئون الإدارية", "EMP-018", "مدير عام الشئون الإدارية", u_admin_gd, r_gm, sector=sec_fin_hr)
+        prod_head = make_user("prod_head", "أ. عادل رئيس قطاع الإنتاج", "EMP-019", "رئيس قطاعات الإنتاج", u_prod_sec, r_sector_head)
         hr_sector_admin = make_user("hr_sector_admin", "أ. منال مسؤول قطاع الموارد البشرية (سكرتارية)", "EMP-016", "مسؤول قطاع الموارد البشرية والسكرتارية", u_hr_sec, r_sector_admin, sector=sec_hr, is_sec=True)
+
+        # سيناريو الإسكان: موضوع ينشأ في قطاع الإنتاج ويُوجَّه إلى قطاع المالية والموارد البشرية؛ يُمنح المعنيون
+        # صلاحيتهم على موضوعات الإسكان فقط في قطاع الإنتاج (لا اتساع في باقي الأنواع أو القطاعات)
+        for _u, _r in ((fin_hr_head, r_sector_head), (admin_gm, r_gm), (housing_sup, r_sup), (housing_emp, r_emp)):
+            UserRoleAssignment.objects.get_or_create(user=_u, role=_r, sector=sec_prod, org_unit=None, transaction_type=tx_housing)
 
         # تفويضات السكرتارية (رئيس القطاع، المدير العام، ورئيس/مشرف القسم)
         Delegation.objects.get_or_create(
@@ -364,7 +401,7 @@ class Command(BaseCommand):
 
         # 9. اللجان
         Committee.objects.get_or_create(code="COM_PERSONNEL", defaults={"name": "لجنة شئون العاملين", "sector": sec_hr, "chair": hr_head})
-        Committee.objects.get_or_create(code="COM_TRAINING", defaults={"name": "اللجنة العليا للتدريب", "sector": sec_hr, "chair": chairman})
+        Committee.objects.get_or_create(code="COM_TRAINING", defaults={"name": "لجنة التدريب", "sector": sec_hr, "chair": chairman})
         Committee.objects.get_or_create(code="COM_HOUSING", defaults={"name": "لجنة الإسكان الفرعية بالمحطة", "sector": sec_fin_hr, "chair": housing_emp})
 
         # 10. تهيئة السيناريوهات الخمسة إذا لم تكن منشأة مسبقاً
@@ -545,9 +582,9 @@ class Command(BaseCommand):
                     subject=s3,
                     memo_number=SystemSequence.next_number("MEMO", "MEM"),
                     memo_type=Memo.MemoType.COMMITTEE,
-                    title="مذكرة عرض للعرض على اللجنة العليا للتدريب بشأن ماجستير يحيى أحمد",
-                    directed_to="رئيس مجلس الإدارة / اللجنة العليا للتدريب",
-                    body="بالإشارة إلى الطلب المقدم من السيد/ يحيى أحمد للحصول على العلاوة التشجيعية، وبعد استيفاء أصل الشهادة وموافقة قطاع التدريب، نرفع لسيادتكم للعرض على اللجنة العليا للتدريب.",
+                    title="مذكرة عرض للعرض على لجنة التدريب بشأن ماجستير يحيى أحمد",
+                    directed_to="رئيس مجلس الإدارة / لجنة التدريب",
+                    body="بالإشارة إلى الطلب المقدم من السيد/ يحيى أحمد للحصول على العلاوة التشجيعية، وبعد استيفاء أصل الشهادة وموافقة قطاع التدريب، نرفع لسيادتكم للعرض على لجنة التدريب.",
                     author=settlements_emp,
                 )
 
@@ -624,9 +661,11 @@ class Command(BaseCommand):
                 priority="NORMAL",
                 target_level="L1",
                 reason_for_level="إشعار ردود ومذكرات: مرفوعة من الإدارات المختصة.",
-                title="مذكرة عرض جديدة على اللجنة العليا للتدريب",
+                title="مذكرة عرض جديدة على لجنة التدريب",
                 message="تم إعداد مذكرة عرض بشأن العلاوة التشجيعية لمؤهل الماجستير للمراجعة.",
                 link_url=f"/subjects/{first_subj.id}/" if first_subj else "/",
             )
 
+        from core.models import SystemSequence
+        SystemSequence.sync_all()
         self.stdout.write(self.style.SUCCESS("تمت تهيئة جميع البيانات المرجعية والسيناريوهات الخمسة وحساب an بنجاح!"))

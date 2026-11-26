@@ -2,13 +2,14 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from accounts.models import User
 from accounts.services import PermissionService
 from audit.services import AuditService
-from committees.models import CommitteeAgendaItem
+from committees.models import Committee, CommitteeAgendaItem
 from core.models import (
     ConfidentialityLevel,
     DocumentType,
@@ -28,7 +29,7 @@ from notifications.services import NotificationService
 from organization.models import OrgUnit, Sector
 from workflow.models import Referral, ReferralRecipient, Task, WorkflowTemplateVersion
 from workflow.services import WorkflowEngineService, apply_template
-from .models import Annotation, Memo, Subject, SubjectAccessGrant, SubjectSuspension
+from .models import Annotation, NoticeRecord, OutgoingCorrespondence, Memo, Subject, SubjectAccessGrant, SubjectSuspension
 from .guidance import build_subject_guidance
 from .services import OptimisticLockError, SubjectService
 
@@ -84,6 +85,10 @@ def subject_create(request):
             messages.error(request, "عنوان الموضوع أو الرسالة مطلوب.")
             return redirect("subjects:subject_create")
 
+        if request.POST.get("direction") == "OUT" and compose_mode != "message" and not request.POST.get("external_source", "").strip():
+            messages.error(request, "اكتب الجهة الموجّه إليها المراسلة الصادرة.")
+            return redirect("subjects:subject_create")
+
         tx_id = request.POST.get("transaction_type_id")
         sector_id = request.POST.get("sector_id")
         org_unit_id = request.POST.get("org_unit_id")
@@ -135,9 +140,21 @@ def subject_create(request):
             applicant_name=request.POST.get("applicant_name", ""),
             external_source=request.POST.get("external_source", "") or ("مراسلة داخلية" if compose_mode == "message" else ""),
             keywords=request.POST.get("keywords", ""),
-            status=request.POST.get("status", Subject.Status.INCOMING),
+            status=(Subject.Status.NEW if request.POST.get("direction") == "OUT" and compose_mode != "message" else request.POST.get("status", Subject.Status.INCOMING)),
             due_date=request.POST.get("due_date") or None,
         )
+
+        # موضوع صادر: مراسلة لجهة محددة تطلب بياناً أو رداً؛ تُسجَّل كطلب بانتظار الرد (لا إرسال من النظام)
+        if request.POST.get("direction") == "OUT" and compose_mode != "message":
+            recipient = request.POST.get("external_source", "").strip()
+            oc = OutgoingCorrespondence.objects.create(
+                subject=subject, kind=OutgoingCorrespondence.Kind.REQUEST, recipient_entity=recipient[:255],
+                title=title[:255], notes=request.POST.get("description", "").strip(), recorded_by=request.user, is_origin=True,
+            )
+            AuditService.record_activity(
+                subject=subject, action_type="OUTGOING_RECORDED", actor_user=request.user,
+                description=f"تجهيز مراسلة صادرة (لم يُسجَّل إرسالها) إلى {oc.recipient_entity}: {oc.title}",
+            )
 
         # رفع وربط المستندات المبدئية إن وُجدت أثناء الإنشاء
         uploaded_list = request.FILES.getlist("initial_attachment")
@@ -282,7 +299,7 @@ def subject_detail(request, subject_id: int):
     if request.method == "POST":
         action = request.POST.get("action")
         try:
-            if action in {"update_meta", "add_memo", "suspend", "fulfill_suspension", "close_subject", "add_annotation", "upload_attachment", "apply_template"} and not PermissionService.can_act_on_subject(request.user, subject):
+            if action in {"update_meta", "add_memo", "suspend", "fulfill_suspension", "close_subject", "add_annotation", "record_notice", "record_outgoing", "mark_outgoing_sent", "mark_outgoing_reply", "upload_attachment", "apply_template"} and not PermissionService.can_act_on_subject(request.user, subject):
                 raise PermissionDenied("هذا الموضوع للاطلاع فقط في مستواك الحالي؛ لا يمكنك تعديل إجراءاته أو إحالات رئيس القطاع.")
 
             if action == "upload_attachment":
@@ -436,6 +453,8 @@ def subject_detail(request, subject_id: int):
                     annotation_text=request.POST.get("annotation_text", "").strip(),
                     required_action=request.POST.get("required_action", "").strip(),
                     assigned_unit_id=unit_id,
+                    outcome=(request.POST.get("outcome") if request.POST.get("outcome") in Annotation.Outcome.values else ""),
+                    outcome_other=request.POST.get("outcome_other", "").strip()[:255],
                 )
                 AuditService.record_activity(
                     subject=subject,
@@ -445,6 +464,90 @@ def subject_detail(request, subject_id: int):
                 )
                 messages.success(request, "تم تسجيل التأشيرة الإدارية.")
 
+            elif action == "record_notice":
+                # تسجيل إخطار تم فعلاً. لا صلاحية جديدة: يكفي أن يكون المستخدم ممن يعملون على الموضوع ويملك صلاحية العمل عليه.
+                from django.utils import timezone as _tz
+                recipient = request.POST.get("recipient_name", "").strip()
+                method = request.POST.get("method", "")
+                if not recipient or method not in NoticeRecord.Method.values:
+                    raise ValidationError("اكتب اسم المُخطَر واختر وسيلة الإخطار.")
+                ann_id = request.POST.get("annotation_id") or None
+                ann_obj = Annotation.objects.filter(id=ann_id, subject=subject).first() if ann_id else None
+                rec = NoticeRecord.objects.create(
+                    subject=subject, annotation=ann_obj, recipient_name=recipient[:255], method=method,
+                    method_other=request.POST.get("method_other", "").strip()[:120],
+                    notes=request.POST.get("notes", "").strip(), notified_at=_tz.now(), recorded_by=request.user,
+                )
+                AuditService.record_activity(
+                    subject=subject,
+                    action_type="NOTICE_RECORDED",
+                    actor_user=request.user,
+                    description=f"تسجيل إخطار ({rec.get_method_display()}) للمُخطَر: {rec.recipient_name}",
+                )
+                messages.success(request, "تم تسجيل الإخطار.")
+
+            elif action == "record_outgoing":
+                # يوثق مراسلة صادرة تمت فعلاً؛ لا إرسال من النظام ولا موعد ولا إغلاق تلقائي.
+                kind = request.POST.get("kind", "")
+                if kind not in OutgoingCorrespondence.Kind.values:
+                    raise ValidationError("اختر نوع المراسلة الصادرة.")
+                entity = request.POST.get("recipient_entity", "").strip()
+                title = request.POST.get("title", "").strip()
+                parent = None
+                if kind == "RESPONSE" and OutgoingCorrespondence.objects.filter(subject=subject, is_origin=True).exists():
+                    raise ValidationError("الرد الصادر يخص موضوعاً بدأ بطلب وارد؛ هذا الموضوع بدأ بمراسلة صادرة ولا يوجد طلب وارد للرد عليه.")
+                if kind == "FOLLOWUP":
+                    parent = OutgoingCorrespondence.objects.filter(id=request.POST.get("parent_id") or 0, subject=subject, kind="REQUEST", sent_at__isnull=False).first()
+                    if not parent:
+                        raise ValidationError("الاستعجال يجب أن يرتبط بطلب صادر سبق تأكيد إرساله على نفس الموضوع.")
+                    entity = entity or parent.recipient_entity
+                    title = title or ("استعجال: " + parent.title)
+                if not entity or not title:
+                    raise ValidationError("اكتب الجهة وموضوع المراسلة.")
+                oc = OutgoingCorrespondence.objects.create(
+                    subject=subject, kind=kind, parent=parent, recipient_entity=entity[:255], title=title[:255],
+                    notes=request.POST.get("notes", "").strip(), recorded_by=request.user,
+                )
+                sent_now = request.POST.get("sent_confirmed") == "1"
+                if sent_now:
+                    oc.sent_at = timezone.now(); oc.sent_marked_by = request.user
+                    oc.save(update_fields=["sent_at", "sent_marked_by"])
+                AuditService.record_activity(
+                    subject=subject, action_type="OUTGOING_RECORDED", actor_user=request.user,
+                    description=f"{'تسجيل مراسلة صادرة تم إرسالها' if sent_now else 'تجهيز مراسلة صادرة (لم يُسجَّل إرسالها)'} ({oc.get_kind_display()}) إلى {oc.recipient_entity}: {oc.title}",
+                )
+                messages.success(request, "تم تسجيل المراسلة الصادرة كمرسلة." if sent_now else "تم حفظ المراسلة الصادرة كمسودة؛ سجّل الإرسال بعد إرسالها فعلاً.")
+
+            elif action == "mark_outgoing_sent":
+                oc = get_object_or_404(OutgoingCorrespondence, id=request.POST.get("outgoing_id") or 0, subject=subject)
+                if oc.sent_at:
+                    raise ValidationError("سبق تسجيل إرسال هذه المراسلة.")
+                if request.POST.get("sent_confirmed") != "1":
+                    raise ValidationError("أكّد أن المراسلة أُرسلت فعلاً قبل تسجيل الإرسال.")
+                oc.sent_at = timezone.now(); oc.sent_marked_by = request.user
+                oc.save(update_fields=["sent_at", "sent_marked_by"])
+                AuditService.record_activity(
+                    subject=subject, action_type="OUTGOING_SENT_CONFIRMED", actor_user=request.user,
+                    description=f"تأكيد إرسال المراسلة الصادرة ({oc.get_kind_display()}) إلى {oc.recipient_entity}: {oc.title}",
+                )
+                messages.success(request, "تم تسجيل الإرسال الفعلي للمراسلة.")
+
+            elif action == "mark_outgoing_reply":
+                oc = get_object_or_404(OutgoingCorrespondence, id=request.POST.get("outgoing_id") or 0, subject=subject, kind="REQUEST")
+                if oc.reply_received_at:
+                    raise ValidationError("تم تسجيل الرد على هذا الطلب بالفعل.")
+                if not oc.sent_at:
+                    raise ValidationError("لا يُسجَّل رد على مراسلة لم يُؤكَّد إرسالها.")
+                from django.utils import timezone as _tz
+                oc.reply_received_at = _tz.now(); oc.reply_marked_by = request.user
+                oc.reply_notes = request.POST.get("reply_notes", "").strip()
+                oc.save(update_fields=["reply_received_at", "reply_marked_by", "reply_notes"])
+                AuditService.record_activity(
+                    subject=subject, action_type="OUTGOING_REPLY_RECORDED", actor_user=request.user,
+                    description=f"تسجيل ورود رد/استيفاء من {oc.recipient_entity} على: {oc.title}",
+                )
+                messages.success(request, "تم تسجيل الرد/الاستيفاء.")
+
             elif action == "suspend":
                 if not PermissionService.user_has_permission(
                     request.user, "SUBJECT_SUSPEND", sector=subject.sector, confidentiality_rank=subject.confidentiality.rank, subject=subject
@@ -452,9 +555,12 @@ def subject_detail(request, subject_id: int):
                     raise PermissionDenied("ليس لديك صلاحية تعليق الموضوع.")
                 reason_ref_id = request.POST.get("reason_ref_id") or None
                 reason_ref = SuspensionReason.objects.filter(id=reason_ref_id).first() if reason_ref_id else None
+                _cid = request.POST.get("committee_id") or None
+                _committee = Committee.objects.filter(id=_cid, is_active=True).first() if _cid else None
                 SubjectService.suspend_subject(
                     subject=subject,
                     user=request.user,
+                    committee=_committee,
                     reason_ref=reason_ref,
                     reason_details=request.POST.get("reason_details", "").strip(),
                     required_from=request.POST.get("required_from", "").strip(),
@@ -495,7 +601,7 @@ def subject_detail(request, subject_id: int):
                             relation_type=SubjectDocumentLink.RelationType.SUPPORTING,
                             uploaded_file=fulfill_file,
                         )
-                messages.success(request, "تم تسجيل الاستيفاء وإرفاق المستند واستئناف مسار الموضوع.")
+                messages.success(request, "تم تسجيل الاستيفاء" + (" وإرفاق المستند" if fulfill_file is not None else " (دون رفع ملف؛ الإرفاق اختياري)") + " واستئناف مسار الموضوع.")
 
             elif action == "close_subject":
                 exceptional = request.POST.get("exceptional") == "on"
@@ -644,13 +750,36 @@ def subject_detail(request, subject_id: int):
     has_memo = len(memos) > 0
     is_closed = subject.status == Subject.Status.CLOSED
     active_step = 5 if is_closed else (4 if (has_memo or has_sup_or_emp_ref) else (3 if has_sector_or_gm_ref else 2))
-    workflow_steps = [
-        {"id": 1, "title": "التسجيل والمرفقات", "done": True, "current": False},
-        {"id": 2, "title": "توجيه القطاع والمدير العام", "done": active_step > 2 or has_sector_or_gm_ref, "current": not is_closed and active_step == 2},
-        {"id": 3, "title": "التوزيع على القسم والمختص", "done": active_step > 3 or has_sup_or_emp_ref, "current": not is_closed and active_step == 3},
-        {"id": 4, "title": "إعداد المذكرة والقرار", "done": is_closed or has_memo or len(decisions) > 0, "current": not is_closed and active_step == 4},
-        {"id": 5, "title": "الاعتماد والإغلاق والأرشفة", "done": is_closed, "current": not is_closed and active_step == 5},
-    ]
+    out_origin = OutgoingCorrespondence.objects.filter(subject=subject, is_origin=True).first()
+    # المسار المسجَّل فعلاً (لا تسلسل إلزامي): كل خطوة تظهر فقط إن وُجد أثرها، ثم الحالة الحالية، ثم الإغلاق
+    _rec = [("التسجيل والمرفقات", True)]
+    if has_sector_or_gm_ref:
+        _rec.append(("الإحالة والتوجيه", True))
+    if has_sup_or_emp_ref:
+        _rec.append(("التوزيع على المختص", True))
+    if len(annotations):
+        _rec.append(("تأشيرة / توجيه", True))
+    if has_memo:
+        _rec.append(("مذكرة", True))
+    if len(committee_items):
+        _rec.append(("عرض على لجنة", True))
+    if len(decisions):
+        _rec.append(("قرار", True))
+    workflow_steps = [{"id": i + 1, "title": t, "done": True, "current": False} for i, (t, _d) in enumerate(_rec)]
+    if not is_closed:
+        workflow_steps.append({"id": len(workflow_steps) + 1, "title": "الحالة الحالية: " + subject.get_status_display(), "done": False, "current": True})
+    workflow_steps.append({"id": len(workflow_steps) + 1, "title": "الإغلاق والأرشفة", "done": is_closed, "current": False})
+
+    if out_origin:
+        # موضوع بدأ بمراسلة صادرة: مراحله حالة المراسلة نفسها لا مراحل الوارد
+        _sent = out_origin.sent_at is not None
+        _rep = out_origin.reply_received_at is not None
+        workflow_steps = [
+            {"id": 1, "title": "تجهيز المراسلة", "done": True, "current": False},
+            {"id": 2, "title": "تأكيد الإرسال", "done": _sent, "current": (not is_closed) and not _sent},
+            {"id": 3, "title": "انتظار الرد / الاستيفاء", "done": _rep, "current": (not is_closed) and _sent and not _rep},
+            {"id": 4, "title": "الإغلاق", "done": is_closed, "current": (not is_closed) and _rep},
+        ]
 
     # إرشاد للموظف المختص عند امتلاك العهدة
     role_codes = PermissionService.get_effective_role_codes(request.user, sector=subject.sector)
@@ -666,13 +795,28 @@ def subject_detail(request, subject_id: int):
     creator_label = (subject.created_by.get_full_name() or subject.created_by.username) if subject.created_by else "السجل العام"
     owner_label = (subject.current_owner.get_full_name() or subject.current_owner.username) if subject.current_owner else (subject.org_unit.name if subject.org_unit else "قيد التعيين")
     stage_num = 1
-    workflow_stages.append(
+    if out_origin:
+        if out_origin.sent_at is None:
+            o_pending, o_what = "بانتظار تأكيد إرسال الخطاب فعلياً", f"تم تجهيز خطاب إلى ({out_origin.recipient_entity}) ولم يُسجَّل إرساله بعد."
+        elif out_origin.reply_received_at is None:
+            o_pending, o_what = f"بانتظار رد/استيفاء من {out_origin.recipient_entity}", f"سُجّل إرسال الخطاب إلى ({out_origin.recipient_entity}) بتاريخ {timezone.localtime(out_origin.sent_at).strftime('%Y-%m-%d %H:%M')}."
+        else:
+            o_pending, o_what = "", f"وصل رد/استيفاء من ({out_origin.recipient_entity}) بتاريخ {timezone.localtime(out_origin.reply_received_at).strftime('%Y-%m-%d %H:%M')}."
+        workflow_stages.append({
+            "stage_number": stage_num, "title": "مراسلة صادرة", "from_label": creator_label, "to_label": out_origin.recipient_entity,
+            "date": timezone.localtime(subject.created_at).strftime("%Y-%m-%d %H:%M") if subject.created_at else "",
+            "what_happened": o_what, "required": "تأكيد الإرسال الفعلي ثم متابعة الرد.",
+            "completed_text": "تم الرد/الاستيفاء", "pending_text": o_pending,
+            "status": "completed" if (out_origin.reply_received_at or is_closed) else "active",
+        })
+    else:
+      workflow_stages.append(
         {
             "stage_number": stage_num,
             "title": "تسجيل المعاملة وفتح الملف",
             "from_label": subject.external_source or "الوارد العام",
             "to_label": creator_label,
-            "date": subject.created_at.strftime("%Y-%m-%d %H:%M") if subject.created_at else "",
+            "date": timezone.localtime(subject.created_at).strftime("%Y-%m-%d %H:%M") if subject.created_at else "",
             "what_happened": f"تم تسجيل الموضوع برقم ({subject.internal_number}) وتصنيف السرية ({subject.confidentiality.name if subject.confidentiality else 'عادي'}).",
             "required": "إرفاق المستندات الداعمة وتحديد أول مسار إحالة.",
             "completed_text": "تم التسجيل وتثبيت الرقم الأرشيفي بنجاح",
@@ -700,7 +844,7 @@ def subject_detail(request, subject_id: int):
                 "title": f"إحالة {ref.get_purpose_display()}",
                 "from_label": (ref.referred_by.get_full_name() or ref.referred_by.username) if ref.referred_by else creator_label,
                 "to_label": rec_names,
-                "date": ref.created_at.strftime("%Y-%m-%d %H:%M") if ref.created_at else "",
+                "date": timezone.localtime(ref.created_at).strftime("%Y-%m-%d %H:%M") if ref.created_at else "",
                 "what_happened": ref.notes or f"توجيه الموضوع ({ref.get_purpose_display()}) لمتابعة الدراسة والتنفيذ.",
                 "required": "الاستلام الرسمي ودراسة المرفقات وإبداء الرأي.",
                 "completed_text": "تم التوجيه والاستلام" if (is_ack or has_next) else "تم إرسال الإحالة",
@@ -717,7 +861,7 @@ def subject_detail(request, subject_id: int):
                 "title": f"تعليق استيفاء ({susp.reason_ref.name if susp.reason_ref else 'مستندات'})",
                 "from_label": (susp.suspended_by.get_full_name() or susp.suspended_by.username) if susp.suspended_by else owner_label,
                 "to_label": (susp.fulfilled_by.get_full_name() or susp.fulfilled_by.username) if susp.fulfilled_by else (susp.required_from or "الجهة الطالبة / المختص"),
-                "date": susp.suspended_at.strftime("%Y-%m-%d %H:%M") if susp.suspended_at else "",
+                "date": timezone.localtime(susp.suspended_at).strftime("%Y-%m-%d %H:%M") if susp.suspended_at else "",
                 "what_happened": susp.reason_details or "إيقاف المسار مؤقتاً لحين استيفاء المطلوب.",
                 "required": susp.required_item or "استيفاء المستندات المطلوبة لاستئناف المسار.",
                 "completed_text": "تم تسجيل الاستيفاء واستئناف المسار" if susp.is_fulfilled else "تم تعليق المسار بانتظار الاستيفاء",
@@ -734,7 +878,7 @@ def subject_detail(request, subject_id: int):
                 "title": f"مذكرة عرض ({memo.get_memo_type_display()})",
                 "from_label": (memo.author.get_full_name() or memo.author.username) if memo.author else owner_label,
                 "to_label": memo.directed_to or (memo.approved_by.get_full_name() if memo.approved_by else "السلطة المختصة"),
-                "date": memo.created_at.strftime("%Y-%m-%d %H:%M") if memo.created_at else "",
+                "date": timezone.localtime(memo.created_at).strftime("%Y-%m-%d %H:%M") if memo.created_at else "",
                 "what_happened": (memo.body[:160] + "…") if memo.body and len(memo.body) > 160 else (memo.body or memo.title),
                 "required": "مراجعة الرأي والتوصية والاعتماد.",
                 "completed_text": f"مذكرة معتمدة ({memo.get_status_display()})" if memo.status == Memo.MemoStatus.APPROVED else f"حالة المذكرة: {memo.get_status_display()}",
@@ -752,7 +896,7 @@ def subject_detail(request, subject_id: int):
                 "title": f"قرار إداري ({dec.decision_number or 'مسودة'})",
                 "from_label": owner_label,
                 "to_label": "جهات التنفيذ والتوزيع",
-                "date": dec.created_at.strftime("%Y-%m-%d %H:%M") if dec.created_at else "",
+                "date": timezone.localtime(dec.created_at).strftime("%Y-%m-%d %H:%M") if dec.created_at else "",
                 "what_happened": dec.title,
                 "required": "اعتماد القرار وتوزيعه وتأكيد إثبات التنفيذ.",
                 "completed_text": f"تم التنفيذ والاعتماد ({dec.get_status_display()})" if dec_done else f"حالة القرار: {dec.get_status_display()}",
@@ -769,7 +913,7 @@ def subject_detail(request, subject_id: int):
                 "title": "الاعتماد والإغلاق والأرشفة الرسمية",
                 "from_label": owner_label,
                 "to_label": "الأرشيف الدائم",
-                "date": subject.closed_at.strftime("%Y-%m-%d %H:%M") if subject.closed_at else "",
+                "date": timezone.localtime(subject.closed_at).strftime("%Y-%m-%d %H:%M") if subject.closed_at else "",
                 "what_happened": subject.closure_notes or "تم استيفاء جميع المتطلبات وإغلاق الموضوع أرشيفياً.",
                 "required": "حفظ السلسلة وسجل التدقيق غير قابل للتعديل.",
                 "completed_text": "تم الإغلاق والأرشفة النهائية بنجاح",
@@ -798,6 +942,17 @@ def subject_detail(request, subject_id: int):
 
     draft_memo = next((m for m in memos if m.status != Memo.MemoStatus.APPROVED), None)
 
+    # مؤشر التنقل بين الموضوعات (قراءة فقط، نفس مجموعة الموضوعات المرئية للمستخدم ونفس ترتيب القائمة)
+    _vis_ids = list(PermissionService.filter_visible_subjects(Subject.objects.all(), request.user).values_list("id", flat=True))
+    pager = None
+    if subject.id in _vis_ids:
+        _pos = _vis_ids.index(subject.id)
+        pager = {
+            "pos": _pos + 1,
+            "total": len(_vis_ids),
+            "prev": _vis_ids[_pos - 1] if _pos > 0 else None,
+            "next": _vis_ids[_pos + 1] if _pos + 1 < len(_vis_ids) else None,
+        }
     return render(
         request,
         "subjects/subject_detail.html",
@@ -814,17 +969,27 @@ def subject_detail(request, subject_id: int):
             "memos": memos,
             "draft_memo": draft_memo,
             "annotations": annotations,
+            "outgoing_items": OutgoingCorrespondence.objects.filter(subject=subject).select_related("recorded_by", "parent", "reply_marked_by"),
+            "open_outgoing_requests": OutgoingCorrespondence.objects.filter(subject=subject, kind="REQUEST", sent_at__isnull=False, reply_received_at__isnull=True),
+            "outgoing_kind_choices": [c for c in OutgoingCorrespondence.Kind.choices if not (out_origin and c[0] == "RESPONSE")],
+            "notice_records": NoticeRecord.objects.filter(subject=subject).select_related("recorded_by", "annotation"),
+            "outcome_choices": Annotation.Outcome.choices,
+            "notice_method_choices": NoticeRecord.Method.choices,
             "committee_items": committee_items,
             "decisions": decisions,
             "suspensions": suspensions,
             "activity_logs": activity_logs,
             "closure_blockers": closure_blockers,
             "workflow_steps": workflow_steps,
+            "pager": pager,
             "guide": build_subject_guidance(
                 subject,
                 perms,
                 pending_recipient=pending_recipient,
                 has_memo=has_memo,
+                pending_memos=sum(1 for m in memos if m.status != Memo.MemoStatus.APPROVED),
+                draft_decisions=sum(1 for d in decisions if d.status == Decision.Status.DRAFT),
+                pending_committee_items=sum(1 for ci in committee_items if ci.resolution_type == "PENDING"),
                 decisions_count=len(decisions),
                 referrals_count=len(referrals),
                 docs_count=len(doc_links),
@@ -833,6 +998,7 @@ def subject_detail(request, subject_id: int):
                 is_closed=is_closed,
             ),
             "workflow_stages": workflow_stages,
+            "out_origin": out_origin,
             "completed_stages_count": completed_stages_count,
             "active_stage_pending_text": active_stage_pending_text,
             "is_specialist_acting": is_specialist_acting,
@@ -840,6 +1006,7 @@ def subject_detail(request, subject_id: int):
             "org_units": OrgUnit.objects.filter(is_active=True),
             "users": User.objects.filter(is_active=True),
             "suspension_reasons": SuspensionReason.objects.filter(is_active=True),
+            "committee_choices": Committee.objects.filter(is_active=True).order_by("name"),
             "resume_status_choices": resume_status_choices,
             "all_documents": Document.objects.all()[:50],
             "memo_types": MemoTypeRef.objects.filter(is_active=True),
@@ -922,12 +1089,44 @@ def subject_preview_json(request, subject_id: int):
                 "purpose": ref.get_purpose_display(),
                 "targets": "، ".join(targets) or "—",
                 "notes": ref.notes,
-                "created_at": ref.created_at.strftime("%Y-%m-%d %H:%M"),
+                "created_at": timezone.localtime(ref.created_at).strftime("%Y-%m-%d %H:%M"),
             }
         )
 
+    # ملخص للقراءة فقط بنفس شرط الاطلاع المستخدم في صفحة الموضوع (can_view_subject أعلاه).
+    summary_memos = [
+        {"number": m.memo_number, "title": m.title, "status": m.get_status_display()}
+        for m in subject.memos.order_by("-id")[:3]
+    ]
+    summary_tasks = [
+        {"title": t.title, "who": str(t.assigned_to or t.assigned_unit or "—"), "status": t.get_status_display()}
+        for t in Task.objects.filter(subject=subject).select_related("assigned_to", "assigned_unit").order_by("-id")[:3]
+    ]
+    summary_decisions = [
+        {"number": d.decision_number, "title": d.title, "status": d.get_status_display()}
+        for d in Decision.objects.filter(subject=subject).order_by("-id")[:3]
+    ]
+    summary_activity = [
+        {
+            "text": a.description,
+            "who": str(a.actor_user),
+            "at": timezone.localtime(a.created_at).strftime("%Y-%m-%d %H:%M"),
+        }
+        for a in subject.activity_logs.select_related("actor_user").order_by("-created_at", "-id")[:4]
+    ]
+    summary_counts = {
+        "referrals": subject.referrals.count(),
+        "tasks": Task.objects.filter(subject=subject).count(),
+        "decisions": Decision.objects.filter(subject=subject).count(),
+    }
+
     return JsonResponse(
         {
+            "summary_memos": summary_memos,
+            "summary_tasks": summary_tasks,
+            "summary_decisions": summary_decisions,
+            "summary_activity": summary_activity,
+            "summary_counts": summary_counts,
             "id": subject.id,
             "internal_number": subject.internal_number,
             "title": subject.title,
@@ -1034,7 +1233,7 @@ def memo_export_pdf(request, memo_id: int):
             ("Author", str(memo.author)),
             ("Approved By", str(memo.approved_by or "-")),
             ("Status", memo.get_status_display()),
-            ("Date", memo.created_at.strftime("%Y-%m-%d %H:%M")),
+            ("Date", timezone.localtime(memo.created_at).strftime("%Y-%m-%d %H:%M")),
         ],
         sections=[{"heading": "Memo Body", "lines": (memo.body or "-").splitlines()}],
     )

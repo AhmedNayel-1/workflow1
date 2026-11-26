@@ -151,3 +151,40 @@ def qs(request, exclude="page"):
     items = [(k, v) for k in request.GET for v in request.GET.getlist(k) if k not in skip and v != ""]
     out = urlencode(items)
     return (out + "&") if out else ""
+
+
+@register.filter
+def arstatus(value):
+    """Display only: show known subject status codes written as (CODE) with their canonical Arabic label. Unknown codes stay as they are."""
+    import re
+    from subjects.models import Subject
+    labels = dict(Subject.Status.choices)
+    return re.sub(r"\(([A-Z_]+)\)", lambda m: "(%s)" % labels[m.group(1)] if m.group(1) in labels else m.group(0), str(value or ""))
+
+
+_NOTIF_CAT_AR = {
+    "INCOMING_REFERRAL": "إحالة واردة", "REFERRAL": "إحالة واردة",
+    "DECISION_TASK": "قرار / مهمة", "DECISION": "قرار", "TASK": "مهمة",
+    "DEADLINE": "موعد", "ESCALATION_OVERDUE": "تصعيد / تأخير",
+    "SUSPENSION": "تعليق / استيفاء", "REPLY_MEMO": "رد / مذكرة",
+    "FULFILLMENT": "استيفاء", "APPROVAL_NEEDED": "بانتظار اعتماد",
+}
+_LEVEL_AR = {"EXECUTIVE": "تنفيذي", "MANAGER": "إداري", "STAFF": "موظف"}
+
+
+@register.filter
+def notif_cat_ar(value):
+    """Presentation only: Arabic label for a notification category code."""
+    return _NOTIF_CAT_AR.get(value, value)
+
+
+@register.filter
+def perm_name_ar(code):
+    """Presentation only: Arabic name of a permission code (falls back to the code)."""
+    from accounts.models import PermissionCode
+    cache = getattr(perm_name_ar, "_c", None)
+    import time
+    if cache is None or time.time() - cache[0] > 30:
+        cache = (time.time(), dict(PermissionCode.objects.values_list("code", "name")))
+        perm_name_ar._c = cache
+    return cache[1].get(code, code)

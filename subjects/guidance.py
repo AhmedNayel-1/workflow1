@@ -30,6 +30,9 @@ def build_subject_guidance(
     *,
     pending_recipient=None,
     has_memo: bool = False,
+    pending_memos: int = None,
+    draft_decisions: int = 0,
+    pending_committee_items: int = 0,
     decisions_count: int = 0,
     referrals_count: int = 0,
     docs_count: int = 0,
@@ -90,25 +93,44 @@ def build_subject_guidance(
         return {
             "tone": "warning",
             "eyebrow": "الموضوع معلّق",
-            "title": "المطلوب استيفاء مستندات ليُستأنف العمل",
-            "text": "أرفق المستند المطلوب ثم أنهِ التعليق من قسم التأشيرات والإغلاق." + overdue_note,
-            "primary": _jump("إرفاق المستند المطلوب", "sec-documents"),
-            "secondary": [_jump("إنهاء التعليق", "sec-closure"), timeline],
+            "title": "المطلوب استيفاؤه ليُستأنف العمل",
+            "text": "عند وصول المطلوب سجّل الاستيفاء وأنهِ التعليق من قسم التأشيرات والإغلاق. رفع نسخة من المستند اختياري ولا يشترط لتسجيل الاستيفاء." + overdue_note,
+            "primary": _jump("تسجيل الاستيفاء وإنهاء التعليق", "sec-closure"),
+            "secondary": [_jump("إرفاق نسخة (اختياري)", "sec-documents"), timeline],
+        }
+
+    # 4ب) موضوع بدأ بمراسلة صادرة: الإرشاد يعكس حالتها الفعلية (مسودة / مرسلة بانتظار الرد)
+    out_origin = subject.outgoing_items.filter(is_origin=True).first()
+    if out_origin and out_origin.reply_received_at is None:
+        if out_origin.sent_at is None:
+            return {
+                "tone": "warning",
+                "eyebrow": "مراسلة صادرة معدّة",
+                "title": f"الخطاب إلى {out_origin.recipient_entity} لم يُسجَّل إرساله بعد",
+                "text": "بعد إرسال الخطاب فعلياً (خارج النظام)، سجّل تأكيد الإرسال ليظهر الموضوع بانتظار الرد.",
+                "primary": _jump("تأكيد الإرسال", "sec-closure"),
+                "secondary": [_jump("إرفاق نسخة الخطاب", "sec-documents"), timeline],
+            }
+        return {
+            "tone": "info",
+            "eyebrow": "بانتظار الرد",
+            "title": f"بانتظار رد/استيفاء من {out_origin.recipient_entity}",
+            "text": "الموضوع يبقى مفتوحاً حتى ورود الرد أو استيفاء البيان. إن تأخر الرد يمكن تسجيل خطاب استعجال مرتبط بالطلب الأصلي.",
+            "primary": _jump("تسجيل ورود الرد / استعجال", "sec-closure"),
+            "secondary": [_jump("المستندات", "sec-documents"), timeline],
         }
 
     refer_url = reverse("workflow:referral_create", args=[subject.id])
     decision_url = reverse("decisions:decision_create", args=[subject.id])
+    # القرار ليس خطوة عامة: يُقترح فقط للأنواع التي تتطلب قراراً؛ غيرها يتبع التوجيه (تأشيرة/إحالة/رد/إخطار).
+    decision_expected = bool(getattr(subject.transaction_type, "requires_decision", False))
     secondary = []
 
-    # 5) لا توجد مستندات بعد
+    # 5) المرفقات اختيارية دائماً: لا تُعرض كخطوة أولى ولا تمنع شيئاً؛ تبقى خياراً بديلاً فقط
     if docs_count == 0 and perms.get("can_act"):
-        primary = _jump("إرفاق أول مستند", "sec-documents")
-        title, text = "ابدأ بإرفاق مستندات الموضوع", "الموضوع بلا مرفقات حتى الآن. أرفق الأصل أو الصورة الممسوحة ليسهل على الجميع المراجعة."
-        if perms.get("can_refer"):
-            secondary.append(_link("إحالة الموضوع الآن", refer_url))
-        eyebrow = "الخطوة التالية"
+        secondary.append(_jump("إرفاق مستند (اختياري)", "sec-documents"))
     # 6) التوجيه والإحالة
-    elif active_step <= 3 and perms.get("can_refer"):
+    if active_step <= 3 and perms.get("can_refer"):
         if active_step == 2 and referrals_count == 0:
             title = "وجّه الموضوع إلى الجهة المعنية"
             text = "لم تتم أي إحالة بعد. اختر المستلم (مدير عام أو قسم أو موظف مختص) وحدّد نوع الإحالة."
@@ -123,19 +145,35 @@ def build_subject_guidance(
     # 7) إعداد المذكرة والقرار
     elif active_step == 4 or (active_step <= 4 and not perms.get("can_refer")):
         eyebrow = "الخطوة التالية"
-        if not has_memo and perms.get("can_memo"):
-            title, text = "أعدّ مذكرة العرض والرأي", "المذكرة تلخّص الموضوع وتوصيتك لصاحب القرار. بعد اعتمادها يمكن إعداد القرار."
+        if not has_memo and not decision_expected and not decisions_count and perms.get("can_act") and getattr(subject.transaction_type, "code", "") == "EXTERNAL_REQUEST":
+            # نوع طلب البيان المؤكد (EXTERNAL_REQUEST) لا يتطلب قراراً: يكتمل بالرد الصادر المرتبط ثم الإغلاق؛ المذكرة والقرار خياران لا خطوتان إلزاميتان
+            title, text = "أنجز المطلوب وسجّل الرد", "لا تلزم مذكرة ولا قرار لهذا النوع. عند اكتمال البيان سجّله كرد صادر مرتبط بالموضوع إلى الجهة الطالبة، ثم أغلق الموضوع."
+            primary = _jump("سجّل الرد الصادر", "sec-closure")
+            if perms.get("can_memo"):
+                secondary.append(_jump("مذكرة (اختياري)", "sec-memos"))
+            if perms.get("can_decide"):
+                secondary.append(_link("قرار (اختياري)", decision_url))
+        elif not has_memo and perms.get("can_memo"):
+            title, text = "أعدّ مذكرة العرض والرأي", "المذكرة تلخّص الموضوع وتوصيتك لصاحب القرار." + (" بعد اعتمادها يمكن إعداد القرار." if decision_expected else "")
             primary = _jump("إعداد المذكرة", "sec-memos")
             if perms.get("can_decide"):
                 secondary.append(_link("إعداد قرار إداري", decision_url))
-        elif perms.get("can_decide") and decisions_count == 0:
+        elif perms.get("can_decide") and decisions_count == 0 and decision_expected:
             title, text = "حان وقت القرار", "المذكرة جاهزة. أعدّ القرار الإداري ليُعتمد ويُوزّع على الجهات المنفذة."
             primary = _link("إعداد قرار إداري", decision_url)
             if perms.get("can_approve"):
                 secondary.append(_jump("اعتماد المذكرة", "sec-memos"))
-        elif perms.get("can_approve") and has_memo:
+        elif draft_decisions and perms.get("can_approve"):
+            title, text = "قرار بانتظار الاعتماد", "قرار مسودة جاهز للمراجعة والاعتماد."
+            primary = _jump("المهام والقرارات", "sec-tasks")
+            if pending_memos:
+                secondary.append(_jump("مراجعة المذكرات", "sec-memos"))
+        elif perms.get("can_approve") and has_memo and (pending_memos is None or pending_memos > 0):
             title, text = "راجع المذكرة واعتمدها", "هناك مذكرة تنتظر الاعتماد لينتقل الموضوع للمرحلة التالية."
             primary = _jump("مراجعة المذكرات", "sec-memos")
+        elif pending_committee_items:
+            title, text = "بانتظار قرار اللجنة", "الموضوع مدرج على جدول لجنة ولم يُسجَّل قرارها بعد. بعد انعقاد اللجنة سجّل القرار."
+            primary = _jump("المهام والقرارات", "sec-tasks")
         else:
             title, text = "الموضوع قيد الدراسة والتنفيذ", "تابع المهام والقرارات المرتبطة، وأضف تأشيرة أو مستنداً إن لزم."
             primary = _jump("المهام والقرارات", "sec-tasks")

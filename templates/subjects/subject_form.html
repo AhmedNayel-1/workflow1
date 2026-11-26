@@ -2,32 +2,52 @@
 {% block title %}موضوع جديد{% endblock %}
 {% block heading %}موضوع جديد{% endblock %}
 {% block content %}
-<div class="page-h"><div><h2>تسجيل موضوع جديد</h2><p>النموذج الكامل بجميع الحقول. للتسجيل السريع استخدم زر «جديد» في أعلى الصفحة.</p></div><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a></div>
-<form method="post" enctype="multipart/form-data" class="col" style="gap:16px">{% csrf_token %}<input type="hidden" name="compose_mode" value="document">
-  <section class="panel"><div class="panel-h"><h3>1 · البيانات الأساسية</h3></div><div class="panel-b form">
-    <label class="fld full"><span>عنوان الموضوع</span><input class="in" name="title" required></label>
-    <label class="fld"><span>نوع المعاملة</span><select class="in" name="transaction_type_id" required>{% for t in transaction_types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>الأولوية</span><select class="in" name="priority_id" required>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
-    <label class="fld full"><span>الوصف</span><textarea class="in" name="description" rows="4"></textarea></label>
-    <label class="fld"><span>الجهة الوارد منها</span><input class="in" name="external_source"></label>
-    <label class="fld"><span>مقدم الطلب / المعني</span><input class="in" name="applicant_name"></label>
-    <label class="fld"><span>تاريخ الاستحقاق</span><input class="in" type="date" name="due_date"></label>
-    <label class="fld"><span>كلمات مفتاحية</span><input class="in" name="keywords"></label>
-  </div></section>
-  <section class="panel"><div class="panel-h"><h3>2 · التوجيه والسرية</h3></div><div class="panel-b form">
-    <label class="fld"><span>القطاع</span><select class="in" name="sector_id" id="f-sector" required>{% for s in sectors %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>الإدارة / الوحدة</span><select class="in" name="org_unit_id" id="f-unit" required>{% for u in org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}">{{ u.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>درجة السرية</span><select class="in" name="confidentiality_id" required>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
-    <label class="fld"><span>المسؤول الحالي</span><select class="in" name="current_owner_id"><option value="">أنا</option>{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
-    <label class="fld full"><span>توجيه القطاع <small>(اختياري)</small></span><textarea class="in" name="sector_directive" rows="2"></textarea></label>
-    {% if template_versions %}<label class="fld full"><span>قالب مسار العمل <small>(اختياري)</small></span><select class="in" name="workflow_template_version_id"><option value="">— بدون قالب —</option>{% for tv in template_versions %}<option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }})</option>{% endfor %}</select></label>{% endif %}
-  </div></section>
-  <section class="panel"><div class="panel-h"><h3>3 · المرفق الأولي</h3></div><div class="panel-b form">
-    <label class="fld"><span>الملف</span><input class="in" type="file" name="initial_attachment" multiple></label>
-    <label class="fld"><span>تصنيف المستند</span><select class="in" name="initial_doc_type_id">{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
-    <label class="fld full"><span>عنوان المستند <small>(اختياري)</small></span><input class="in" name="initial_doc_title"></label>
-  </div></section>
-  <div class="row end"><a class="btn" href="{% url 'subjects:subject_list' %}">إلغاء</a><button class="btn primary lg" type="submit">حفظ وتسجيل الموضوع</button></div>
+<form method="post" enctype="multipart/form-data" class="nf" data-subject-form id="subject-form">{% csrf_token %}<input type="hidden" name="compose_mode" value="document">
+  <div class="nf-cp">
+    <div class="nf-crumb"><a href="{% url 'subjects:subject_list' %}">الموضوعات</a> <span>/</span> <b>موضوع جديد</b></div>
+    <div class="nf-actions"><button class="btn primary" type="submit">حفظ وتسجيل الموضوع</button><a class="btn" href="{% url 'subjects:subject_list' %}">تجاهل</a></div>
+  </div>
+  <div class="nf-sheet">
+    <div class="nf-statusbar" role="radiogroup" aria-label="اتجاه الموضوع">
+      <label class="nf-seg"><input type="radio" name="direction" value="IN" checked data-dir><span>وارد</span></label>
+      <label class="nf-seg"><input type="radio" name="direction" value="OUT" data-dir><span>صادر</span></label>
+      <small class="nf-hint">الصادر: خطاب لجهة نطلب منها بياناً أو رداً. يُحفظ كمسودة وتؤكد الإرسال من شاشة الموضوع.</small>
+    </div>
+    <div class="nf-body">
+      <input class="nf-title" name="title" required data-subject-title placeholder="عنوان الموضوع" aria-label="عنوان الموضوع" autofocus>
+      <div class="nf-groups">
+        <div class="nf-group">
+          <label class="nf-f"><span>نوع المعاملة</span><select name="transaction_type_id" required>{% for t in transaction_types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
+          <label class="nf-f"><span data-src-label>الجهة الوارد منها</span><input name="external_source"></label>
+          <label class="nf-f"><span>مقدم الطلب / المعني</span><input name="applicant_name"></label>
+        </div>
+        <div class="nf-group">
+          <label class="nf-f"><span>القطاع</span><select name="sector_id" id="f-sector" required>{% for s in sectors %}<option value="{{ s.id }}"{% if s.id == compose_meta.default_sector_id %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></label>
+          <label class="nf-f"><span>الإدارة / الوحدة</span><select name="org_unit_id" id="f-unit" required>{% for u in org_units %}<option value="{{ u.id }}" data-sector="{{ u.sector_id }}"{% if u.id == compose_meta.default_unit_id %} selected{% endif %}>{{ u.name }}</option>{% endfor %}</select></label>
+          <label class="nf-f"><span>درجة السرية</span><select name="confidentiality_id" required>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+        </div>
+      </div>
+      <div class="nf-book">
+        <div class="nf-tabs" role="tablist"><button type="button" class="on" role="tab" data-nf-tab="desc">الوصف</button><button type="button" role="tab" data-nf-tab="files">المرفقات <small>(اختياري)</small></button><button type="button" role="tab" data-nf-tab="more">خيارات إضافية <small>(اختيارية)</small></button></div>
+        <div class="nf-pane" data-nf-pane="desc"><label class="nf-f nf-wide"><span>الوصف</span><textarea name="description" rows="3"></textarea></label></div>
+        <div class="nf-pane" data-nf-pane="files" hidden><label class="nf-f nf-wide"><span>الملف</span><input type="file" name="initial_attachment" multiple data-subject-files></label><small class="nf-hint" data-subject-file-count>لم يتم اختيار ملفات</small></div>
+        <div class="nf-pane" data-nf-pane="more" hidden id="entry-more"><div class="nf-groups">
+          <div class="nf-group">
+            <label class="nf-f"><span>الأولوية</span><select name="priority_id" required>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+            <label class="nf-f"><span>تاريخ الاستحقاق</span><input type="date" name="due_date"></label>
+            <label class="nf-f"><span>كلمات مفتاحية</span><input name="keywords"></label>
+            <label class="nf-f"><span>المسؤول الحالي</span><select name="current_owner_id"><option value="">أنا</option>{% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></label>
+          </div>
+          <div class="nf-group">
+            <label class="nf-f"><span>تصنيف المستند</span><select name="initial_doc_type_id">{% for dt in doc_types %}<option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}</select></label>
+            <label class="nf-f"><span>عنوان المستند</span><input name="initial_doc_title"></label>
+            {% if template_versions %}<label class="nf-f"><span>قالب مسار العمل</span><select name="workflow_template_version_id"><option value="">— بدون قالب —</option>{% for tv in template_versions %}<option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }})</option>{% endfor %}</select></label>{% endif %}
+            <label class="nf-f"><span>توجيه القطاع</span><textarea name="sector_directive" rows="2"></textarea></label>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
 </form>
 {% endblock %}
-{% block extra_js %}<script>(function(){var s=document.getElementById("f-sector"),u=document.getElementById("f-unit");function f(){var v=s.value,first=null;Array.prototype.forEach.call(u.options,function(o){o.hidden=!!(v&&o.dataset.sector&&o.dataset.sector!==v);if(!o.hidden&&!first)first=o});if(u.selectedOptions[0]&&u.selectedOptions[0].hidden&&first)u.value=first.value}s.addEventListener("change",f);f()})()</script>{% endblock %}
+{% block extra_js %}<script>document.addEventListener('DOMContentLoaded',function(){var l=document.querySelector('[data-src-label]');document.querySelectorAll('[data-dir]').forEach(function(r){r.addEventListener('change',function(){if(r.checked&&l)l.textContent=r.value==='OUT'?'الجهة الموجّه إليها':'الجهة الوارد منها'})})});document.body.classList.add("odoo-ui");document.querySelectorAll('[data-nf-tab]').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('[data-nf-tab]').forEach(function(x){x.classList.toggle('on',x===t)});document.querySelectorAll('[data-nf-pane]').forEach(function(p){p.hidden=p.dataset.nfPane!==t.dataset.nfTab})})});(function(){var s=document.getElementById("f-sector"),u=document.getElementById("f-unit");function f(){var v=s.value,first=null;Array.prototype.forEach.call(u.options,function(o){o.hidden=!!(v&&o.dataset.sector&&o.dataset.sector!==v);if(!o.hidden&&!first)first=o});if(u.selectedOptions[0]&&u.selectedOptions[0].hidden&&first)u.value=first.value}s.addEventListener("change",f);f()})()</script>{% endblock %}

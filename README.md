@@ -102,11 +102,14 @@ python manage.py runserver
 
 ---
 
+> **تحذير أمان:** الحزمة بوضع التجربة المحلية افتراضياً (`DJANGO_DEBUG=True`، حساب `an` ببيانات تجريبية معروفة، مبدّل حسابات). لا تعرضها على شبكة قبل: ضبط `DJANGO_DEBUG=False`، ومفتاح `DJANGO_SECRET_KEY` فريد، وتغيير كلمة مرور الحسابات التجريبية أو حذفها، وتقديم الملفات الثابتة عبر خادم ويب (لا `runserver`) وخلف HTTPS.
+
 ## 5. إعداد SQL Server لبيئة الإنتاج
 
 عدّل ملف `.env` بالقيم التالية:
 ```env
 DJANGO_DEBUG=False
+DJANGO_SECRET_KEY=generate-a-long-random-value
 DB_ENGINE=mssql
 DB_NAME=CorrespondenceDB
 DB_USER=correspondence_app

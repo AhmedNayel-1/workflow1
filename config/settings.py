@@ -2,18 +2,28 @@
 إعدادات Django لمنظومة السكرتارية والمراسلات والأرشفة والدورة المستندية.
 """
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "dev-only-insecure-key-replace-in-env-file-before-production",
-)
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
-ENABLE_DEV_ACCOUNT_SWITCHER = os.environ.get("ENABLE_DEV_ACCOUNT_SWITCHER", "True" if DEBUG else "False").lower() in ("1", "true", "yes")
+_DEV_SECRET_KEY = "dev-only-insecure-key-replace-in-env-file-before-production"
+_PLACEHOLDER_KEYS = {"", _DEV_SECRET_KEY, "replace-with-a-unique-random-key"}
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("1", "true", "yes")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if SECRET_KEY in _PLACEHOLDER_KEYS:
+    # خارج وضع التطوير لا يُسمح بمفتاح افتراضي معروف (إغلاق آمن). الاختبارات الآلية مستثناة.
+    if not DEBUG and "test" not in sys.argv:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY غير مضبوط أو قيمته افتراضية. اضبط مفتاحاً سرياً فريداً في .env "
+            "(أو شغّل وضع التطوير بـ DJANGO_DEBUG=True)."
+        )
+    SECRET_KEY = _DEV_SECRET_KEY
+# المبدّل لا يعمل أبداً خارج DEBUG، حتى لو ضُبط المتغير صراحة (تحقق متعدد الطبقات).
+ENABLE_DEV_ACCOUNT_SWITCHER = DEBUG and os.environ.get("ENABLE_DEV_ACCOUNT_SWITCHER", "True").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
     h.strip()

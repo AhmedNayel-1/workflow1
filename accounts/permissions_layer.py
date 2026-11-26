@@ -245,6 +245,113 @@ class CorrespondenceAccessPolicy:
 
         return False
 
+    CHAIN_ROLE_CODES = frozenset({"SECTOR_HEAD", "GENERAL_MANAGER", "SUPERVISOR"})
+    LEADERSHIP_ROLE_CODES = frozenset(
+        {"SECTOR_HEAD", "GENERAL_MANAGER", "SUPERVISOR", "SECTOR_DIR_ADMIN", "CHAIRMAN", "SYSTEM_ADMIN"}
+    )
+
+    @classmethod
+    def get_chain_unit_ids(cls, user) -> set[int]:
+        """
+        الوحدات التي يقع موظفوها ضمن التسلسل الإداري للمستخدم: رئيس القطاع، المدير العام، مشرف القسم.
+        قاعدة التسلسل: لا يعمل موظف في موضوع دون علم تسلسله الإداري ولو لم يُوجَّه إليه منهم مباشرة.
+        """
+        if not user or not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
+            return set()
+        OrgUnit = apps.get_model("organization", "OrgUnit")
+        current_unit = getattr(user, "current_unit", None)
+        ids: set[int] = set()
+        for a in cls.get_active_assignments(user):
+            code = a.role.code
+            if code not in cls.CHAIN_ROLE_CODES:
+                continue
+            if code == "SECTOR_HEAD" and a.org_unit is None and a.sector_id is not None:
+                ids.update(OrgUnit.objects.filter(sector_id=a.sector_id, is_active=True).values_list("id", flat=True))
+                continue
+            target = a.org_unit or current_unit
+            if target is not None:
+                ids.update(target.get_descendant_ids())
+            elif a.sector_id is not None and code != "SUPERVISOR":
+                ids.update(OrgUnit.objects.filter(sector_id=a.sector_id, is_active=True).values_list("id", flat=True))
+        return ids
+
+    @classmethod
+    def get_chain_employee_ids(cls, user) -> set[int]:
+        """معرّفات الموظفين (غير القياديين) في الوحدات الواقعة ضمن تسلسل المستخدم، دون المستخدم نفسه."""
+        unit_ids = cls.get_chain_unit_ids(user)
+        if not unit_ids:
+            return set()
+        User = apps.get_model("accounts", "User")
+        UserRoleAssignment = apps.get_model("accounts", "UserRoleAssignment")
+        leaders = set(
+            UserRoleAssignment.objects.filter(is_active=True, role__code__in=cls.LEADERSHIP_ROLE_CODES)
+            .values_list("user_id", flat=True)
+        )
+        qs = User.objects.filter(is_active=True, employee__current_unit_id__in=unit_ids).exclude(id=user.id)
+        return {uid for uid in qs.values_list("id", flat=True) if uid not in leaders and uid}
+
+    @classmethod
+    def get_gm_chain_employee_ids(cls, user) -> set[int]:
+        """موظفو الوحدات التابعة للمدير العام فقط (للسري للغاية): لا يشمل المشرف ولا سكرتارية المدير العام."""
+        if not user or not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
+            return set()
+        current_unit = getattr(user, "current_unit", None)
+        unit_ids: set[int] = set()
+        for a in cls.get_active_assignments(user):
+            if a.role.code != "GENERAL_MANAGER":
+                continue
+            target = a.org_unit or current_unit
+            if target is not None:
+                unit_ids.update(target.get_descendant_ids())
+        if not unit_ids:
+            return set()
+        User = apps.get_model("accounts", "User")
+        UserRoleAssignment = apps.get_model("accounts", "UserRoleAssignment")
+        leaders = set(
+            UserRoleAssignment.objects.filter(is_active=True, role__code__in=cls.LEADERSHIP_ROLE_CODES)
+            .values_list("user_id", flat=True)
+        )
+        qs = User.objects.filter(is_active=True, employee__current_unit_id__in=unit_ids).exclude(id=user.id)
+        return {uid for uid in qs.values_list("id", flat=True) if uid not in leaders}
+
+    @classmethod
+    def get_delegated_chain_employee_ids(cls, delegation) -> set[int]:
+        """موظفو تسلسل المفوِّض داخل نطاق وحدة التفويض (إن وُجد). السكرتارية ترى ما يُوجَّه لموظفي المدير الذي تنوب عنه."""
+        ids = cls.get_chain_employee_ids(delegation.delegator)
+        if not ids or delegation.scope_unit_id is None:
+            return ids
+        User = apps.get_model("accounts", "User")
+        scope = delegation.scope_unit.get_descendant_ids()
+        return set(
+            User.objects.filter(id__in=ids, employee__current_unit_id__in=scope).values_list("id", flat=True)
+        )
+
+    @classmethod
+    def _chain_directed_q(cls, employee_ids) -> Q:
+        return (
+            Q(current_owner_id__in=employee_ids)
+            | (Q(referrals__recipients__target_user_id__in=employee_ids) & ~Q(referrals__recipients__status="WITHDRAWN"))
+            | Q(tasks__assigned_to_id__in=employee_ids)
+        )
+
+    @classmethod
+    def _is_directed_to_chain_employee(cls, user, subject) -> bool:
+        return cls._subject_directed_to(subject, cls.get_chain_employee_ids(user))
+
+    @classmethod
+    def _subject_directed_to(cls, subject, employee_ids) -> bool:
+        if not employee_ids:
+            return False
+        if subject.current_owner_id in employee_ids:
+            return True
+        ReferralRecipient = apps.get_model("workflow", "ReferralRecipient")
+        Task = apps.get_model("workflow", "Task")
+        if ReferralRecipient.objects.filter(
+            referral__subject=subject, target_user_id__in=employee_ids
+        ).exclude(status="WITHDRAWN").exists():
+            return True
+        return Task.objects.filter(subject=subject, assigned_to_id__in=employee_ids).exists()
+
     @classmethod
     def can_view_subject(cls, user, subject, _visited_delegators=None) -> bool:
         if not user or not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
@@ -277,6 +384,10 @@ class CorrespondenceAccessPolicy:
                 continue
             if subject.confidentiality.overrides_hierarchy and not delegation.allow_confidential:
                 continue
+            if not subject.confidentiality.overrides_hierarchy:
+                chain_ids = cls.get_delegated_chain_employee_ids(delegation)
+                if chain_ids and cls._subject_directed_to(subject, chain_ids):
+                    return True
             if delegation.scope_unit_id is not None:
                 if subject.org_unit_id not in delegation.scope_unit.get_descendant_ids():
                     continue
@@ -285,7 +396,15 @@ class CorrespondenceAccessPolicy:
 
         # 5. السرية الفائقة (سري للغاية): محصورة بالمباشرين والمصرح لهم صراحة فقط
         if subject.confidentiality.overrides_hierarchy:
-            return False
+            # المدير العام الأعلى تنظيميًا من الموظف المنفذ يرى «سري للغاية» الموجّه لموظف في إدارته (دون المشرف ولا السكرتارية)
+            # عبر التفويض (سكرتارية المدير العام) لا تُورَّث هذه القاعدة؛ تبقى لشخص المدير العام فقط
+            if _visited_delegators:
+                return False
+            return cls._subject_directed_to(subject, cls.get_gm_chain_employee_ids(user))
+
+        # 5ب. التسلسل الإداري يعلم بما يُوجَّه لموظفيه (رئيس القطاع / المدير العام / مشرف القسم)
+        if cls._is_directed_to_chain_employee(user, subject):
+            return True
 
         # 6. عزل القطاعات والوحدات التنظيمية في الطبقة المركزية
         boundaries = cls.get_user_scope_boundaries(user)
@@ -422,7 +541,24 @@ class CorrespondenceAccessPolicy:
                 )
                 scope_q = Q(confidentiality__overrides_hierarchy=False) & sec_filter & (unit_filter | unit_ref_filter)
 
-        positive_q = grant_q | direct_q | delegation_q | scope_q
+        # 5ب. التسلسل الإداري: ما يُوجَّه لموظفين تحت رئيس القطاع / المدير العام / المشرف (غير السري للغاية)
+        chain_q = Q(pk__in=[])
+        chain_employee_ids = cls.get_chain_employee_ids(user)
+        if chain_employee_ids:
+            chain_q = Q(confidentiality__overrides_hierarchy=False) & cls._chain_directed_q(chain_employee_ids)
+
+        for delegation in cls.get_active_delegations(user):
+            if "SUBJECT_VIEW" not in (delegation.allowed_actions or []):
+                continue
+            d_ids = cls.get_delegated_chain_employee_ids(delegation)
+            if d_ids:
+                chain_q |= Q(confidentiality__overrides_hierarchy=False) & cls._chain_directed_q(d_ids)
+
+        gm_ids = cls.get_gm_chain_employee_ids(user)
+        if gm_ids:
+            chain_q |= Q(confidentiality__overrides_hierarchy=True) & cls._chain_directed_q(gm_ids)
+
+        positive_q = grant_q | direct_q | delegation_q | scope_q | chain_q
         return positive_q & deny_filter
 
     @classmethod

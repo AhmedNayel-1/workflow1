@@ -87,7 +87,7 @@ def logout_view(request):
 @login_required
 def switch_user_view(request):
     """مبدّل المستخدمين السريع للاختبار المحلي قبل النشر (يُعطّل تلقائياً عند إيقاف DEBUG)."""
-    if not (getattr(settings, "ENABLE_DEV_ACCOUNT_SWITCHER", False) or getattr(settings, "DEBUG", False)):
+    if not getattr(settings, "ENABLE_DEV_ACCOUNT_SWITCHER", False):
         raise PermissionDenied("مبدّل المستخدمين متاح في وضع الاختبار المحلي فقط.")
 
     raw_val = (
@@ -132,6 +132,84 @@ def switch_user_view(request):
     return redirect("core:dashboard")
 
 
+def create_user_account(actor, *, username, password, full_name, job_title="", emp_no="", unit_obj=None, role_obj=None,
+                        sector_obj=None, is_secretariat=False, is_active=True, ip=None):
+    """إنشاء مستخدم + موظف + إسناد دور (المنطق الأصلي لشاشة إدارة المستخدمين، مستخرج ليُعاد استخدامه في الاستيراد الجماعي)."""
+    from django.db import transaction
+    from core.models import SystemSequence
+    from organization.models import PositionAssignment
+    is_full_admin = bool(actor.is_superuser or actor.is_system_admin)
+    forbidden_roles_for_scoped = {"SYSTEM_ADMIN", "CHAIRMAN", "SECTOR_DIR_ADMIN"}
+    if not is_full_admin:
+        if unit_obj is None:
+            raise PermissionDenied("يجب تحديد الوحدة التنظيمية داخل نطاقك عند إنشاء المستخدم.")
+        if not PermissionService.can_manage_target_user(
+            actor,
+            target_sector_id=sector_obj.id if sector_obj else None,
+            target_unit_id=unit_obj.id,
+        ):
+            raise PermissionDenied("لا يمكنك إنشاء مستخدم خارج نطاق قطاعك أو إدارتك العامة.")
+        if role_obj and role_obj.code in forbidden_roles_for_scoped:
+            raise PermissionDenied("لا يمكنك إسناد دور قيادي أعلى أو مسؤول نظام.")
+
+    with transaction.atomic():
+        emp_obj = None
+        if unit_obj is not None:
+            final_emp_no = emp_no or SystemSequence.next_number("EMPLOYEE", "EMP")
+            if Employee.objects.filter(employee_number=final_emp_no).exists():
+                final_emp_no = SystemSequence.next_number("EMPLOYEE", "EMP")
+            emp_obj = Employee.objects.create(
+                employee_number=final_emp_no,
+                full_name=full_name,
+                job_title=job_title or (role_obj.name if role_obj else "موظف"),
+                current_unit=unit_obj,
+                is_active=is_active,
+            )
+            PositionAssignment.objects.create(
+                employee=emp_obj,
+                org_unit=unit_obj,
+                position_title=emp_obj.job_title,
+                start_date=timezone.localdate(),
+                is_current=True,
+            )
+
+        new_user = User.objects.create(
+            username=username,
+            first_name=full_name,
+            employee=emp_obj,
+            job_display_title=job_title or (role_obj.name if role_obj else ""),
+            is_secretariat=is_secretariat,
+            is_active=is_active,
+            is_superuser=False,
+            is_staff=False,
+            is_system_admin=False,
+        )
+        new_user.set_password(password)
+        new_user.save()
+
+        if role_obj is not None:
+            UserRoleAssignment.objects.create(
+                user=new_user,
+                role=role_obj,
+                sector=sector_obj,
+                org_unit=unit_obj,
+                is_active=True,
+            )
+
+        AuditService.log_audit(
+            actor=actor,
+            action="USER_CREATED",
+            model_name="User",
+            object_id=new_user.id,
+            after_state={
+                "username": username,
+                "unit": unit_obj.code if unit_obj else None,
+                "role": role_obj.code if role_obj else None,
+            },
+            ip_address=ip,
+        )
+
+
 @login_required
 def users_list(request):
     """إدارة حسابات المستخدمين (Superuser بالكامل، ومسؤول القطاع/الإدارة العامة ضمن نطاقه فقط)."""
@@ -174,74 +252,11 @@ def users_list(request):
                     if sector_id
                     else (unit_obj.sector if unit_obj else None)
                 )
-                if not is_full_admin:
-                    if unit_obj is None:
-                        raise PermissionDenied("يجب تحديد الوحدة التنظيمية داخل نطاقك عند إنشاء المستخدم.")
-                    if not PermissionService.can_manage_target_user(
-                        request.user,
-                        target_sector_id=sector_obj.id if sector_obj else None,
-                        target_unit_id=unit_obj.id,
-                    ):
-                        raise PermissionDenied("لا يمكنك إنشاء مستخدم خارج نطاق قطاعك أو إدارتك العامة.")
-                    if role_obj and role_obj.code in forbidden_roles_for_scoped:
-                        raise PermissionDenied("لا يمكنك إسناد دور قيادي أعلى أو مسؤول نظام.")
-
-                with transaction.atomic():
-                    emp_obj = None
-                    if unit_obj is not None:
-                        final_emp_no = emp_no or SystemSequence.next_number("EMPLOYEE", "EMP")
-                        if Employee.objects.filter(employee_number=final_emp_no).exists():
-                            final_emp_no = SystemSequence.next_number("EMPLOYEE", "EMP")
-                        emp_obj = Employee.objects.create(
-                            employee_number=final_emp_no,
-                            full_name=full_name,
-                            job_title=job_title or (role_obj.name if role_obj else "موظف"),
-                            current_unit=unit_obj,
-                            is_active=is_active,
-                        )
-                        PositionAssignment.objects.create(
-                            employee=emp_obj,
-                            org_unit=unit_obj,
-                            position_title=emp_obj.job_title,
-                            start_date=timezone.localdate(),
-                            is_current=True,
-                        )
-
-                    new_user = User.objects.create(
-                        username=username,
-                        first_name=full_name,
-                        employee=emp_obj,
-                        job_display_title=job_title or (role_obj.name if role_obj else ""),
-                        is_secretariat=is_secretariat,
-                        is_active=is_active,
-                        is_superuser=False,
-                        is_staff=False,
-                        is_system_admin=False,
-                    )
-                    new_user.set_password(password)
-                    new_user.save()
-
-                    if role_obj is not None:
-                        UserRoleAssignment.objects.create(
-                            user=new_user,
-                            role=role_obj,
-                            sector=sector_obj,
-                            org_unit=unit_obj,
-                            is_active=True,
-                        )
-
-                    AuditService.log_audit(
-                        actor=request.user,
-                        action="USER_CREATED",
-                        model_name="User",
-                        object_id=new_user.id,
-                        after_state={
-                            "username": username,
-                            "unit": unit_obj.code if unit_obj else None,
-                            "role": role_obj.code if role_obj else None,
-                        },
-                        ip_address=_get_client_ip(request),
-                    )
+                create_user_account(
+                    request.user, username=username, password=password, full_name=full_name, job_title=job_title,
+                    emp_no=emp_no, unit_obj=unit_obj, role_obj=role_obj, sector_obj=sector_obj,
+                    is_secretariat=is_secretariat, is_active=is_active, ip=_get_client_ip(request),
+                )
                 messages.success(request, f"تم إنشاء حساب المستخدم ({full_name} / {username}) بنجاح.")
 
         elif action == "assign_role":
@@ -349,6 +364,11 @@ def users_list(request):
                         ip_address=_get_client_ip(request),
                     )
                     messages.warning(request, f"المستخدم ({target_username}) مرتبط بمراسلات تاريخية؛ تم إيقاف حسابه حفاظاً على سلامة السجل.")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from django.http import JsonResponse
+            msgs = list(messages.get_messages(request))
+            ok = any(m.level_tag == "success" for m in msgs) and not any(m.level_tag == "error" for m in msgs)
+            return JsonResponse({"ok": ok, "message": " ".join(str(m) for m in msgs), "error": "" if ok else " ".join(str(m) for m in msgs)}, status=200 if ok else 400)
         return redirect("accounts:users_list")
 
     users_qs = User.objects.select_related("employee__current_unit__sector").prefetch_related(

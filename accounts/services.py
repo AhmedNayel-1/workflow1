@@ -12,6 +12,10 @@ from .models import Delegation, RolePermission, User, UserRoleAssignment
 from .permissions_layer import CorrespondenceAccessPolicy
 
 
+def _active_ids(ids):
+    return set(User.objects.filter(id__in=ids, is_active=True).values_list("id", flat=True))
+
+
 class PermissionService:
     @staticmethod
     def is_manager(user: User) -> bool:
@@ -355,7 +359,45 @@ class PermissionService:
         return False
 
     @classmethod
+    def can_distribute_decision(cls, user: User, decision) -> bool:
+        """توزيع القرار: المعتمد، أو صاحب صلاحية التوزيع (مشرف القسم، سكرتارية القسم، الموظف المختص) وهو في عهدته."""
+        subject = decision.subject
+        rank = subject.confidentiality.rank
+        if cls.user_has_permission(user, "DECISION_APPROVE", sector=subject.sector, confidentiality_rank=rank, subject=subject):
+            return True
+        return cls.can_act_on_subject(user, subject) and cls.user_has_permission(
+            user, "DECISION_DISTRIBUTE", sector=subject.sector, confidentiality_rank=rank, subject=subject
+        )
+
+    @classmethod
     def get_allowed_referral_targets(cls, user: User, subject) -> QuerySet:
+        """الهرمية للأسفل + إعادة العهدة للأعلى لمن سبق أن أحال الموضوع في السلسلة."""
+        down = cls._get_downward_referral_targets(user, subject)
+        if not user or not user.is_authenticated or not user.is_active:
+            return down
+        if user.is_superuser or user.is_system_admin:
+            return down
+        Referral = apps.get_model("workflow", "Referral")
+        upstream_ids = set(
+            Referral.objects.filter(subject=subject).exclude(referred_by=user).values_list("referred_by_id", flat=True)
+        )
+        if subject.created_by_id and subject.created_by_id != user.id:
+            upstream_ids.add(subject.created_by_id)
+        # إعادة العهدة للأعلى فقط لمن ليس تحته؛ المستلم الحالي أو من أحيل إليه يعيد لمن أحال إليه ولمن تقدمه في السلسلة
+        my_chain_ids = set(
+            apps.get_model("workflow", "ReferralRecipient").objects.filter(
+                referral__subject=subject, target_user=user
+            ).values_list("referral__referred_by_id", flat=True)
+        )
+        if not my_chain_ids:
+            return down
+        return User.objects.filter(
+            Q(id__in=set(down.values_list("id", flat=True))) | Q(id__in=upstream_ids & _active_ids(upstream_ids)),
+            is_active=True,
+        ).exclude(id=user.id).select_related("employee__current_unit").distinct()
+
+    @classmethod
+    def _get_downward_referral_targets(cls, user: User, subject) -> QuerySet:
         """
         تحديد المستخدمين المسموح بتوجيه الإحالة إليهم وفق التسلسل الهرمي وعزل القطاعات والوحدات:
         - رئيس مجلس الإدارة -> رؤساء القطاعات والمديرون العامون (في قطاع الموضوع أو المعنيين)
@@ -374,6 +416,12 @@ class PermissionService:
         if delegation and ("SECRETARIAT" in roles or not roles):
             effective_user = delegation.delegator
             roles = cls.get_effective_role_codes(effective_user, sector=subject.sector)
+
+        if not roles and effective_user.current_unit and effective_user.current_unit.sector_id:
+            # قطاع آخر أُحيل إليه الموضوع (مثل المالية والموارد البشرية في الإسكان): صلاحيته داخل قطاعه
+            roles = cls.get_effective_role_codes(effective_user, sector=effective_user.current_unit.sector)
+            if "SECRETARIAT" in roles:
+                roles = set()
 
         base_qs = User.objects.filter(is_active=True).exclude(id=effective_user.id).select_related("employee__current_unit")
 
@@ -397,32 +445,56 @@ class PermissionService:
         if "SECTOR_HEAD" in roles:
             if subject.confidentiality.overrides_hierarchy:
                 return base_qs.filter(employee__current_unit__sector=subject.sector).distinct()
+            # رئيس القطاع يوجه للمدير العام، أو مباشرة للمشرف/الموظف المختص (تتطلع المستويات بينهما)،
+            # أو لنظيره رئيس قطاع آخر (مثلاً من قطاعات الإنتاج إلى المالية والموارد البشرية)
+            own_unit = effective_user.current_unit
+            sectors = {subject.sector_id}
+            if own_unit and own_unit.sector_id:
+                sectors.add(own_unit.sector_id)  # رئيس قطاع آخر أُحيل إليه الموضوع يوجه داخل قطاعه
             return base_qs.filter(
-                employee__current_unit__sector=subject.sector,
-                role_assignments__is_active=True,
-                role_assignments__role__code="GENERAL_MANAGER",
+                Q(
+                    employee__current_unit__sector_id__in=sectors,
+                    role_assignments__is_active=True,
+                    role_assignments__role__code__in=["GENERAL_MANAGER", "SUPERVISOR", "SPECIALIST"],
+                )
+                | Q(
+                    role_assignments__is_active=True,
+                    role_assignments__role__code="SECTOR_HEAD",
+                )
+                # قرار أحمد (Telegram 17622179): رئيس القطاع أو رئيس القطاعات يرفع إلى رئيس المجلس
+                # حتى لو لم يكن رئيس المجلس ضمن سلسلة الموضوع (غير السري للغاية فقط).
+                | Q(
+                    role_assignments__is_active=True,
+                    role_assignments__role__code="CHAIRMAN",
+                )
             ).distinct()
 
+        _own_sectors = {subject.sector_id} | ({effective_user.current_unit.sector_id} if effective_user.current_unit and effective_user.current_unit.sector_id else set())
         if "GENERAL_MANAGER" in roles:
             unit = effective_user.current_unit
             descendant_ids = unit.get_descendant_ids() if unit else set()
             qs = base_qs.filter(
-                employee__current_unit__sector=subject.sector,
+                employee__current_unit__sector_id__in=_own_sectors,
                 role_assignments__is_active=True,
                 role_assignments__role__code="SUPERVISOR",
             )
             if descendant_ids:
                 qs = qs.filter(employee__current_unit_id__in=descendant_ids)
-            if subject.org_unit_id and (not descendant_ids or subject.org_unit_id in descendant_ids):
-                section_sups = qs.filter(employee__current_unit_id=subject.org_unit_id).distinct()
-                if section_sups.exists():
-                    return section_sups
-            return qs.distinct()
+            # المدير العام يوجه للمشرف المختص أو مباشرة للموظف المختص داخل إدارته
+            emp_qs = base_qs.filter(
+                employee__current_unit__sector_id__in=_own_sectors,
+                role_assignments__is_active=True,
+                role_assignments__role__code="SPECIALIST",
+            )
+            if descendant_ids:
+                emp_qs = emp_qs.filter(employee__current_unit_id__in=descendant_ids)
+            ids = set(qs.values_list("id", flat=True)) | set(emp_qs.values_list("id", flat=True))
+            return base_qs.filter(id__in=ids).distinct()
 
         if "SUPERVISOR" in roles:
             target_unit_id = effective_user.current_unit.id if effective_user.current_unit else subject.org_unit_id
             qs = base_qs.filter(
-                employee__current_unit__sector=subject.sector,
+                employee__current_unit__sector_id__in=_own_sectors,
                 role_assignments__is_active=True,
                 role_assignments__role__code="SPECIALIST",
             )

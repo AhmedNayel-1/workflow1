@@ -39,7 +39,11 @@ set "VIRTUAL_ENV=%PROJECT_DIR%venv"
 
 echo [1/3] التحقق من حالة الترحيلات وتهيئة Django...
 "%VENV_PY%" "%PROJECT_DIR%manage.py" migrate --check >nul 2>&1
+if not errorlevel 1 goto :migrate_ok
+echo تطبيق الترحيلات الناقصة فقط، بدون المساس بالبيانات الحالية...
+"%VENV_PY%" "%PROJECT_DIR%manage.py" migrate --noinput
 if errorlevel 1 goto :err_migrate_pending
+:migrate_ok
 
 "%VENV_PY%" "%PROJECT_DIR%manage.py" check
 if errorlevel 1 goto :err_check
@@ -47,16 +51,27 @@ if errorlevel 1 goto :err_check
 echo [2/3] التحقق من توفر المنفذ %SERVER_PORT%...
 if exist "%HELPER%" (
     "%VENV_PY%" "%HELPER%" check-port 127.0.0.1 %SERVER_PORT% >nul 2>&1
-    if errorlevel 1 goto :err_port_busy
+    if errorlevel 1 goto :port_busy
 )
+goto :port_ok
+:port_busy
+echo المنفذ %SERVER_PORT% مستخدم، البحث عن منفذ آخر...
+set /a SERVER_PORT=SERVER_PORT+1
+if %SERVER_PORT% GTR 8100 goto :err_port_busy
+"%VENV_PY%" "%HELPER%" check-port 127.0.0.1 %SERVER_PORT% >nul 2>&1
+if errorlevel 1 goto :port_busy
+:port_ok
 
 echo [3/3] تشغيل الخادم الآن على: http://127.0.0.1:%SERVER_PORT%/
 echo حساب الاختبار Superuser: an  ^|  كلمة المرور: 123
 echo اضغط Ctrl+C لإيقاف الخادم.
 echo.
+start "" "http://127.0.0.1:%SERVER_PORT%/" >nul 2>&1
 "%VENV_PY%" "%PROJECT_DIR%manage.py" runserver 127.0.0.1:%SERVER_PORT%
 if errorlevel 1 goto :err_runtime
-
+echo.
+echo توقف الخادم.
+pause
 endlocal
 exit /b 0
 

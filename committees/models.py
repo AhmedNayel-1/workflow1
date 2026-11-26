@@ -3,7 +3,7 @@ from django.db import models
 
 
 class Committee(models.Model):
-    """اللجان المؤسسية (شئون العاملين، العليا للتدريب، الإسكان...)."""
+    """اللجان المؤسسية (شئون العاملين، التدريب، الإسكان...)."""
     code = models.CharField("كود اللجنة", max_length=40, unique=True)
     name = models.CharField("اسم اللجنة", max_length=180)
     sector = models.ForeignKey(

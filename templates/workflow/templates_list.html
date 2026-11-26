@@ -1,9 +1,22 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}قوالب مسارات العمل{% endblock %}
 {% block heading %}قوالب مسارات العمل{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 <div class="page-h"><div><h2>قوالب مسارات العمل</h2><p>مسارات افتراضية بخطواتها المقترحة، يمكن تطبيقها على أي موضوع من صفحته.</p></div></div>
-<div class="grid g2">{% for t in templates %}<section class="panel"><div class="panel-h"><div><h3>{{ t.name }}</h3><span class="muted xs">{{ t.transaction_type.name|default:"عام" }}{% if t.sector %} · {{ t.sector.name }}{% endif %}</span></div><div class="row gap-s"><span class="tag code">{{ t.code }}</span>{% if t.is_active %}<span class="pill ok">مفعّل</span>{% else %}<span class="pill nodot">معطّل</span>{% endif %}</div></div><div class="panel-b">
-  {% for v in t.versions.all %}<details class="dd mb" {% if v.is_active %}open{% endif %}><summary><span>الإصدار <b class="num">{{ v.version_number }}</b> {% if v.is_active %}<span class="pill brand nodot">المعتمد</span>{% endif %}</span><span class="muted xs">{{ v.steps.all|length }} خطوة</span></summary><div class="dd-b">{% if v.notes %}<p class="muted sm mb">{{ v.notes }}</p>{% endif %}<div class="tl">{% for s in v.steps.all %}<div class="tl-i"><b>{{ s.step_title }}</b><small>{{ s.suggested_unit|default:"—" }}{% if s.sla_hours %} · {{ s.sla_hours }} ساعة{% endif %}{% if s.is_optional %} · اختيارية{% endif %}</small>{% if s.suggested_action %}<p>{{ s.suggested_action }}</p>{% endif %}</div>{% endfor %}</div></div></details>{% empty %}<p class="muted sm">لا توجد إصدارات.</p>{% endfor %}</div></section>
-{% empty %}<div class="panel" style="grid-column:1/-1">{% include "partials/empty.html" with title="لا توجد قوالب" icon_name="flow" %}</div>{% endfor %}</div>
+<div class="template-tools">
+  <label class="search-in template-search"><span class="sr-only">البحث في قوالب مسارات العمل</span><input class="in" type="search" data-workflow-template-search placeholder="ابحث باسم القالب أو الكود أو القطاع أو الخطوة…" autocomplete="off"></label>
+  <span class="muted xs" data-workflow-template-count aria-live="polite"></span>
+</div>
+<div class="grid g2" data-workflow-template-workspace>
+{% for t in templates %}
+  <section class="panel" data-workflow-template-card>
+    <div class="panel-h"><div><h3>{{ t.name }}</h3><span class="muted xs">{{ t.transaction_type.name|default:"عام" }}{% if t.sector %} · {{ t.sector.name }}{% endif %}</span></div><div class="row gap-s"><span class="tag code">{{ t.code }}</span>{% if t.is_active %}<span class="pill ok">مفعّل</span>{% else %}<span class="pill nodot">معطّل</span>{% endif %}</div></div>
+    <div class="panel-b">
+      {% for v in t.versions.all %}<details class="dd mb" {% if v.is_active %}open{% endif %}><summary><span>الإصدار <b class="num">{{ v.version_number }}</b> {% if v.is_active %}<span class="pill brand nodot">المعتمد</span>{% endif %}</span><span class="muted xs">{{ v.steps.all|length }} خطوة</span></summary><div class="dd-b">{% if v.notes %}<p class="muted sm mb">{{ v.notes }}</p>{% endif %}<div class="tl">{% for s in v.steps.all %}<div class="tl-i"><b>{{ s.step_title }}</b><small>{{ s.suggested_unit|default:"—" }}{% if s.sla_hours %} · {{ s.sla_hours }} ساعة{% endif %}{% if s.is_optional %} · اختيارية{% endif %}</small>{% if s.suggested_action %}<p>{{ s.suggested_action }}</p>{% endif %}</div>{% endfor %}</div></div></details>{% empty %}<p class="muted sm">لا توجد إصدارات.</p>{% endfor %}
+    </div>
+  </section>
+{% empty %}<div class="panel" style="grid-column:1/-1">{% include "partials/empty.html" with title="لا توجد قوالب" icon_name="flow" %}</div>{% endfor %}
+</div>
+<div class="panel template-no-results" data-workflow-template-empty hidden>لا توجد قوالب مطابقة لعبارة البحث.</div>
 {% endblock %}

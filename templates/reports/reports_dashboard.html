@@ -1,7 +1,8 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}التقارير{% endblock %}
 {% block heading %}التقارير والإحصاءات{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 <div class="page-h"><div><h2>التقارير والإحصاءات</h2><p>{% if user_scope.scope_label %}نطاقك: {{ user_scope.scope_label }}{% else %}تقارير إدارية وتشغيلية بحسب نطاق صلاحياتك.{% endif %}</p></div></div>
-<div class="grid g3">{% for r in reports_list %}<a class="tile" href="{% url 'reports:report_detail' r.slug %}"><span class="ico">{% icon 'chart' %}</span><b><span class="num">{{ r.number }}</span> · {{ r.title }}</b><small>{{ r.subtitle }}</small><span class="pill info nodot" style="align-self:flex-start">{{ r.category }}</span></a>{% endfor %}</div>
+<section class="report-catalog" data-report-catalog><div class="report-catalog-tools"><label class="search-in report-catalog-search">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-report-catalog-search placeholder="ابحث باسم التقرير أو رقمه أو تصنيفه…" aria-label="البحث في التقارير"></label><span class="muted xs" data-report-catalog-count aria-live="polite"></span><span class="muted xs">البحث داخل التقارير المتاحة لحسابك</span></div><div class="grid g3">{% for r in reports_list %}<a class="tile" data-report-card href="{% url 'reports:report_detail' r.slug %}"><span class="ico">{% icon 'chart' %}</span><b><span class="num">{{ r.number }}</span> · {{ r.title }}</b><small>{{ r.subtitle }}</small><span class="pill info nodot" style="align-self:flex-start">{{ r.category }}</span></a>{% endfor %}</div></section>
 {% endblock %}

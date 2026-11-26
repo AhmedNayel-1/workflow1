@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}إعدادات المنظومة{% endblock %}
 {% block heading %}إعدادات المنظومة{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 <div class="page-h"><div><h2>إعدادات المنظومة</h2><p>القوائم المرجعية التي تعتمد عليها النماذج في كل الشاشات.</p></div></div>
 <div class="tabs mb"><a class="tab {% if active_tab == 'transaction_types' %}on{% endif %}" href="?tab=transaction_types">أنواع المعاملات</a><a class="tab {% if active_tab == 'doc_types' %}on{% endif %}" href="?tab=doc_types">أنواع المستندات</a><a class="tab {% if active_tab == 'memo_types' %}on{% endif %}" href="?tab=memo_types">أنواع المذكرات</a><a class="tab {% if active_tab == 'memo_directed_targets' %}on{% endif %}" href="?tab=memo_directed_targets">جهات المذكرات</a><a class="tab {% if active_tab == 'confidentiality_levels' %}on{% endif %}" href="?tab=confidentiality_levels">درجات السرية</a><a class="tab {% if active_tab == 'priority_levels' %}on{% endif %}" href="?tab=priority_levels">الأولويات</a><a class="tab {% if active_tab == 'suspension_reasons' %}on{% endif %}" href="?tab=suspension_reasons">أسباب التعليق</a></div>
@@ -8,7 +9,7 @@
 {% elif active_tab == 'memo_types' %}{% include "partials/settings_list.html" with items=memo_types_list tab="memo_types" has_code=True %}
 {% elif active_tab == 'memo_directed_targets' %}{% include "partials/settings_list.html" with items=memo_targets_list tab="memo_directed_targets" %}
 {% elif active_tab == 'confidentiality_levels' %}{% include "partials/settings_list.html" with items=confidentialities tab="confidentiality_levels" has_code=True has_rank=True %}
-{% elif active_tab == 'priority_levels' %}{% include "partials/settings_list.html" with items=priorities tab="priority_levels" has_rank=True %}
+{% elif active_tab == 'priority_levels' %}{% include "partials/settings_list.html" with items=priorities tab="priority_levels" has_rank=True has_sla=True %}
 {% elif active_tab == 'suspension_reasons' %}{% include "partials/settings_list.html" with items=suspension_reasons tab="suspension_reasons" %}
 {% else %}{% include "partials/settings_list.html" with items=transaction_types tab="transaction_types" has_code=True is_tx=True %}{% endif %}
 {% if retention_policies %}<section class="panel mt-l"><div class="panel-h"><h3>سياسات الاحتفاظ</h3></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>الكود</th><th>الاسم</th><th>سنوات الاحتفاظ</th></tr></thead><tbody>{% for r in retention_policies %}<tr><td><span class="tag code">{{ r.code }}</span></td><td>{{ r.name }}</td><td class="num">{{ r.retention_years }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}

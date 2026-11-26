@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}استيراد مستخدمين{% endblock %}
+{% block heading %}استيراد مستخدمين{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>استيراد مستخدمين دفعة واحدة</h2><p>حمّل القالب، املأه، ارفعه، راجع المعاينة ثم أكّد. يُنشأ كل مستخدم بنفس منطق وصلاحيات «مستخدم جديد».</p></div><a class="btn" href="{% url 'accounts:users_list' %}">رجوع لإدارة المستخدمين</a></div>
+{% if not preview and not results %}
+<section class="panel"><div class="panel-b col">
+  <div class="row wrap"><a class="btn" href="{% url 'accounts:bulk_template' 'xlsx' %}" data-bulk-tpl="xlsx">تحميل القالب (Excel)</a><a class="btn" href="{% url 'accounts:bulk_template' 'csv' %}" data-bulk-tpl="csv">تحميل القالب (CSV)</a></div>
+  <p class="muted xs">الأعمدة: الاسم الكامل، اسم المستخدم، كلمة المرور، المسمى الوظيفي، الوحدة (الكود أو الاسم)، الدور (كود أو اسم، اختياري)، الرقم الوظيفي (اختياري)، سكرتارية (نعم/لا). الحد الأقصى {{ max_rows }} صفاً. الوحدة مطلوبة.</p>
+  <form method="post" enctype="multipart/form-data" class="row wrap">{% csrf_token %}<input type="hidden" name="action" value="preview"><input class="in" type="file" name="file" accept=".csv,.xlsx" required data-bulk-file><button class="btn primary" type="submit">معاينة</button></form>
+</div></section>
+{% endif %}
+{% if preview %}
+<section class="panel"><div class="panel-b col">
+  <div class="row wrap"><b data-bulk-ok>{{ ok_count }}</b> صف سليم · <b data-bulk-bad style="color:#b3261e">{{ bad_count }}</b> صف به أخطاء (لن يُنشأ)</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>سطر</th><th>الاسم</th><th>اسم المستخدم</th><th>الوحدة</th><th>الدور</th><th>سكرتارية</th><th>الحالة</th></tr></thead><tbody>
+  {% for r in preview %}<tr data-bulk-row {% if r.errors %}style="background:#fff3f2"{% endif %}><td>{{ r.line }}</td><td>{{ r.full_name }}</td><td class="ltr">{{ r.username }}</td><td>{{ r.unit }}</td><td>{{ r.role|default:"—" }}</td><td>{% if r.secretariat %}نعم{% else %}لا{% endif %}</td><td>{% if r.errors %}<span style="color:#b3261e">{{ r.errors|join:"، " }}</span>{% else %}سليم{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="row wrap">{% if ok_count %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="confirm"><input type="hidden" name="token" value="{{ token }}"><button class="btn primary" type="submit" data-bulk-confirm>تأكيد وإنشاء {{ ok_count }} مستخدم</button></form>{% endif %}<a class="btn" href="{% url 'accounts:bulk_users' %}">إلغاء</a></div>
+</div></section>
+{% endif %}
+{% if results %}
+<section class="panel"><div class="panel-b col">
+  <div class="row wrap"><b data-bulk-created>{{ created }}</b> تم إنشاؤهم · <b data-bulk-failed>{{ failed }}</b> لم يُنشأوا</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>سطر</th><th>الاسم</th><th>اسم المستخدم</th><th>الوحدة</th><th>النتيجة</th></tr></thead><tbody>
+  {% for r in results %}<tr data-bulk-result><td>{{ r.line }}</td><td>{{ r.full_name }}</td><td class="ltr">{{ r.username }}</td><td>{{ r.unit }}</td><td>{{ r.status }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="row wrap"><a class="btn primary" href="{% url 'accounts:bulk_users' %}">استيراد ملف آخر</a><a class="btn" href="{% url 'organization:org_tree' %}">الهيكل التنظيمي</a></div>
+</div></section>
+{% endif %}
+{% endblock %}

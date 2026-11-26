@@ -1,0 +1,68 @@
+/* odoo-version: subject page = work area (tabs) + permanent activity panel. Presentation only. */
+@media (min-width:1201px){
+  .odoo-ui .gh-layout{grid-template-columns:minmax(0,1fr) 400px!important;gap:0!important;align-items:start}
+  .odoo-ui .gh-layout>.col:first-child{padding-inline-end:20px}
+  .odoo-ui .od-chatter{position:sticky;top:calc(var(--top) + 8px);height:calc(100vh - var(--top) - 24px);overflow-y:auto;overscroll-behavior:contain;border-inline-start:1px solid var(--line-2);background:var(--panel);border-radius:8px;border:1px solid var(--line-2)}
+  .odoo-ui .od-chatter>section.panel{border:0!important;border-radius:0;display:block!important}
+}
+.odoo-ui .od-chatter>section.panel{display:block!important}
+.odoo-ui .gh-layout>.col:first-child>section.panel{display:none!important}
+.odoo-ui .gh-layout>.col:first-child>section.panel.od-on{display:block!important}
+.odoo-ui .od-chatter .case-chronology{padding-inline-start:0;margin-top:10px}
+.odoo-ui .od-chatter .case-chronology::before{display:none}
+.odoo-ui .od-chatter .chronology-item>.avatar,.odoo-ui .od-chatter .chronology-item>.chronology-marker{position:static;margin:8px 12px 0}
+.odoo-ui .od-chatter .chronology-item{display:flex!important;gap:0;border:0;border-bottom:1px solid var(--line-2);border-radius:0;margin:0}
+.odoo-ui .od-chatter .chronology-item .activity-heading{background:transparent;border:0;padding:6px 0 0}
+.odoo-ui .od-chatter .chronology-item .fi-b>p,.odoo-ui .od-chatter .chronology-item .fi-b>small,.odoo-ui .od-chatter .chronology-item .chronology-route{padding:0;margin:4px 0}
+.odoo-ui .od-chatter .fi-b{flex:1;min-width:0;padding:0 4px 8px}
+.odoo-ui .od-chatter .activity-tools{display:flex;flex-wrap:wrap;gap:6px}
+.odoo-ui #sec-stages .steps{padding-top:10px}
+.odoo-ui .gh-compose{position:static}
+.odoo-ui .od-chatter .chronology-item{padding:10px 12px!important;align-items:flex-start;gap:10px}
+.odoo-ui .od-chatter .chronology-item>.avatar,.odoo-ui .od-chatter .chronology-item>.chronology-marker{margin:2px 0 0;flex:none}
+.odoo-ui .od-chatter .fi-b{display:flex;flex-direction:column;padding:0}
+.odoo-ui .od-chatter .fi-b>small{order:0;font-weight:700;color:var(--ink)}
+.odoo-ui .od-chatter .fi-b>.activity-heading{order:1;justify-content:flex-start;gap:10px;font-size:12.5px;color:var(--muted);padding:0}
+.odoo-ui .od-chatter .fi-b>p{order:2;margin:6px 0 0!important}
+.odoo-ui .od-chatter .fi-b>.chronology-route{order:0}
+.odoo-ui .od-chatter .activity-type{background:var(--panel-2);border-radius:4px;padding:1px 7px}
+.odoo-ui .od-chatter .panel-h{display:none}
+/* v3 cleanup */
+.odoo-ui .subnav{overflow-y:hidden!important}
+.odoo-ui .od-chatter .case-chronology{display:block}
+.odoo-ui .od-chatter .chronology-item{display:flex!important;flex-direction:row;position:relative}
+.odoo-ui .od-chatter .chronology-item>.avatar,.odoo-ui .od-chatter .chronology-item>.chronology-marker{position:static!important;inset:auto!important;margin:2px 0 0!important}
+.odoo-ui .od-chatter .chronology-item:not(:has(>.avatar)):not(:has(>.chronology-marker)){padding-inline-start:12px!important}
+.odoo-ui .od-chatter .activity-tools,.odoo-ui .od-chatter .sd-note,.odoo-ui .od-chatter .sd-trunc,.odoo-ui .od-chatter .note.brand{margin:8px 12px}
+.odoo-ui .od-chatter .panel-b{padding:0!important}
+.odoo-ui .od-chatter .fi-b>small:not(:only-child){font-weight:700}
+@media (max-width:1200px){.odoo-ui .od-chatter{margin-top:16px;max-height:none;overflow:visible}}
+/* v4: win over shell.css .sd-stream rules */
+.odoo-ui .od-chatter .sd-stream .chronology-item{display:block!important;margin:0!important;padding:10px 14px!important;border-bottom:1px solid var(--line-2)!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b{display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;gap:3px!important;padding:0!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .activity-heading{display:flex!important;order:1;gap:8px;align-items:center;flex-wrap:wrap}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>small{order:0!important;display:block!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p{order:2!important;display:block!important;margin:4px 0 0!important}
+.odoo-ui .od-chatter .sd-stream .chronology-item .activity-heading time{order:2}
+.odoo-ui .od-chatter .sd-stream .chronology-item .activity-type{order:1}
+.odoo-ui .od-chatter .sd-stream .chronology-item .activity-type .tl-ico{position:static!important;display:inline-grid;width:18px;height:18px;margin-inline-end:4px;vertical-align:middle}
+.odoo-ui .od-chatter .sd-stream .chronology-stage .chronology-route{order:0!important}
+.od-modal{position:fixed;inset:0;z-index:9000;background:rgba(20,20,30,.5);display:grid;place-items:center;padding:20px}
+.od-modal-box{background:var(--panel);border-radius:10px;width:min(640px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.od-modal-h{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.od-modal-h .iconbtn{font-size:22px;line-height:1}
+.od-modal-b{padding:14px 16px;overflow:auto}
+.od-modal-b .dd-b{border:0;padding:0}
+/* attachment viewer takes the activity column (no overlap); wide screens only. Activity returns on close. */
+@media (min-width:1300px){
+  .odoo-ui.od-viewing .gh-layout{grid-template-columns:minmax(0,1fr) clamp(400px,38vw,580px)!important}
+  .odoo-ui.od-viewing #od-chatter>section.panel{display:none!important}
+  .odoo-ui.od-viewing #od-chatter{overflow:hidden}
+  .odoo-ui #od-chatter>.modal{width:100%!important;max-width:none!important;height:100%!important;max-height:none!important;border:0;border-radius:0;box-shadow:none;margin:0}
+}
+.odoo-ui #pv.od-docked{display:none!important}
+
+/* no visible re-layout on load: the subject sheet is rearranged by odoo.js right after parsing; stay hidden until then (fallback reveal after 1.2s if scripts fail) */
+.gh-layout{visibility:hidden;animation:od-reveal 0s linear 1.2s forwards}
+@keyframes od-reveal{to{visibility:visible}}
+.odoo-ui .gh-layout{visibility:visible;animation:none}

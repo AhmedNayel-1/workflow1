@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from accounts.models import User
+from accounts.models import Role, User
 from accounts.services import PermissionService
 from audit.services import AuditService
 from .models import Company, Employee, OrgUnit, OrgUnitType, PositionAssignment, Sector
@@ -241,6 +241,18 @@ def org_tree(request):
             "selected_company_code": selected_company_code,
             "companies": tree_companies_payload,
             "units": tree_units_payload,
+            "employees": [
+                {"id": e.id, "name": e.full_name, "unit_id": e.current_unit_id, "unit": e.current_unit.name if e.current_unit else ""}
+                for e in employees
+            ] if PermissionService.user_has_permission(request.user, "ORG_MANAGE") else [],
+            "roles": [
+                {"id": r.id, "name": r.name}
+                for r in (
+                    Role.objects.all()
+                    if (request.user.is_superuser or request.user.is_system_admin)
+                    else Role.objects.exclude(code__in={"SYSTEM_ADMIN", "CHAIRMAN", "SECTOR_DIR_ADMIN"})
+                )
+            ] if PermissionService.can_manage_users(request.user) else [],
         },
         ensure_ascii=False,
     )

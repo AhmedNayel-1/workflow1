@@ -370,7 +370,7 @@ class NewFeaturesTestSuite(TestCase):
         self.assertEqual(resp_detail.status_code, 200)
         self.assertContains(resp_detail, 'class="steps"')
         self.assertContains(resp_detail, "التسجيل والمرفقات")
-        self.assertContains(resp_detail, "الاعتماد والإغلاق والأرشفة")
+        self.assertContains(resp_detail, "الإغلاق والأرشفة")
 
         # التحقق من مبدّل الحسابات في وضع الاختبار المحلي وحجبه عند إيقافه
         switch_url = reverse("accounts:switch_user")
@@ -396,7 +396,12 @@ class NewFeaturesTestSuite(TestCase):
         superuser = User.objects.get(username="an")
         client.force_login(superuser)
 
-        units = list(OrgUnit.objects.filter(sector__company__code="WDEPCO").order_by("id")[:2])
+        # الوحدة الجذر (المستوى الأول) لا يجوز نقلها بقرار النظام، لذا نختار وحدة غير جذرية ووحدة أب مناسبة
+        # الوحدة الجذر (L1) لا تُنقل، ولا يجوز النقل تحت وحدة فرعية: نختار وحدة ورقية ووحدة أب لا تتبعها
+        all_units = OrgUnit.objects.filter(sector__company__code="WDEPCO")
+        leaf = all_units.filter(parent__isnull=False, children__isnull=True).order_by("id").first()
+        other = all_units.exclude(id=leaf.id).exclude(id=leaf.parent_id).order_by("id").first() if leaf else None
+        units = [leaf, other] if leaf and other else []
         if len(units) >= 2:
             src_unit, dst_unit = units[0], units[1]
             # نقل وحدة فرعية عبر السحب والإفلات
@@ -411,7 +416,7 @@ class NewFeaturesTestSuite(TestCase):
             self.assertEqual(src_unit.parent_id, dst_unit.id)
 
             # نقل مستخدم إلى وحدة أخرى عبر السحب والإفلات
-            target_user = User.objects.filter(is_superuser=False).first()
+            target_user = User.objects.filter(is_superuser=False, employee__isnull=False).first()
             if target_user:
                 resp_user = client.post(
                     reverse("organization:move_user"),
@@ -421,7 +426,7 @@ class NewFeaturesTestSuite(TestCase):
                 self.assertEqual(resp_user.status_code, 200)
                 self.assertTrue(resp_user.json().get("ok"))
                 target_user.refresh_from_db()
-                self.assertEqual(target_user.primary_org_unit_id, dst_unit.id)
+                self.assertEqual(target_user.employee.current_unit_id, dst_unit.id)
 
     def test_subject_detail_open_side_timeline_and_from_to_flow(self):
         client = Client()
@@ -432,9 +437,9 @@ class NewFeaturesTestSuite(TestCase):
         resp = client.get(reverse("subjects:subject_detail", args=[subj.id]))
         self.assertEqual(resp.status_code, 200)
         html = resp.content.decode("utf-8")
-        # سجل الحركة مفتوح تلقائياً جانباً (غير مخفي بـ hidden على #timeline-box)
-        self.assertIn('id="timeline-box"', html)
-        self.assertNotIn('id="timeline-box" class="hidden', html)
+        # سجل الحركة مفتوح تلقائياً جانباً (القسم الموحّد sec-timeline منذ bc4f4ac)
+        self.assertIn('id="sec-timeline"', html)
+        self.assertNotIn('id="sec-timeline" class="hidden', html)
         self.assertContains(resp, "مراحل السير")
         self.assertContains(resp, "من")
         self.assertContains(resp, "إلى")

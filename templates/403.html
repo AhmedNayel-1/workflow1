@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}غير مصرح{% endblock %}
+{% block heading %}غير مصرح بهذا الإجراء{% endblock %}
+{% block content %}
+<section class="panel" role="alert">
+  <div style="padding:22px 24px;display:grid;gap:10px">
+    <p style="font-size:1.15rem;font-weight:700;margin:0">لا تملك صلاحية تنفيذ هذا الإجراء أو الاطلاع على هذه الصفحة.</p>
+    {% if exception %}<p class="muted" style="margin:0">{{ exception }}</p>{% endif %}
+    <p class="muted" style="margin:0">إن كنت ترى أن هذا غير صحيح، راجع مسؤول النظام أو استخدم دورك المناسب.</p>
+    <p style="margin:6px 0 0;display:flex;gap:8px"><a class="btn" href="javascript:history.back()">رجوع</a> <a class="btn" href="/">الصفحة الرئيسية</a></p>
+  </div>
+</section>
+{% endblock %}

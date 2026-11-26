@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}دليل الاستخدام{% endblock %}
 {% block heading %}دليل الاستخدام{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
 {% block content %}
 <div class="page-h"><div><h2>دليل الاستخدام السريع</h2><p>كل شاشة في المنظومة تعرض لك «الخطوة التالية» المناسبة لدورك. هذه خريطة الرحلة.</p></div></div>
 <section class="panel mb"><div class="panel-b"><div class="steps"><div class="step done"><i>1</i><span>التسجيل والمرفقات</span></div><div class="step done"><i>2</i><span>توجيه القطاع والمدير العام</span></div><div class="step done"><i>3</i><span>التوزيع على القسم والمختص</span></div><div class="step done"><i>4</i><span>المذكرة والقرار</span></div><div class="step now"><i>5</i><span>الإغلاق والأرشفة</span></div></div></div></section>

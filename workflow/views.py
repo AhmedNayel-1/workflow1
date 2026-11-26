@@ -197,7 +197,7 @@ def referral_respond(request, recipient_id: int):
                     recipient_item=recipient_item,
                     user=request.user,
                     response_notes=request.POST.get("response_notes", "").strip(),
-                    complete=(action != "receive_only"),
+                    complete=(action not in ("receive_only", "acknowledge")),
                     force_complete_parallel=(request.POST.get("force_complete_parallel") == "on"),
                 )
                 messages.success(request, "تم تحديث حالة الإحالة بنجاح.")

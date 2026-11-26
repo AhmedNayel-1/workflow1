@@ -217,6 +217,11 @@ def system_context(request):
     can_view_audit = request.user.is_superuser or PermissionService.user_has_permission(request.user, "AUDIT_VIEW")
     companies_list = list(Company.objects.filter(is_active=True))
 
+    _emp = getattr(request.user, "employee", None)
+    _own_unit = getattr(_emp, "current_unit", None)
+    _default_unit_id = _own_unit.id if _own_unit and _own_unit.is_active else None
+    _default_sector_id = _own_unit.sector_id if _default_unit_id else None
+
     return {
         "unread_notifications_count": unread_count,
         "active_delegations": active_delegations,
@@ -250,5 +255,7 @@ def system_context(request):
             "priorities": PriorityLevel.objects.filter(is_active=True),
             "doc_types": DocumentType.objects.filter(is_active=True),
             "users": User.objects.filter(is_active=True).select_related("employee__current_unit"),
+            "default_unit_id": _default_unit_id,
+            "default_sector_id": _default_sector_id,
         },
     }

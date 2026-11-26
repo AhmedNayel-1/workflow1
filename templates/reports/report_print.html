@@ -2,8 +2,8 @@
 {% load ui_extras %}
 {% block title %}طباعة تقرير — {{ definition.title }}{% endblock %}
 {% block content %}
-<p style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
-<h1>{{ definition.title }}</h1><p style="text-align:center;color:#555">{{ definition.subtitle }} — {{ report.generated_at|date:"Y-m-d H:i" }}</p>
-{% if report.kpis %}<table><tr>{% for k in report.kpis %}<th style="width:auto">{{ k.label }}</th>{% endfor %}</tr><tr>{% for k in report.kpis %}<td><b>{{ k.value }}</b></td>{% endfor %}</tr></table>{% endif %}
-<table style="font-size:12px"><thead><tr><th style="width:30px">#</th>{% for c in report.columns %}<th style="width:auto">{{ c.label }}</th>{% endfor %}</tr></thead><tbody>{% for row in report.rows %}<tr><td>{{ forloop.counter }}</td>{% for c in report.columns %}<td>{{ row|get_item:c.key|default_if_none:"—" }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+<p class="report-print-company" style="text-align:center;margin:0">شركة غرب الدلتا لإنتاج الكهرباء</p>
+<h1 class="report-print-title">{{ definition.title }}</h1><p class="report-print-meta" style="text-align:center;color:#555">{{ definition.subtitle }} — {{ report.generated_at|date:"Y-m-d H:i" }}</p>
+{% if report.kpis %}<table class="report-print-kpis"><tr>{% for k in report.kpis %}<th style="width:auto">{{ k.label }}</th>{% endfor %}</tr><tr>{% for k in report.kpis %}<td><b>{{ k.value }}</b></td>{% endfor %}</tr></table>{% endif %}
+<table class="report-print-data" style="font-size:12px"><thead><tr><th style="width:30px">#</th>{% for c in report.columns %}<th style="width:auto">{{ c.label }}</th>{% endfor %}</tr></thead><tbody>{% for row in report.rows %}<tr><td>{{ forloop.counter }}</td>{% for c in report.columns %}<td>{{ row|get_item:c.key|default_if_none:"—" }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
 {% endblock %}

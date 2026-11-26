@@ -190,7 +190,7 @@ def decision_detail(request, decision_id: int):
         {
             "decision": decision,
             "can_approve": can_approve,
-            "can_distribute": can_approve,
+            "can_distribute": decision.status in (Decision.Status.APPROVED, Decision.Status.ISSUED, Decision.Status.DISTRIBUTING, Decision.Status.EXECUTING) and PermissionService.can_distribute_decision(request.user, decision),
             "can_close_subject": can_close_subject,
             "closure_blockers": SubjectService.validate_closure_requirements(decision.subject),
             "org_units": scoped_units,

@@ -1,10 +1,10 @@
 {% load ui_extras %}{% with v=request.resolver_match.view_name a=request.resolver_match.app_name c=gmail_folder_counts %}
-<aside class="rail" aria-label="القائمة الرئيسية">
+<aside class="rail" id="main-rail" aria-label="القائمة الرئيسية">
   <div class="rail-brand">
     <span class="logo">غ د</span>
     <div><b>الاتصالات الإدارية</b><small>غرب الدلتا لإنتاج الكهرباء</small></div>
   </div>
-  <nav class="rail-scroll">
+  <nav class="rail-scroll" aria-label="روابط النظام">
     <button type="button" class="btn primary block rail-new" data-compose="document">{% icon 'plus' %}<span>موضوع جديد</span></button>
 
     <div data-cap="القائمة الرئيسية"><div class="nav-cap">القائمة الرئيسية</div>

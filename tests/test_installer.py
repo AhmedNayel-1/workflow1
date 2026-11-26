@@ -141,8 +141,13 @@ class BatchFilesIntegrityTests(unittest.TestCase):
 
     def test_install_offline_and_run_server_required_directives(self):
         install_txt = (PROJECT_DIR / "install.bat").read_text(encoding="utf-8")
-        self.assertIn("py -V:Astral/CPython3.12.15", install_txt)
-        self.assertIn("seed_demo_data", install_txt)
+        self.assertNotIn("Astral", install_txt)
+        for token in ("py -%%V", "python -c", "-m venv", "-m pip install -r", "migrate --check", "migrate --noinput", "check-port 127.0.0.1", "runserver 127.0.0.1:%SERVER_PORT%", "pause"):
+            self.assertIn(token, install_txt, f"Missing in install.bat: {token}")
+        # لا يجوز أن يحذف التثبيت قاعدة البيانات أو يعيد تحميل البيانات التجريبية تلقائياً فوق قاعدة موجودة
+        for forbidden in ("del ", "flush", "erase ", "rmdir"):
+            self.assertNotIn(forbidden, install_txt.lower())
+        self.assertIn("if defined HAD_DB goto :db_ready", install_txt)
 
         offline_txt = (PROJECT_DIR / "install_offline.bat").read_text(encoding="utf-8")
         for token in (
@@ -367,12 +372,29 @@ class InstallHelperExecutionTests(unittest.TestCase):
         self.assertEqual(score, "0")
         self.assertEqual(reason, "IS_VENV")
 
-        # بدون pip يفشل check-venv حتى نضمن إعادة بناء البيئات الناقصة
+        # check-venv يقبل venv بلا pip إذا كان ensurepip متاحاً (يصلحه المثبّت بالخطوة 2)،
+        # ويرفضه إذا لم يتوفر لا pip ولا ensurepip؛ التوقع يُحسب من مفسّر venv نفسه.
+        avail = subprocess.run(
+            [str(venv_py), "-c",
+             "import importlib.util as u; print(int(u.find_spec('pip') is not None or u.find_spec('ensurepip') is not None))"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
         check_missing_pip = subprocess.run(
             [sys.executable, str(HELPER_PATH), "check-venv", str(venv_dir)],
             capture_output=True,
         )
-        self.assertEqual(check_missing_pip.returncode, 1)
+        self.assertEqual(check_missing_pip.returncode, 0 if avail == "1" else 1)
+
+        # venv تالف (بلا pyvenv.cfg) يُرفض دائماً
+        cfg = venv_dir / "pyvenv.cfg"
+        cfg_text = cfg.read_text(encoding="utf-8")
+        cfg.unlink()
+        check_no_cfg = subprocess.run(
+            [sys.executable, str(HELPER_PATH), "check-venv", str(venv_dir)],
+            capture_output=True,
+        )
+        self.assertEqual(check_no_cfg.returncode, 1)
+        cfg.write_text(cfg_text, encoding="utf-8")
 
         # بعد محاكاة توفر pip داخل site-packages ينجح check-venv، وإذا نُقل لمسار آخر يفشل
         site_pkgs = next(venv_dir.glob("lib/python*/site-packages"))

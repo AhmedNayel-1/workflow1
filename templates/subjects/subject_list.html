@@ -1,27 +1,31 @@
 {% extends "base.html" %}{% load ui_extras %}
 {% block title %}جميع الموضوعات{% endblock %}
 {% block heading %}جميع الموضوعات{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
-<div class="page-h"><div><h2>الموضوعات</h2><p>سجل كل المعاملات التي يسمح لك نطاق صلاحياتك برؤيتها.</p></div>{% if can_create %}<button class="btn primary" data-compose="document">{% icon 'plus' %}موضوع جديد</button>{% endif %}</div>
-<section class="panel" data-table>
+<div class="page-h od-lh"><div><h2>الموضوعات</h2><p>سجل كل المعاملات التي يسمح لك نطاق صلاحياتك برؤيتها.</p></div>{% if can_create %}<button class="btn primary" data-compose="document">{% icon 'plus' %}موضوع جديد</button>{% endif %}</div>
+<section class="panel" data-table data-subject-list>
   <form class="toolbar" method="get" data-auto>
-    <div class="search-in" style="min-width:240px">{% icon 'search' 'sm' %}<input class="in sm" data-filter placeholder="تصفية سريعة في الصفحة الحالية…" type="search"></div>
+    <div class="search-in" style="min-width:240px">{% icon 'search' 'sm' %}<input class="in sm" data-subject-search placeholder="بحث سريع في الموضوعات المعروضة…" type="search"></div>
     <select class="in sm" name="status" style="width:auto"><option value="">كل الحالات</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if status_filter == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
     <select class="in sm" name="sector" style="width:auto"><option value="">كل القطاعات</option>{% for s in sectors %}<option value="{{ s.id }}" {% if sector_filter == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select>
-    {% if status_filter or sector_filter %}<a class="btn sm ghost" href="{% url 'subjects:subject_list' %}">مسح التصفية</a>{% endif %}
-    <span class="spacer"></span><span class="muted sm">{{ total_count }} موضوع</span>
+    {% if status_filter or sector_filter %}<a class="btn sm ghost" href="{% url 'subjects:subject_list' %}">مسح فلاتر الخادم</a>{% endif %}<button class="btn sm ghost" type="button" data-subject-clear>مسح البحث</button>
+    <span class="spacer"></span><span class="muted sm" data-subject-count data-total="{{ total_count }}">{{ total_count }} موضوع</span>
   </form>
   <div class="bulk"><span><b data-count>0</b> محدد</span><button class="btn sm" type="button" data-export>{% icon 'download' 'sm' %}تصدير CSV</button><button class="btn sm ghost" type="button" data-clear>مسح التحديد</button></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="w-chk"><input type="checkbox" data-all aria-label="تحديد الكل"></th><th>الرقم</th><th>العنوان</th><th>النوع</th><th>القطاع / الوحدة</th><th>الحالة</th><th>الأولوية</th><th>الاستحقاق</th><th>المسؤول</th></tr></thead><tbody>
-    {% for s in subjects %}<tr><td class="w-chk"><input type="checkbox" class="row-chk" aria-label="تحديد"></td>
-      <td><span class="tag code">{{ s.internal_number }}</span></td>
-      <td style="max-width:340px"><a class="title" href="{% url 'subjects:subject_detail' s.id %}">{{ s.title|short:70 }}</a>{% if s.confidentiality.overrides_hierarchy %} <span class="lock">{% icon 'lock' 'sm' %}</span>{% endif %}</td>
-      <td>{{ s.transaction_type.name }}</td><td class="sm">{{ s.sector.name }}<br><span class="muted xs">{{ s.org_unit.name }}</span></td>
-      <td><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span></td><td>{{ s.priority.name }}</td>
-      <td class="num {% if s.is_overdue %}bold{% endif %}" {% if s.is_overdue %}style="color:var(--bad)"{% endif %}>{{ s.due_date|date:"Y-m-d"|default:"—" }}</td>
-      <td class="sm">{{ s.current_owner.get_full_name|default:s.current_owner.username|default:"—" }}</td></tr>
-    {% empty %}<tr><td colspan="9">{% include "partials/empty.html" with title="لا توجد موضوعات" text="جرّب تغيير التصفية أو أنشئ موضوعاً جديداً." icon_name="folder" %}</td></tr>{% endfor %}
+  <div class="sl-wrap"><div class="tbl-wrap"><table class="tbl sl-tbl"><thead><tr><th class="w-chk"><input type="checkbox" data-all aria-label="تحديد الكل"></th><th class="w-ic"></th><th>الموضوع</th><th>الرقم</th><th>المسؤول</th><th>الاستحقاق</th><th>الحالة</th><th>الوسوم</th></tr></thead><tbody>
+    {% for s in subjects %}{% with owner=s.current_owner.get_full_name|default:s.current_owner.username|default:"—" %}<tr data-subject-row tabindex="0" data-od-title="{{ s.title }}" data-od-num="{{ s.internal_number }}" data-od-owner="{{ owner }}" data-od-due="{{ s.due_date|date:'Y-m-d'|default:'—' }}" data-od-status="{{ s.get_status_display }}" data-od-tone="{{ s.status|tone }}" data-od-type="{{ s.transaction_type.name }}" data-od-sector="{{ s.sector.name }} / {{ s.org_unit.name }}" data-od-prio="{{ s.priority.name }}" data-od-conf="{{ s.confidentiality.name }}" data-od-secret="{% if s.confidentiality.overrides_hierarchy %}1{% endif %}" data-od-overdue="{% if s.is_overdue %}1{% endif %}" data-od-href="{% url 'subjects:subject_detail' s.id %}" data-od-preview="{% url 'subjects:subject_preview_json' s.id %}"><td class="w-chk"><input type="checkbox" class="row-chk" aria-label="تحديد"></td>
+      <td class="w-ic"><span class="sl-ic">{% if s.confidentiality.overrides_hierarchy %}{% icon 'lock' 'sm' %}{% else %}{% icon 'folder' 'sm' %}{% endif %}</span></td>
+      <td class="sl-title"><a class="title" href="{% url 'subjects:subject_detail' s.id %}">{{ s.title|short:70 }}</a></td>
+      <td class="sl-ref">{{ s.internal_number }}</td>
+      <td class="sl-owner">{{ owner }}</td>
+      <td class="num sl-due {% if s.is_overdue %}is-late{% endif %}">{{ s.due_date|date:"Y-m-d"|default:"—" }}</td>
+      <td><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span></td>
+      <td><div class="sl-tags"><span class="sd-tag" data-prio="{{ s.priority.name }}">{{ s.priority.name }}</span>{% if s.confidentiality.overrides_hierarchy %}<span class="sd-tag sd-tag-secret">{{ s.confidentiality.name }}</span>{% elif s.confidentiality.name != "عادي" %}<span class="sd-tag sd-tag-conf">{{ s.confidentiality.name }}</span>{% endif %}{% if s.is_overdue %}<span class="sd-tag" data-prio="عاجل">متأخر</span>{% endif %}</div></td></tr>{% endwith %}
+    {% empty %}<tr><td colspan="8">{% include "partials/empty.html" with title="لا توجد موضوعات" text="جرّب تغيير التصفية أو أنشئ موضوعاً جديداً." icon_name="folder" %}</td></tr>{% endfor %}
   </tbody></table></div>
+  <aside class="sl-side" data-sl-side hidden aria-label="تفاصيل الموضوع المحدد"></aside></div>
+  <div class="sl-foot" data-sl-foot><span><b data-f-total>0</b> موضوع معروض</span><span>متأخر: <b data-f-late>0</b></span><span>سري: <b data-f-secret>0</b></span><span>محدد: <b data-f-sel>0</b></span></div>
   {% include "partials/pager.html" %}
 </section>
 {% endblock %}
