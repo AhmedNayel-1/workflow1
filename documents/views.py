@@ -144,7 +144,10 @@ def document_detail(request, doc_id: int):
         )
         raise PermissionDenied("غير مصرح لك بالاطلاع على هذا المستند أو مستوى سريته.")
 
-    linked_subjects = [link.subject for link in doc.subjectdocumentlink_set.all()]
+    linked_subjects = [
+        link.subject for link in doc.subjectdocumentlink_set.all()
+        if PermissionService.can_view_subject(request.user, link.subject)
+    ]
     context_subject = linked_subjects[0] if linked_subjects else None
     context_sector = (
         context_subject.sector
