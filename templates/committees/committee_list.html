@@ -4,7 +4,7 @@
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
 {% include "partials/breadcrumbs.html" with current="اللجان والاجتماعات" %}
-<div class="page-h"><div><h2>اللجان والاجتماعات</h2><p>جدول الجلسات، واختر يوماً من التقويم لتصفيتها.</p></div>{% if can_manage %}<button class="btn primary" data-open="new-meeting">{% icon 'plus' %}جلسة جديدة</button>{% endif %}</div>
+<div class="page-h od-list-heading"><div><h2>اللجان والاجتماعات</h2><p>جدول الجلسات، واختر يوماً من التقويم لتصفيتها.</p></div>{% if can_manage %}<button class="btn primary" data-open="new-meeting">{% icon 'plus' %}جلسة جديدة</button>{% endif %}</div>
 <script id="meet-data" type="application/json">[{% for c in committees %}{% for m in c.meetings.all %}{"date":"{{ m.meeting_date|date:'Y-m-d' }}"},{% endfor %}{% endfor %}{"date":""}]</script>
 <div class="committee-tools od-list-toolbar" data-committee-workspace data-filter-chip-root><label class="search-in committee-search">{% icon 'search' 'sm' %}<input class="in sm" type="search" data-committee-search data-filter-chip="بحث" placeholder="ابحث باسم اللجنة أو رقم الجلسة أو المكان…" aria-label="البحث في اللجان والاجتماعات"></label><span class="muted xs" data-committee-count aria-live="polite"></span><span class="muted xs">بحث محلي في اللجان والاجتماعات المعروضة</span>{% include "partials/filter_chips.html" %}</div>
 <div class="grid g-main-r">
