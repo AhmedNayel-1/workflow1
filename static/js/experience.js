@@ -872,6 +872,36 @@
   }
 
 
+
+  // Shared active-filter chips for list workspaces; resets the existing controls only.
+  document.querySelectorAll("[data-filter-chip-root]").forEach(root => {
+    const holder = root.querySelector("[data-filter-chips]");
+    const controls = [...root.querySelectorAll("[data-filter-chip]")];
+    if (!holder || !controls.length) return;
+    const update = () => {
+      holder.textContent = "";
+      controls.forEach(control => {
+        const raw = control.type === "checkbox" ? (control.checked ? "1" : "") : String(control.value || "").trim();
+        if (!raw) return;
+        const selected = control.tagName === "SELECT" ? control.options[control.selectedIndex]?.textContent?.trim() : raw;
+        const chip = document.createElement("button");
+        chip.type = "button"; chip.className = "chip";
+        chip.textContent = (control.dataset.filterChip || "تصفية") + ": " + selected + " ×";
+        chip.setAttribute("aria-label", "إزالة فلتر " + (control.dataset.filterChip || "التصفية"));
+        chip.addEventListener("click", () => {
+          if (control.type === "checkbox") control.checked = false; else control.value = "";
+          control.dispatchEvent(new Event("input", { bubbles: true }));
+          control.dispatchEvent(new Event("change", { bubbles: true }));
+          update();
+        });
+        holder.append(chip);
+      });
+      holder.hidden = holder.childElementCount === 0;
+    };
+    controls.forEach(control => { control.addEventListener("input", update); control.addEventListener("change", update); });
+    update();
+  });
+
   // Phase 20 — accessible global navigation state and collapsed-rail labels.
   const railElement = document.querySelector("#main-rail");
   const railToggle = document.querySelector("[data-rail-toggle]");
