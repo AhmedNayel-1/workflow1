@@ -1,9 +1,9 @@
 {% comment %}ترقيم صفحات: page_obj و paginator + حفظ بقية معاملات GET عبر qs{% endcomment %}
 {% load ui_extras %}{% qs request as qs %}{% if paginator.num_pages > 1 %}
-<div class="pager"><span>{{ page_obj.start_index }}–{{ page_obj.end_index }} من {{ paginator.count }}</span>
+<nav class="pager" aria-label="التنقل بين صفحات النتائج"><span>{{ page_obj.start_index }}–{{ page_obj.end_index }} من {{ paginator.count }}</span>
   <div class="pages">
-    {% if page_obj.has_previous %}<a class="pg" href="?{{ qs }}page={{ page_obj.previous_page_number }}" aria-label="السابق">{% icon 'chevr' 'sm' %}</a>{% else %}<span class="pg off">{% icon 'chevr' 'sm' %}</span>{% endif %}
-    {% for n in paginator.page_range %}{% if n == page_obj.number %}<span class="pg on">{{ n }}</span>{% elif n <= 2 or n > paginator.num_pages|add:'-2' or n >= page_obj.number|add:'-1' and n <= page_obj.number|add:'1' %}<a class="pg" href="?{{ qs }}page={{ n }}">{{ n }}</a>{% elif n == 3 or n == paginator.num_pages|add:'-2' %}<span class="pg off">…</span>{% endif %}{% endfor %}
-    {% if page_obj.has_next %}<a class="pg" href="?{{ qs }}page={{ page_obj.next_page_number }}" aria-label="التالي">{% icon 'chevl' 'sm' %}</a>{% else %}<span class="pg off">{% icon 'chevl' 'sm' %}</span>{% endif %}
+    {% if page_obj.has_previous %}<a class="pg" href="?{{ qs }}page={{ page_obj.previous_page_number }}" aria-label="السابق" rel="prev">{% icon 'chevr' 'sm' %}</a>{% else %}<span class="pg off">{% icon 'chevr' 'sm' %}</span>{% endif %}
+    {% for n in paginator.page_range %}{% if n == page_obj.number %}<span class="pg on" aria-current="page">{{ n }}</span>{% elif n <= 2 or n > paginator.num_pages|add:'-2' or n >= page_obj.number|add:'-1' and n <= page_obj.number|add:'1' %}<a class="pg" href="?{{ qs }}page={{ n }}">{{ n }}</a>{% elif n == 3 or n == paginator.num_pages|add:'-2' %}<span class="pg off">…</span>{% endif %}{% endfor %}
+    {% if page_obj.has_next %}<a class="pg" href="?{{ qs }}page={{ page_obj.next_page_number }}" aria-label="التالي" rel="next">{% icon 'chevl' 'sm' %}</a>{% else %}<span class="pg off">{% icon 'chevl' 'sm' %}</span>{% endif %}
   </div>
-</div>{% else %}{% if paginator.count %}<div class="pager"><span>{{ paginator.count }} عنصر</span></div>{% endif %}{% endif %}
+</nav>{% else %}{% if paginator.count %}<div class="pager" aria-label="عدد النتائج"><span>{{ paginator.count }} عنصر</span></div>{% endif %}{% endif %}
