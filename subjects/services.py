@@ -233,7 +233,7 @@ class SubjectService:
 
         memos = list(subject.memos.all())
         latest_memo = max(memos, key=lambda item: item.created_at, default=None)
-        if latest_memo and latest_memo.status != "APPROVED":
+        if any(item.status != "APPROVED" for item in memos):
             return "مذكرة عرض قيد الإعداد / الاعتماد"
 
         if latest_memo and latest_memo.status == "APPROVED" and subject.transaction_type.requires_decision:
