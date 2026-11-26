@@ -4,7 +4,7 @@
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
 {% include "partials/breadcrumbs.html" with current="المستندات" %}
-<div class="page-h"><div><h2>سجل المستندات</h2><p>كل المستندات المتاحة لك. اضغط على بطاقة لمعاينة مرفقها فوراً.</p></div><a class="btn primary" href="{% url 'documents:document_create' %}">{% icon 'plus' %}مستند جديد</a></div>
+<div class="page-h od-list-heading"><div><h2>سجل المستندات</h2><p>كل المستندات المتاحة لك. اضغط على بطاقة لمعاينة مرفقها فوراً.</p></div><a class="btn primary" href="{% url 'documents:document_create' %}">{% icon 'plus' %}مستند جديد</a></div>
 <section class="panel od-list-view docs-split no-preview" data-docs data-odoo-list data-filter-chip-root>
   <div class="col" style="min-width:0;overflow:hidden;gap:0">
     <form class="toolbar od-list-toolbar document-tools" method="get"><div class="search-in grow">{% icon 'search' 'sm' %}<input class="in sm" name="q" value="{{ q }}" placeholder="بحث بالخادم: العنوان أو الرقم الداخلي أو الخارجي…"></div><button class="btn sm primary" type="submit">بحث</button>{% if q %}<a class="btn sm" href="{% url 'documents:document_list' %}">مسح بحث الخادم</a>{% endif %}<label class="document-local-filter"><span>التصنيف</span><select class="in sm" data-document-type-filter data-filter-chip="التصنيف"><option value="">كل التصنيفات المعروضة</option></select></label><label class="document-local-filter"><span>السرية</span><select class="in sm" data-document-conf-filter data-filter-chip="السرية"><option value="">كل درجات السرية</option></select></label><span class="muted sm" data-document-count>{{ total_count }} مستند</span><button class="btn sm ghost" type="button" data-document-clear>مسح الفلاتر</button></form>
