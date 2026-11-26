@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from accounts.models import Delegation, Role, User, UserRoleAssignment
 from accounts.services import PermissionService
-from audit.models import AuditLog
+from audit.models import ActivityLog, AuditLog
 from committees.models import Committee, CommitteeMeeting
 from core.models import ConfidentialityLevel, DocumentType, PriorityLevel, TransactionType
 from decisions.models import Decision
@@ -550,6 +550,65 @@ class SecurityAndIsolationTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(version.attachments.count(), 0)
+
+    def test_specialist_action_menu_logs_action_and_status_separately(self):
+        """قائمة المختص تعرض الإجراء، والاستلام/الرد لا يغلقان الموضوع، والسبب الفارغ للإرجاع مرفوض."""
+        sender = User.objects.get(username="transfers_sup")
+        specialist = User.objects.get(username="transfers_emp")
+        base = Subject.objects.filter(applicant_name="محمد محمود علي").first()
+        subject = SubjectService.create_subject(
+            title="اختبار قائمة إجراءات الموظف المختص",
+            transaction_type=base.transaction_type,
+            sector=base.sector,
+            org_unit=base.org_unit,
+            confidentiality=base.confidentiality,
+            priority=base.priority,
+            created_by=sender,
+            current_owner=sender,
+        )
+        referral = WorkflowEngineService.create_referral(
+            subject=subject,
+            referred_by=sender,
+            routing_mode=Referral.RoutingMode.DIRECT,
+            purpose=Referral.Purpose.FOR_EXECUTION,
+            target_users=[specialist],
+            enforce_hierarchy=False,
+        )
+        recipient = referral.recipients.first()
+
+        client = Client()
+        client.force_login(specialist)
+        page = client.get(reverse("subjects:subject_detail", args=[subject.id]))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'data-specialist-action-select')
+        self.assertContains(page, "إتمام التنفيذ")
+        self.assertContains(page, "إرجاع للمحيل")
+        self.assertContains(page, "قرار جديد")
+
+        with self.assertRaises(ValidationError):
+            WorkflowEngineService.reject_or_return_recipient(
+                recipient_item=recipient, user=specialist, reason="   "
+            )
+
+        WorkflowEngineService.acknowledge_or_complete_recipient(
+            recipient_item=recipient, user=specialist, complete=False
+        )
+        received_log = ActivityLog.objects.filter(
+            subject=subject, action_type="REFERRAL_RECEIVED"
+        ).latest("created_at")
+        self.assertEqual(received_log.metadata_json["action"], "استلام")
+        self.assertEqual(received_log.metadata_json["status"], subject.get_status_display())
+
+        WorkflowEngineService.acknowledge_or_complete_recipient(
+            recipient_item=recipient, user=specialist, complete=True
+        )
+        subject.refresh_from_db()
+        self.assertNotEqual(subject.status, Subject.Status.CLOSED)
+        completed_log = ActivityLog.objects.filter(
+            subject=subject, action_type="REFERRAL_RESPONDED"
+        ).latest("created_at")
+        self.assertEqual(completed_log.metadata_json["action"], "إتمام الرد")
+        self.assertEqual(completed_log.metadata_json["status"], subject.get_status_display())
 
     # =========================================================================
     # 4. فرض صلاحيات الإحالة على المستخدمين والوحدات التنظيمية معاً
