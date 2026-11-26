@@ -399,6 +399,7 @@ def subject_detail(request, subject_id: int):
                     action_type="MEMO_CREATED",
                     actor_user=request.user,
                     description=f"تم إعداد {memo.get_memo_type_display()} رقم {memo.memo_number}: {memo.title}",
+                    metadata={"action": "إعداد مذكرة العرض", "status": subject.get_status_display(), "status_code": subject.status, "memo_status": memo.get_status_display()},
                 )
                 # إشعار ذكي لرئيس القطاع / مدير العام بمذكرة الرد الجديدة
                 notify_targets = set()
