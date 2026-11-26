@@ -205,6 +205,47 @@ def transition_subject(subject: Subject, new_status: str, user, reason: str = ""
 
 class SubjectService:
     transition_subject = staticmethod(transition_subject)
+
+    @staticmethod
+    def get_current_stage_label(subject: Subject) -> str:
+        """اسم المرحلة الحالية للعرض في نتائج البحث دون تعديل حالة الموضوع أو مساره."""
+        if subject.status == Subject.Status.CLOSED:
+            return "مغلق"
+        if subject.status == Subject.Status.SUSPENDED:
+            return "معلق لاستيفاء المطلوب"
+        if subject.status in (
+            Subject.Status.DECISION_ISSUED,
+            Subject.Status.DISTRIBUTING,
+            Subject.Status.FINAL_EXECUTION,
+            Subject.Status.COMPLETED,
+        ):
+            return subject.get_status_display()
+
+        for referral in subject.referrals.all():
+            if referral.is_completed or referral.is_withdrawn or referral.purpose == "FOR_INFO":
+                continue
+            if any(
+                item.is_active_step
+                and item.status in ("PENDING", "RECEIVED", "WAITING_TURN")
+                for item in referral.recipients.all()
+            ):
+                return "بانتظار إجراء الإحالة"
+
+        memos = list(subject.memos.all())
+        latest_memo = max(memos, key=lambda item: item.created_at, default=None)
+        if latest_memo and latest_memo.status != "APPROVED":
+            return "مذكرة عرض قيد الإعداد / الاعتماد"
+
+        if latest_memo and latest_memo.status == "APPROVED" and subject.transaction_type.requires_decision:
+            decisions = [item for item in subject.decisions.all() if item.status != "CANCELLED"]
+            if not decisions:
+                return "قرار جديد"
+            latest_decision = max(decisions, key=lambda item: item.created_at)
+            if latest_decision.status in ("DRAFT", "UNDER_REVIEW"):
+                return "قرار جديد قيد الإعداد / المراجعة"
+
+        return subject.get_status_display()
+
     @staticmethod
     @transaction.atomic
     def create_subject(
