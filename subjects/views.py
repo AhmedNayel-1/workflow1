@@ -715,6 +715,7 @@ def subject_detail(request, subject_id: int):
     suspensions = list(
         SubjectSuspension.objects.filter(subject=subject).select_related("reason_ref", "suspended_by", "fulfilled_by")
     )
+    active_suspension = next((item for item in suspensions if not item.is_fulfilled), None)
     activity_logs = subject.activity_logs.select_related("actor_user", "acting_on_behalf_of").all()
     closure_blockers = SubjectService.validate_closure_requirements(subject)
 
@@ -735,6 +736,7 @@ def subject_detail(request, subject_id: int):
         "can_exceptional_close": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_EXCEPTIONAL_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_reopen": PermissionService.user_has_permission(request.user, "SUBJECT_REOPEN", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_manage_access": PermissionService.user_has_permission(request.user, "PERMISSIONS_MANAGE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
+        "can_upload_document": can_act and PermissionService.user_has_permission(request.user, "DOCUMENT_CREATE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
     }
 
     # حساب مسار الـ 5 خطوات التنفيذي للعرض المبسط
@@ -987,6 +989,7 @@ def subject_detail(request, subject_id: int):
             "committee_items": committee_items,
             "decisions": decisions,
             "suspensions": suspensions,
+            "active_suspension": active_suspension,
             "activity_logs": activity_logs,
             "closure_blockers": closure_blockers,
             "workflow_steps": workflow_steps,
