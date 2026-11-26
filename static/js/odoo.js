@@ -76,7 +76,10 @@
     var action=select.value;select.value='';
     if(!action)return;
     var launcher=document.querySelector('[data-specialist-launch="'+action+'"]');
-    if(launcher)launcher.click();
+    if(!launcher)return;
+    var targetId=(launcher.getAttribute('href')||'').slice(1);
+    var target=targetId&&document.getElementById(targetId);
+    if(target&&target.tagName==='DETAILS')open(target,select);
   });
   // after a POST that re-renders with errors nothing is hidden: forms live inside their normal sections
 
