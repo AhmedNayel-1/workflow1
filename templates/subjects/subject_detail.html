@@ -234,50 +234,7 @@
 
 <div class="layout-3 gh-layout">
 <div class="col" style="gap:16px;min-width:0">
-  <section class="panel sd-stream" id="sec-timeline" data-activity-root>
-    <div class="panel-h"><h3>{% icon 'clock' %} الخط الزمني للموضوع</h3><span class="muted xs">{{ completed_stages_count }} من {{ workflow_stages|length }} مرحلة مكتملة</span></div>
-    <div class="panel-b">
-      <div class="note brand xs chronology-current">{{ active_stage_pending_text }}</div>
-      <div id="sec-activity" class="chronology-filter-anchor">
-        <div class="activity-tools" role="search" aria-label="البحث في الخط الزمني">
-          <label class="search-in activity-search"><span class="sr-only">ابحث في الخط الزمني</span><input class="in" type="search" placeholder="ابحث في سجل النشاط…" data-activity-search autocomplete="off"></label>
-          <div class="sd-chips" data-sd-chips aria-label="تصفية حسب النوع"></div>
-          <details class="sd-more"><summary>تصفية متقدمة</summary><div class="sd-more-b">
-          <label class="activity-filter"><span class="sr-only">نوع الحدث</span><select class="in" data-activity-type><option value="">كل الأحداث</option></select></label>
-          <label class="activity-filter"><span class="sr-only">الفترة الزمنية</span><select class="in" data-activity-period><option value="all">كل الفترات</option><option value="1">آخر 24 ساعة</option><option value="7">آخر 7 أيام</option><option value="30">آخر 30 يومًا</option></select></label>
-          <button class="btn sm" type="button" data-activity-clear>مسح الفلاتر</button></div></details>
-          <span class="activity-count muted xs" data-activity-count aria-live="polite">—</span>
-        </div>
-      </div>
-      <template id="sd-creation-fields"><p class="sd-caption">بيانات الموضوع (القيم الحالية في السجل)</p><dl class="sd-fields"><div><dt>نوع المعاملة</dt><dd>{{ subject.transaction_type.name }}</dd></div>{% if subject.applicant_name %}<div><dt>مقدم الطلب</dt><dd>{{ subject.applicant_name }}</dd></div>{% endif %}{% if subject.external_source %}<div><dt>{% if out_origin %}الجهة الموجّه إليها{% else %}الجهة الواردة{% endif %}</dt><dd>{{ subject.external_source }}</dd></div>{% endif %}<div><dt>القطاع / الوحدة</dt><dd>{{ subject.sector.name }}، {{ subject.org_unit.name }}</dd></div></dl></template>
-      {% if activity_logs.count > 25 %}<p class="sd-trunc muted xs" data-sd-trunc hidden>بداية السجل غير معروضة: الأحداث الأقدم من أحدث 25 حدثًا غير ظاهرة في هذه القائمة.</p>{% endif %}
-      <div class="case-chronology" data-activity-list aria-live="polite">
-        {% for st in workflow_stages %}
-        <article class="fi activity-item chronology-item chronology-stage {% if st.status == 'completed' %}is-complete{% elif st.status == 'waiting' %}is-waiting{% else %}is-active{% endif %}" data-activity-item data-action-type="مرحلة سير" data-log-timestamp="{{ st.date }}">
-          <span class="chronology-marker" aria-hidden="true">{% if st.status == 'completed' %}✓{% elif st.status == 'waiting' %}!{% else %}•{% endif %}</span>
-          <div class="fi-b">
-            <div class="activity-heading"><span class="activity-type">{{ st.title }}</span><time class="num">{{ st.date }}</time></div>
-            <b class="chronology-route">{{ st.from_label }} <span aria-hidden="true">←</span> {{ st.to_label }}</b>
-            <p>{{ st.what_happened }}</p>
-            {% if st.pending_text %}<small class="chronology-pending">{{ st.pending_text }}</small>{% elif st.completed_text %}<small class="muted">{{ st.completed_text }}</small>{% endif %}
-          </div>
-        </article>
-        {% endfor %}
-        {% for log in activity_logs|slice:":25" %}
-        <article class="fi activity-item chronology-item chronology-log" data-activity-item data-action-type="{{ log.action_type }}" data-actor="{{ log.actor_user.get_full_name|default:log.actor_user.username }}" data-log-timestamp="{{ log.created_at|date:'U' }}">
-          <span class="avatar sm">{{ log.actor_user|default:"؟"|initials }}</span>
-          <div class="fi-b">
-            <div class="activity-heading"><span class="activity-type">{{ log.action_type }}</span><time class="num" datetime="{{ log.created_at|date:'c' }}">{{ log.created_at|date:"Y-m-d H:i" }}</time></div>
-            <p>{{ log.description|arstatus|short:140 }}</p>
-            <small>{{ log.actor_user.get_full_name|default:log.actor_user.username }}{% if log.acting_on_behalf_of %} (نيابةً عن {{ log.acting_on_behalf_of }}){% endif %}</small>
-          </div>
-        </article>
-        {% endfor %}
-      </div>
-      <p class="activity-no-results muted sm" data-activity-no-results hidden>لا توجد أحداث تطابق معايير البحث الحالية.</p>
-      <p class="sd-note muted xs" data-sd-foot-note>{% if activity_logs.count > 25 %}يعرض أحدث 25 حدثًا فقط من {{ activity_logs.count }}. الأحداث الأقدم غير معروضة هنا.{% else %}كل أحداث السجل ({{ activity_logs.count }}) معروضة.{% endif %} الفلاتر محلية ولا تغيّر السجل المحفوظ.</p>
-    </div>
-  </section>
+  
 
 
 {# ====================== المستندات ====================== #}
