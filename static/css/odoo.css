@@ -105,3 +105,25 @@
 .odoo-ui #sec-stages .sd-side-sec b{font-size:15px}
 .odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>p,
 .odoo-ui .od-chatter .sd-stream .chronology-item .fi-b>.chronology-route{font-size:15px;line-height:1.65}
+
+
+/* Specialist view: one action selector replaces the legacy action clusters.
+   Existing action forms are moved into the shared modal only when selected. */
+.specialist-mode .specialist-action-menu{border:1px solid var(--line-2)}
+.specialist-mode .specialist-action-menu .panel-b{display:flex;flex-direction:column;gap:8px}
+.specialist-mode .specialist-action-menu .fld{max-width:520px;margin:0}
+.specialist-mode .specialist-action-menu select{width:100%;min-height:42px}
+.specialist-mode #sec-referrals .panel-h a,
+.specialist-mode #sec-referrals .panel-b form,
+.specialist-mode #sec-referrals .panel-b details,
+.specialist-mode #sec-tasks .panel-h a,
+.specialist-mode #sec-tasks .panel-b form,
+.specialist-mode #sec-tasks .panel-b details,
+.specialist-mode #sec-documents #action-upload,
+.specialist-mode #sec-closure .panel-b>.grid,
+.specialist-mode #sec-closure .note details,
+.specialist-mode #sec-closure [data-outgoing-item],
+.specialist-mode .case-actions{display:none!important}
+.specialist-action-sources{display:none!important}
+.specialist-action-launchers{display:none!important}
+.specialist-mode .od-sheet .subnav a[href="#sec-closure"]{display:none}
