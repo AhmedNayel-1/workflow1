@@ -146,6 +146,60 @@ class SecurityAndIsolationTests(TestCase):
         checked = validate_bulk_rows(actor, rows)
         self.assertIn("لا يمكنك إسناد دور أعلى من مستواك أو مساوٍ له", checked[0]["errors"])
 
+    def test_delegation_cannot_be_created_for_another_delegator_or_expand_permissions(self):
+        """منع إنشاء تفويض باسم رئيس آخر ومنع تفويض صلاحيات لا يملكها المنشئ."""
+        actor = User.objects.get(username="fin_hr_head")
+        chairman = User.objects.get(username="chairman")
+        delegate = User.objects.get(username="admin_gm")
+        before = Delegation.objects.count()
+        client = Client()
+        client.force_login(actor)
+        response = client.post(
+            reverse("accounts:delegations"),
+            {
+                "action": "create_delegation",
+                "delegator_id": chairman.id,
+                "delegate_id": delegate.id,
+                "scope_unit_id": actor.current_unit.id,
+                "allowed_actions": ["SUBJECT_VIEW"],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Delegation.objects.count(), before)
+
+        # حتى باسم المنشئ نفسه لا يمكن تفويض إجراء غير ممنوح له.
+        response = client.post(
+            reverse("accounts:delegations"),
+            {
+                "action": "create_delegation",
+                "delegator_id": actor.id,
+                "delegate_id": delegate.id,
+                "scope_unit_id": actor.current_unit.id,
+                "allowed_actions": ["SYSTEM_SETTINGS"],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Delegation.objects.count(), before)
+
+    def test_scoped_admin_cannot_revoke_delegation_outside_scope(self):
+        """مسؤول قطاع لا يستطيع إلغاء تفويض تابع لقطاع آخر."""
+        actor = User.objects.get(username="fin_hr_head")
+        other_delegation = Delegation.objects.filter(delegator=User.objects.get(username="hr_head")).first()
+        self.assertIsNotNone(other_delegation)
+        client = Client()
+        client.force_login(actor)
+        response = client.post(
+            reverse("accounts:delegations"),
+            {
+                "action": "revoke",
+                "delegation_id": other_delegation.id,
+                "revoked_reason": "اختبار تجاوز النطاق",
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        other_delegation.refresh_from_db()
+        self.assertTrue(other_delegation.is_active)
+
     # =========================================================================
     # 2. تشديد صلاحيات المهام (Tasks) والقرارات (Decisions)
     # =========================================================================

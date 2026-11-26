@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -474,10 +475,44 @@ def delegations_view(request):
         if action == "create_delegation":
             if not PermissionService.user_has_permission(request.user, "DELEGATION_MANAGE"):
                 raise PermissionDenied("ليس لديك صلاحية إنشاء تفويض أو إنابة.")
-            delegate = get_object_or_404(User, id=request.POST.get("delegate_id"))
-            delegator_id = request.POST.get("delegator_id")
-            delegator = get_object_or_404(User, id=delegator_id) if delegator_id else request.user
-            allowed_actions = request.POST.getlist("allowed_actions")
+
+            # لا يوجد حالياً رمز صلاحية مستقل يسمح بإنشاء تفويض نيابةً عن مسؤول آخر.
+            posted_delegator_id = request.POST.get("delegator_id") or ""
+            if posted_delegator_id and str(posted_delegator_id) != str(request.user.id):
+                raise PermissionDenied("يمكنك إنشاء التفويض باسمك فقط؛ لا توجد صلاحية معتمدة للتفويض نيابةً عن مسؤول آخر.")
+            delegator = request.user
+            delegate = get_object_or_404(User, id=request.POST.get("delegate_id"), is_active=True)
+            if delegate.id == delegator.id:
+                raise PermissionDenied("لا يمكن إنشاء تفويض للمستخدم نفسه.")
+
+            is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
+            bounds = PermissionService.get_scoped_admin_boundaries(request.user)
+            if not is_full_admin:
+                delegate_unit_id = delegate.current_unit.id if delegate.current_unit else None
+                delegate_sector_id = delegate.current_sector.id if delegate.current_sector else None
+                if delegate_unit_id not in bounds["unit_ids"] and delegate_sector_id not in bounds["sector_ids"]:
+                    raise PermissionDenied("المفوَّض إليه خارج نطاقك التنظيمي.")
+
+            scope_unit_id = request.POST.get("scope_unit_id") or None
+            if not scope_unit_id and not is_full_admin and request.user.current_unit_id:
+                scope_unit_id = request.user.current_unit_id
+            scope_unit = get_object_or_404(OrgUnit, id=scope_unit_id, is_active=True) if scope_unit_id else None
+            if not is_full_admin and (scope_unit is None or scope_unit.id not in bounds["unit_ids"]):
+                raise PermissionDenied("نطاق التفويض يجب أن يكون وحدة داخل نطاقك التنظيمي.")
+
+            allowed_actions = list(dict.fromkeys(request.POST.getlist("allowed_actions")))
+            valid_codes = set(PermissionCode.objects.values_list("code", flat=True))
+            if any(code not in valid_codes or not PermissionService.user_has_permission(delegator, code) for code in allowed_actions):
+                raise PermissionDenied("لا يجوز منح المفوَّض إليه إجراءً لا يملكه المفوِّض.")
+
+            allow_confidential = request.POST.get("allow_confidential") == "on"
+            if allow_confidential and not PermissionService.get_active_assignments(delegator).filter(
+                role__can_view_confidential=True
+            ).exists() and not PermissionService.get_active_assignments(delegator).filter(
+                role__can_view_top_secret=True
+            ).exists():
+                raise PermissionDenied("لا يمكنك تفويض الاطلاع السري بصلاحيات لا تملكها.")
+
             valid_from = parse_datetime(request.POST.get("valid_from", "")) or timezone.now()
             valid_to = parse_datetime(request.POST.get("valid_to", "")) or (
                 timezone.now() + timezone.timedelta(days=30)
@@ -486,14 +521,16 @@ def delegations_view(request):
                 valid_from = timezone.make_aware(valid_from)
             if timezone.is_naive(valid_to):
                 valid_to = timezone.make_aware(valid_to)
+            if valid_to <= valid_from:
+                raise PermissionDenied("تاريخ نهاية التفويض يجب أن يكون بعد تاريخ بدايته.")
 
             delegation = Delegation.objects.create(
                 delegator=delegator,
                 delegate=delegate,
                 delegation_type=request.POST.get("delegation_type", Delegation.DelegationType.SECRETARIAT),
-                scope_unit_id=request.POST.get("scope_unit_id") or None,
+                scope_unit=scope_unit,
                 allowed_actions=allowed_actions,
-                allow_confidential=request.POST.get("allow_confidential") == "on",
+                allow_confidential=allow_confidential,
                 valid_from=valid_from,
                 valid_to=valid_to,
             )
@@ -508,10 +545,15 @@ def delegations_view(request):
             messages.success(request, "تم تسجيل التفويض بنجاح.")
         elif action == "revoke":
             delegation = get_object_or_404(Delegation, id=request.POST.get("delegation_id"))
-            if delegation.delegator_id != request.user.id and not PermissionService.user_has_permission(
-                request.user, "DELEGATION_MANAGE"
-            ):
-                raise PermissionDenied("لا تملك صلاحية إلغاء هذا التفويض.")
+            if not PermissionService.user_has_permission(request.user, "DELEGATION_MANAGE"):
+                raise PermissionDenied("ليس لديك صلاحية إلغاء التفويضات.")
+            is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
+            bounds = PermissionService.get_scoped_admin_boundaries(request.user)
+            if not is_full_admin and delegation.delegator_id != request.user.id:
+                delegator_unit_id = delegation.delegator.current_unit.id if delegation.delegator.current_unit else None
+                delegator_sector_id = delegation.delegator.current_sector.id if delegation.delegator.current_sector else None
+                if delegation.scope_unit_id not in bounds["unit_ids"] and delegator_unit_id not in bounds["unit_ids"] and delegator_sector_id not in bounds["sector_ids"]:
+                    raise PermissionDenied("لا يمكنك إلغاء تفويض خارج نطاقك التنظيمي.")
             delegation.is_active = False
             delegation.revoked_at = timezone.now()
             delegation.revoked_reason = request.POST.get("revoked_reason", "إلغاء يدوي")
@@ -527,10 +569,23 @@ def delegations_view(request):
             messages.info(request, "تم إلغاء التفويض مع الاحتفاظ بسجله التاريخي.")
         return redirect("accounts:delegations")
 
-    delegations = Delegation.objects.select_related("delegator", "delegate", "scope_unit").all()
+    is_full_admin = bool(request.user.is_superuser or request.user.is_system_admin)
+    bounds = PermissionService.get_scoped_admin_boundaries(request.user)
+    delegations = Delegation.objects.select_related("delegator", "delegate", "scope_unit")
     users = User.objects.filter(is_active=True)
     org_units = OrgUnit.objects.filter(is_active=True)
+    if not is_full_admin:
+        delegations = delegations.filter(Q(delegator=request.user) | Q(scope_unit_id__in=bounds["unit_ids"]))
+        users = users.filter(
+            Q(employee__current_unit_id__in=bounds["unit_ids"])
+            | Q(role_assignments__is_active=True, role_assignments__sector_id__in=bounds["sector_ids"])
+        ).distinct()
+        org_units = org_units.filter(id__in=bounds["unit_ids"])
     permission_codes = PermissionCode.objects.all()
+    permission_codes = [
+        permission for permission in permission_codes
+        if PermissionService.user_has_permission(request.user, permission.code)
+    ]
     return render(
         request,
         "accounts/delegations.html",
