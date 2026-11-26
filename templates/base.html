@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/odoo-shell.css' %}?v=86">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% if request.user.is_authenticated %} class="odoo-ui"{% endif %}>
   <a class="skip" href="#main">تخطَّ إلى المحتوى</a>
   {% if request.user.is_authenticated %}
   <div class="shell">
