@@ -324,6 +324,7 @@ class WorkflowEngineService:
                 action_type="REFERRAL_RECEIVED",
                 actor_user=user,
                 description=f"تم استلام الإحالة فعلياً بواسطة {user}",
+                metadata={"action": "استلام", "status": referral.subject.get_status_display(), "status_code": referral.subject.status},
             )
             return referral
 
@@ -391,6 +392,7 @@ class WorkflowEngineService:
             action_type="REFERRAL_RESPONDED",
             actor_user=user,
             description=f"إفادة على الإحالة بواسطة {user}: {response_notes or 'تم التنفيذ'}",
+            metadata={"action": "إتمام الرد", "status": referral.subject.get_status_display(), "status_code": referral.subject.status},
         )
         if referral.referred_by and referral.referred_by_id != user.id:
             ref_by = referral.referred_by
@@ -622,6 +624,7 @@ class WorkflowEngineService:
             action_type="REFERRAL_RETURNED",
             actor_user=user,
             description=f"رفض/إرجاع الإحالة إلى {referral.referred_by} — السبب: {clean_reason}",
+            metadata={"action": "إرجاع للمحيل", "status": referral.subject.get_status_display(), "status_code": referral.subject.status},
         )
 
         if referral.referred_by and referral.referred_by_id != user.id:
