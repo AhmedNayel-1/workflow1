@@ -62,9 +62,7 @@
 }
 .odoo-ui #pv.od-docked{display:none!important}
 
-/* no visible re-layout on load: the subject sheet is rearranged by odoo.js right after parsing; stay hidden until then (fallback reveal after 1.2s if scripts fail) */
-.gh-layout{visibility:hidden;animation:od-reveal 0s linear 1.2s forwards}
-@keyframes od-reveal{to{visibility:visible}}
+/* The subject layout is authored in HTML; it must remain visible without JavaScript. */
 .odoo-ui .gh-layout{visibility:visible;animation:none}
 
 
