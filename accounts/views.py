@@ -494,8 +494,9 @@ def delegations_view(request):
                     raise PermissionDenied("المفوَّض إليه خارج نطاقك التنظيمي.")
 
             scope_unit_id = request.POST.get("scope_unit_id") or None
-            if not scope_unit_id and not is_full_admin and request.user.current_unit_id:
-                scope_unit_id = request.user.current_unit_id
+            actor_unit = request.user.current_unit
+            if not scope_unit_id and not is_full_admin and actor_unit:
+                scope_unit_id = actor_unit.id
             scope_unit = get_object_or_404(OrgUnit, id=scope_unit_id, is_active=True) if scope_unit_id else None
             if not is_full_admin and (scope_unit is None or scope_unit.id not in bounds["unit_ids"]):
                 raise PermissionDenied("نطاق التفويض يجب أن يكون وحدة داخل نطاقك التنظيمي.")
