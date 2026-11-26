@@ -7,6 +7,7 @@
 5. عزل القطاعات والوحدات التنظيمية في الطبقة المنطقية المركزية (CorrespondenceAccessPolicy) واللجان.
 """
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import patch
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -613,6 +614,9 @@ class SecurityAndIsolationTests(TestCase):
         page = client.get(reverse("subjects:subject_detail", args=[subject.id]))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'data-specialist-action-select')
+        self.assertContains(page, 'class="panel specialist-action-menu"')
+        shell_css = (Path(__file__).resolve().parents[1] / "static" / "css" / "odoo.css").read_text(encoding="utf-8")
+        self.assertIn('.odoo-ui .gh-layout>.col:first-child>section.panel:not(.specialist-action-menu){display:none!important}', shell_css)
         self.assertContains(page, "إتمام التنفيذ")
         self.assertContains(page, "إرجاع للمحيل")
         self.assertContains(page, "قرار جديد")
