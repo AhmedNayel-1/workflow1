@@ -327,6 +327,13 @@ def subject_detail(request, subject_id: int):
                         relation_type=SubjectDocumentLink.RelationType.SUPPORTING,
                         uploaded_files=uploaded_files,
                     )
+                    AuditService.record_activity(
+                        subject=subject,
+                        action_type="DOCUMENT_ATTACHED",
+                        actor_user=request.user,
+                        description=f"تم رفع وإرفاق المستند ({doc.internal_number}) تحت تصنيف «{doc_type.name}» ({len(uploaded_files)} ملف).",
+                        metadata={"action": "رفع مستند", "status": subject.get_status_display(), "status_code": subject.status, "document_number": doc.internal_number},
+                    )
                     messages.success(request, f"تم رفع وإرفاق المستند ({doc.internal_number}) تحت تصنيف «{doc_type.name}» ({len(uploaded_files)} ملف).")
 
             elif action == "update_meta":
