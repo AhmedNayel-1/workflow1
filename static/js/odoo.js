@@ -69,6 +69,15 @@
     if(!d||d.tagName!=='DETAILS')return;
     e.preventDefault();e.stopImmediatePropagation();open(d,a);
   },true);
+  /* Specialist actions reuse the existing action forms and modal host. */
+  document.addEventListener('change',function(e){
+    var select=e.target.closest&&e.target.closest('[data-specialist-action-select]');
+    if(!select)return;
+    var action=select.value;select.value='';
+    if(!action)return;
+    var launcher=document.querySelector('[data-specialist-launch="'+action+'"]');
+    if(launcher)launcher.click();
+  });
   // after a POST that re-renders with errors nothing is hidden: forms live inside their normal sections
 
   /* viewer docking: existing #pv overlay content is shown inside the activity column while it is open */
