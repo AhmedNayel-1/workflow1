@@ -942,8 +942,17 @@ def subject_detail(request, subject_id: int):
 
     draft_memo = next((m for m in memos if m.status != Memo.MemoStatus.APPROVED), None)
 
-    # مؤشر التنقل بين الموضوعات (قراءة فقط، نفس مجموعة الموضوعات المرئية للمستخدم ونفس ترتيب القائمة)
-    _vis_ids = list(PermissionService.filter_visible_subjects(Subject.objects.all(), request.user).values_list("id", flat=True))
+    # مؤشر التنقل يحترم فلاتر قائمة الموضوعات الحالية مع تطبيق نطاق الرؤية نفسه.
+    _pager_subjects = Subject.objects.all()
+    _pager_status = request.GET.get("status")
+    _pager_sector = request.GET.get("sector")
+    if _pager_status:
+        _pager_subjects = _pager_subjects.filter(status=_pager_status)
+    if _pager_sector:
+        _pager_subjects = _pager_subjects.filter(sector_id=_pager_sector)
+    _vis_ids = list(
+        PermissionService.filter_visible_subjects(_pager_subjects, request.user).values_list("id", flat=True)
+    )
     pager = None
     if subject.id in _vis_ids:
         _pos = _vis_ids.index(subject.id)
