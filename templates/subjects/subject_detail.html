@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% load ui_extras static %}
 {% block title %}{{ subject.internal_number }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=11">{% endblock %}
-{% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=19" defer></script>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=12">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=20" defer></script>{% endblock %}
 {% block cp_extra %}<div class="od-cp-actions"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>{% if perms.can_refer %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
 {% if perms.can_act or perms.can_memo or perms.can_task or perms.can_annotate %}<div class="od-add" style="position:relative"><button type="button" class="btn sm" data-pop="od-add-pop" aria-haspopup="true">{% icon 'plus' 'sm' %} إضافة</button><div class="pop od-pop" id="od-add-pop" hidden>
 {% if perms.can_act %}<a href="#action-upload" data-open-details>{% icon 'upload' 'sm' %}<span>إرفاق مستند</span></a>{% endif %}{% if perms.can_memo %}<a href="#action-memo" data-open-details>{% icon 'note' 'sm' %}<span>إعداد مذكرة</span></a>{% endif %}{% if perms.can_task %}<a href="#action-task" data-open-details>{% icon 'task' 'sm' %}<span>تكليف بمهمة</span></a>{% endif %}{% if perms.can_annotate %}<a href="#action-annotation" data-open-details>{% icon 'edit' 'sm' %}<span>إضافة تأشيرة</span></a>{% endif %}{% if perms.can_decide %}<a href="{% url 'decisions:decision_create' subject.id %}">{% icon 'gavel' 'sm' %}<span>إعداد قرار</span></a>{% endif %}</div></div>{% endif %}</div>
@@ -400,28 +400,7 @@
 </div>
 </div>
 
-{# ====================== العمود الجانبي ====================== #}
-<aside class="col sticky" style="gap:16px">
-  <section class="panel gh-side" id="sec-stages"><div class="panel-b">
-  <div class="sd-side-sec"><small>المسؤول الحالي</small><b>{{ subject.current_owner|default:"—" }}</b></div>
-  <div class="sd-side-sec"><small>المرحلة <span class="num">{% for st in workflow_steps %}{% if st.current %}{{ st.id }}{% endif %}{% endfor %}</span> من <span class="num">{{ workflow_steps|length }}</span></small>
-  <div class="sd-bar" aria-hidden="true">{% for st in workflow_steps %}<i class="{% if st.done %}done{% elif st.current %}now{% endif %}"></i>{% endfor %}</div>
-  <div class="steps">{% for st in workflow_steps %}<div class="step {% if st.done %}done{% endif %} {% if st.current %}now{% endif %}"><i>{% if st.done %}✓{% else %}{{ st.id }}{% endif %}</i><span>{{ st.title }}</span></div>{% endfor %}</div></div>
-  <div class="case-meta">
-    <div><small>الاستحقاق</small><b class="num" {% if subject.is_overdue %}style="color:var(--bad)"{% endif %}>{{ subject.due_date|date:"Y-m-d"|default:"غير محدد" }}</b>{% if subject.is_overdue %}<span class="sd-od">متأخر</span>{% endif %}</div>
-    <div><small>الأولوية / السرية</small><b>{{ subject.priority.name }} · {{ subject.confidentiality.name }}</b></div>
-    <div data-sd-people hidden><small>شاركوا في النشاط</small><span class="sd-people"></span></div>
-    <div><small>الارتباطات</small><b class="sd-links">{{ doc_links|length }} مستند · {{ referrals|length }} إحالة · {{ memos|length }} مذكرة</b></div>
-    <div class="sd-full"><details><summary>بيانات المعاملة الكاملة</summary><div class="sd-full-b">
-    <div><small>تاريخ التسجيل</small><b class="num">{{ subject.created_at|date:"Y-m-d H:i" }}</b></div>
-    <div><small>نوع المعاملة</small><b>{{ subject.transaction_type.name }}</b></div>
-    <div><small>القطاع / الوحدة</small><b>{{ subject.sector.name }} — {{ subject.org_unit.name }}</b></div>
-    {% if subject.applicant_name %}<div><small>مقدم الطلب</small><b>{{ subject.applicant_name }}</b></div>{% endif %}
-    {% if subject.external_source %}<div><small>{% if out_origin %}الجهة الموجّه إليها{% else %}الجهة الواردة{% endif %}</small><b>{{ subject.external_source }}</b></div>{% endif %}
-    </div></details></div>
-  </div>
-  </div></section>
-</aside>
+
 </div>
 {% endwith %}
 {% endblock %}
