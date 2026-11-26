@@ -91,7 +91,7 @@ a{color:var(--info)}
 .odoo-ui .od-detail{border-top:0!important;border-radius:0 0 6px 6px!important;margin-top:0!important}
 .odoo-ui .sd-guide{margin:0 0 10px!important}
 @media (max-width:1380px){
-  .od-burger{display:inline-grid}
+  
   .od-menus{inset-inline-start:auto;inset-inline-end:auto;right:auto;left:auto;width:230px;border:1px solid var(--line);border-radius:6px;top:44px;padding:4px 0!important}
   .od-menus .od-mb{height:34px;padding:0 14px;font-size:14px}
   .od-menus .od-menu .od-pop{display:block;position:static;border:0;padding:0}
