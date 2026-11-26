@@ -374,7 +374,7 @@ mark.search-match{padding:0 2px;border-radius:3px;background:var(--warn-soft);co
 .referral-form-summary b{font-size:13px;overflow-wrap:anywhere}
 .referral-field-hint{display:block;margin-top:5px}
 .referral-form [data-referral-step]{scroll-margin-top:calc(var(--top,64px) + 86px)}
-[data-referral-item][hidden]{display:none!important}
+
 .memo-tools{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 11px;border:1px solid var(--ux-border);border-radius:11px;background:var(--panel-2)}
 .memo-tools .search-in{min-width:0;flex:1}
 .memo-tools .search-in .in{width:100%;min-width:0;border:0;background:transparent}
