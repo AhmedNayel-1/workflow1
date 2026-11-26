@@ -612,3 +612,5 @@ html:has(.subject-form){scroll-padding-bottom:84px}
 .od-filter-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-block:0 10px}.od-filter-chips .chip{white-space:nowrap}
 .od-list-view .pager{border-top:1px solid var(--line-2)}
 @media(max-width:760px){.od-breadcrumbs{margin-bottom:6px}.od-list-toolbar{align-items:stretch}.od-list-toolbar .search-in{flex:1 1 100%;width:100%;min-width:0}.od-list-toolbar>select,.od-list-toolbar>.in{flex:1 1 calc(50% - 8px);width:auto!important;min-width:0}.od-list-toolbar>.spacer{display:none}.od-list-toolbar [data-notification-count],.od-list-toolbar [data-referral-count],.od-list-toolbar [data-task-count],.od-list-toolbar [data-document-count]{margin-inline-end:auto;align-self:center}.od-list-view .pager{align-items:center;padding:10px 12px}.od-list-view .pages{flex-wrap:wrap}}
+
+.od-list-heading{flex-wrap:wrap;gap:12px}.od-list-heading>div{min-width:0}.od-list-heading>form{margin-inline-start:auto}@media(max-width:600px){.od-list-heading{align-items:flex-start}.od-list-heading>form{width:100%}.od-list-heading>form>.btn{width:100%}}
