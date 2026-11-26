@@ -482,6 +482,38 @@ class SecurityAndIsolationTests(TestCase):
         self.assertNotIn(hidden_subject.internal_number, linked_text)
         self.assertNotIn(hidden_subject.title, linked_text)
 
+    def test_recipient_cannot_reassign_referral_to_disallowed_peer(self):
+        """الموظف المستلم لا يستطيع إعادة إسناد الإحالة إلى موظف نظير خارج قائمة المستلمين المسموح بها."""
+        sender = User.objects.get(username="transfers_sup")
+        recipient_user = User.objects.get(username="transfers_emp")
+        forbidden_peer = User.objects.get(username="penalties_emp")
+        unit = OrgUnit.objects.get(code="UNIT_TRANSFERS")
+        subject = SubjectService.create_subject(
+            title="اختبار منع إعادة الإسناد خارج التسلسل",
+            transaction_type=TransactionType.objects.filter(sector=unit.sector).first(),
+            sector=unit.sector, org_unit=unit,
+            confidentiality=ConfidentialityLevel.objects.get(code="NORMAL"),
+            priority=PriorityLevel.objects.first(),
+            created_by=sender, current_owner=sender,
+        )
+        referral = WorkflowEngineService.create_referral(
+            subject=subject, referred_by=sender,
+            routing_mode=Referral.RoutingMode.DIRECT,
+            purpose=Referral.Purpose.FOR_EXECUTION,
+            target_users=[recipient_user], enforce_hierarchy=False,
+        )
+        recipient = referral.recipients.first()
+        self.assertFalse(
+            PermissionService.get_allowed_referral_targets(recipient_user, subject).filter(id=forbidden_peer.id).exists()
+        )
+        with self.assertRaises(PermissionDenied):
+            WorkflowEngineService.reassign_recipient(
+                recipient_item=recipient, new_user=forbidden_peer, user=recipient_user,
+                reason="محاولة إعادة إسناد خارج التسلسل",
+            )
+        recipient.refresh_from_db()
+        self.assertEqual(recipient.target_user, recipient_user)
+
     # =========================================================================
     # 4. فرض صلاحيات الإحالة على المستخدمين والوحدات التنظيمية معاً
     # =========================================================================

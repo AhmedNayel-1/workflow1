@@ -808,6 +808,11 @@ class WorkflowEngineService:
         if not is_authorized:
             raise PermissionDenied("ليس لديك صلاحية إعادة إسناد هذه الإحالة.")
 
+        # افحص قائمة المستلمين المسموح بها داخل الخدمة نفسها؛ لا تعتمد على تحقق واجهة المستخدم.
+        allowed_targets = PermissionService.get_allowed_referral_targets(user, referral.subject)
+        if not allowed_targets.filter(id=new_user.id).exists():
+            raise PermissionDenied("المستخدم المختار خارج نطاق المستلمين المسموح بهم لهذه الإحالة.")
+
         if referral.is_completed or referral.is_withdrawn:
             raise ValidationError("لا يمكن إعادة إسناد مستلم في إحالة مكتملة أو مسحوبة.")
         if locked_item.status not in (
