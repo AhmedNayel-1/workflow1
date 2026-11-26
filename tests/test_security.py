@@ -609,6 +609,8 @@ class SecurityAndIsolationTests(TestCase):
         ).latest("created_at")
         self.assertEqual(completed_log.metadata_json["action"], "إتمام الرد")
         self.assertEqual(completed_log.metadata_json["status"], subject.get_status_display())
+        after_reply = client.get(reverse("subjects:subject_detail", args=[subject.id]))
+        self.assertContains(after_reply, 'value="complete">إغلاق الموضوع</option>')
 
     # =========================================================================
     # 4. فرض صلاحيات الإحالة على المستخدمين والوحدات التنظيمية معاً
