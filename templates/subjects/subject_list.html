@@ -4,7 +4,7 @@
 {% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
 {% block content %}
 {% include "partials/breadcrumbs.html" with current="الموضوعات" %}
-<div class="page-h od-lh"><div><h2>الموضوعات</h2><p>سجل كل المعاملات التي يسمح لك نطاق صلاحياتك برؤيتها.</p></div>{% if can_create %}<button class="btn primary" data-compose="document">{% icon 'plus' %}موضوع جديد</button>{% endif %}</div>
+<div class="page-h od-list-heading od-lh"><div><h2>الموضوعات</h2><p>سجل كل المعاملات التي يسمح لك نطاق صلاحياتك برؤيتها.</p></div>{% if can_create %}<button class="btn primary" data-compose="document">{% icon 'plus' %}موضوع جديد</button>{% endif %}</div>
 <section class="panel od-list-view" data-table data-subject-list data-filter-chip-root>
   <form class="toolbar od-list-toolbar" method="get" data-auto>
     <div class="search-in" style="min-width:240px">{% icon 'search' 'sm' %}<input class="in sm" data-subject-search data-filter-chip="بحث" placeholder="بحث سريع في الموضوعات المعروضة…" type="search"></div>
