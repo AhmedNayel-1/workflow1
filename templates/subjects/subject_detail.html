@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% load ui_extras static %}
 {% block title %}{{ subject.internal_number }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=10">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/odoo.css' %}?v=11">{% endblock %}
 {% block extra_js %}<script src="{% static 'js/odoo.js' %}?v=19" defer></script>{% endblock %}
 {% block cp_extra %}<div class="od-cp-actions"><a class="btn sm" href="{% url 'subjects:subject_export_pdf' subject.id %}">{% icon 'download' 'sm' %}تصدير PDF</a>{% if perms.can_refer %}<a class="btn sm primary" href="{% url 'workflow:referral_create' subject.id %}">إحالة</a>{% endif %}
 {% if perms.can_act or perms.can_memo or perms.can_task or perms.can_annotate %}<div class="od-add" style="position:relative"><button type="button" class="btn sm" data-pop="od-add-pop" aria-haspopup="true">{% icon 'plus' 'sm' %} إضافة</button><div class="pop od-pop" id="od-add-pop" hidden>
