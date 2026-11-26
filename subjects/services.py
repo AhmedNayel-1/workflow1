@@ -214,6 +214,8 @@ class SubjectService:
         if subject.status == Subject.Status.SUSPENDED:
             return "معلق لاستيفاء المطلوب"
         if subject.status in (
+            Subject.Status.AWAITING_APPROVAL,
+            Subject.Status.AWAITING_COMMITTEE,
             Subject.Status.DECISION_ISSUED,
             Subject.Status.DISTRIBUTING,
             Subject.Status.FINAL_EXECUTION,
