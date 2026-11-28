@@ -85,3 +85,11 @@
 .sl-tip .evt td:nth-child(3){min-width:var(--ox-px-130)}
 
 .sl-tip{pointer-events:none}
+
+/* قائمة الموضوعات: وسوم ومراحل هادئة. اللون فقط للمعنى: متأخر، عاجل/عاجل جداً، سري. */
+.odoo-ui .sl-wrap .sl-tags .sd-tag{background:var(--ox-muted-soft);color:var(--ox-ink-2);font-size:var(--ox-fs-sm);font-weight:var(--ox-fw-medium)}
+.odoo-ui .sl-wrap .sl-tags .sd-tag[data-prio="عاجل"]{background:var(--ox-warning-soft);color:var(--ox-warning-ink)}
+.odoo-ui .sl-wrap .sl-tags .sd-tag[data-prio="عاجل جداً"]{background:var(--ox-danger-soft);color:var(--ox-danger-ink)}
+.odoo-ui .sl-wrap .sl-tags .sd-tag.sd-tag-secret{background:var(--ox-brand-soft);color:var(--ox-brand)}
+.odoo-ui .sl-wrap .sl-tags .sd-tag.sd-tag-conf{background:var(--ox-muted-soft);color:var(--ox-ink-2)}
+.sl-wrap .tbl td .pill,.sl-card .pill{background:var(--ox-muted-soft);color:var(--ox-ink-2);font-weight:var(--ox-fw-medium)}
