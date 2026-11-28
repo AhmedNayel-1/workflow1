@@ -103,3 +103,22 @@ class PickTreeTests(TestCase):
         h = c.get(reverse("workflow:referral_create", args=[s.id]) + "?partial=1").content.decode()
         self.assertIn("rf-node", h)
         self.assertIn('name="target_user_ids"', h)
+
+
+class ReceiveVisibilityTests(TestCase):
+    def test_recipient_keeps_subject_after_receive(self):
+        from django.urls import reverse
+        from workflow.services import WorkflowEngineService as W
+        call_command("seed_demo_data")
+        s = Subject.objects.filter(org_unit__name__contains="التنقلات").exclude(status="CLOSED").first()
+        for tgt in ("transfers_emp", "transfers_sup", "personnel_gm"):
+            Subject.objects.filter(id=s.id).update(current_owner=User.objects.get(username="hr_head"), status="NEW")
+            RR.objects.filter(referral__subject=s).update(is_active_step=False)
+            s.refresh_from_db()
+            W.create_referral(subject=s, referred_by=s.current_owner, routing_mode="DIRECT", purpose="FOR_EXECUTION", target_users=[User.objects.get(username=tgt)])
+            rec = RR.objects.filter(referral__subject=s, target_user__username=tgt).order_by("-id").first()
+            c = Client(); c.force_login(User.objects.get(username=tgt))
+            c.post(reverse("workflow:referral_respond", args=[rec.id]), {"action": "acknowledge"})
+            for url in ("/subjects/", "/?folder=inbox&tab=primary"):
+                self.assertIn(s.internal_number, c.get(url).content.decode(), (tgt, url))
+            self.assertEqual(json.loads(c.get(f"/subjects/{s.id}/action-options/").content)["mode"], "full")
