@@ -17,7 +17,7 @@
       <section class="nf-sec"><h3 class="nf-sec-h"><span data-dir="IN">1. الورود</span><span data-dir="OUT" hidden>1. الصادر</span></h3>
         <div class="nf-groups">
           <div class="nf-group">
-            <label class="nf-f"><span><i data-dir="IN">الوارد من</i><i data-dir="OUT" hidden>الصادر إلى</i></span><select name="origin_type" id="f-ot" required><option value="">— اختر —</option><option value="INTERNAL">جهة داخلية</option><option value="EXTERNAL">جهة خارجية</option></select></label>
+            <label class="nf-f"><span><i data-dir="IN">الوارد من</i><i data-dir="OUT" hidden>الصادر إلى</i></span><select name="origin_type" id="f-ot" required><option value="INTERNAL" selected>جهة داخلية</option><option value="EXTERNAL">جهة خارجية</option></select></label>
             <label class="nf-f" data-origin-box="INTERNAL" hidden><span>الجهة الداخلية</span><select name="origin_unit_id" id="f-ou" data-ac><option value="">— اختر —</option>{% for u in outgoing_internal %}<option value="{{ u.id }}">{{ u.code }} — {{ u.name }}</option>{% endfor %}</select><small class="nf-hint">جهات أعلى أو موازية أو من قطاع آخر، بدون الجهات التابعة لك. اكتب للبحث.</small></label>
             <label class="nf-f" data-origin-box="EXTERNAL" hidden><span>الجهة الخارجية</span><select name="origin_external_id" id="f-oe" data-ac><option value="">— اختر —</option>{% for e in external_entities %}<option value="{{ e.id }}">{{ e.code }} — {{ e.name }}</option>{% endfor %}</select>{% if not external_entities %}<small class="nf-hint">لا توجد جهات خارجية مسجلة. تُضاف من الإعدادات.</small>{% endif %}</label>
           </div>
@@ -54,8 +54,8 @@
       <section class="nf-sec"><h3 class="nf-sec-h">3. السرية والأهمية</h3>
         <div class="nf-groups">
           <div class="nf-group">
-            <label class="nf-f"><span>درجة السرية</span><select name="confidentiality_id" required><option value="">— اختر —</option>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
-            <label class="nf-f"><span>الأهمية</span><select name="priority_id" required><option value="">— اختر —</option>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+            <label class="nf-f"><span>درجة السرية</span><select name="confidentiality_id" required><option value="">— اختر —</option>{% for c in confidentialities %}<option value="{{ c.id }}"{% if c.code == "NORMAL" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+            <label class="nf-f"><span>الأهمية</span><select name="priority_id" required><option value="">— اختر —</option>{% for p in priorities %}<option value="{{ p.id }}"{% if p.code == "NORMAL" %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></label>
           </div>
           <div class="nf-group" data-dir="IN">
             <label class="nf-f"><span>تاريخ الاستحقاق</span><input type="date" name="due_date" min="{{ today }}"></label>
@@ -106,6 +106,14 @@ li.querySelectorAll(':scope > ul > li').forEach(function(c){if(show(c,force||own
 var vis=self||any;li.hidden=!vis;return vis}
 document.querySelectorAll('.rt-root > li').forEach(function(li){show(li,false)})})}
 ot.addEventListener('change',org);dir();org();
+f.setAttribute('novalidate','');
+function clr(l){if(!l)return;l.classList.remove('bad');var e=l.querySelector('.nf-err');if(e)e.remove()}
+f.addEventListener('input',function(e){clr(e.target.closest('.nf-f'))});f.addEventListener('change',function(e){clr(e.target.closest('.nf-f'))});
+f.addEventListener('submit',function(ev){var first=null;
+f.querySelectorAll('[required]').forEach(function(i){var l=i.closest('.nf-f');if(i.disabled||(l&&l.closest('[hidden]'))||i.type==='hidden')return;
+var empty=!String(i.value||'').trim(),bad=empty||(i.validationMessage&&i.willValidate&&!i.checkValidity());clr(l);
+if(bad&&l){l.classList.add('bad');var m=document.createElement('small');m.className='nf-err';m.textContent=empty?'هذا الحقل مطلوب':'اختر من القائمة';l.appendChild(m);if(!first)first=i}});
+if(first){ev.preventDefault();first.focus();first.scrollIntoView({block:'center'})}});
 var fi=f.querySelector('[data-subject-files]'),fc=f.querySelector('[data-subject-file-count]');
 fi.addEventListener('change',function(){fc.textContent=fi.files.length?('تم اختيار '+fi.files.length+' ملف'):'لم يتم اختيار ملفات'});
 })</script>{% endblock %}
