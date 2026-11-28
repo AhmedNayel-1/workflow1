@@ -72,6 +72,42 @@
     });
   }
 
+  function manage(id) {
+    var row = rowOf(id); var title = row ? row.dataset.odTitle : "";
+    var d = document.createElement("dialog"); d.className = "af-dlg";
+    d.innerHTML = '<h3>سحب / استبدال الإحالة: ' + esc(title) + '</h3><div data-mg-body><p class="muted">جاري التحميل…</p></div>';
+    document.body.appendChild(d); d.showModal(); d.addEventListener("close", function () { d.remove(); });
+    fetch("/subjects/" + id + "/referrals-manage/", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (o) {
+      var b = d.querySelector("[data-mg-body]");
+      if (!o.items.length) { b.innerHTML = '<p class="muted">لا توجد إحالات يمكن سحبها أو استبدالها.</p><div class="af-row"><button type="button" class="btn" data-af-close>إغلاق</button></div>'; return; }
+      b.innerHTML = '<label class="af-f">الإحالة / المستلم<select data-mg-item>' + o.items.map(function (i) { return '<option value="' + i.recipient_id + '" data-ref="' + i.referral_id + '">' + esc(i.name) + ' (' + esc(i.status) + ')</option>'; }).join("") + '</select></label>' +
+        '<div class="af-opts"><label class="on" data-mg-o="withdraw"><input type="radio" name="mg" checked> سحب الإحالة (يعود الموضوع لي)</label>' +
+        (o.targets.length ? '<label data-mg-o="replace"><input type="radio" name="mg"> إحالة بديلة لشخص آخر</label>' : '') + '</div>' +
+        '<label class="af-f" data-mg-p hidden>الشخص البديل<select data-mg-user>' + o.targets.map(function (t) { return '<option value="' + t.id + '">' + esc(t.name) + '</option>'; }).join("") + '</select></label>' +
+        '<label class="af-f">السبب (إجباري)<textarea rows="3" data-mg-reason></textarea></label><div class="af-err" data-mg-err></div>' +
+        '<div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-mg-go>تنفيذ</button></div>';
+      var mode = "withdraw";
+      b.addEventListener("click", function (ev) {
+        var m = ev.target.closest("[data-mg-o]");
+        if (m) { mode = m.dataset.mgO; b.querySelectorAll("[data-mg-o]").forEach(function (x) { x.classList.toggle("on", x === m); }); m.querySelector("input").checked = true; b.querySelector("[data-mg-p]").hidden = mode !== "replace"; }
+        if (ev.target.closest("[data-mg-go]")) {
+          var opt = b.querySelector("[data-mg-item]").selectedOptions[0], reason = b.querySelector("[data-mg-reason]").value.trim();
+          var err = b.querySelector("[data-mg-err]");
+          if (!reason) { err.textContent = "اكتب السبب."; return; }
+          var fd = new FormData(); fd.append("mode", mode); fd.append("reason", reason); fd.append("referral_id", opt.dataset.ref); fd.append("recipient_id", opt.value);
+          if (mode === "replace") fd.append("new_user_id", b.querySelector("[data-mg-user]").value);
+          post("/subjects/" + id + "/referrals-manage/", fd).then(function (j) { if (j.ok) back(); else err.textContent = j.error || "تعذّر التنفيذ"; });
+        }
+      });
+    });
+    d.addEventListener("click", function (ev) { if (ev.target.closest("[data-af-close]")) d.close(); });
+  }
+
+  document.addEventListener("click", function (e) {
+    var mb = e.target.closest("[data-af-manage]"); if (!mb) return;
+    e.stopPropagation(); manage(mb.dataset.afId);
+  }, true);
+
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-af-receive],[data-af-action]"); if (!b) return;
     e.stopPropagation();
