@@ -81,3 +81,12 @@ class Step30Tests(TestCase):
 def ReferralRecipientActive(s):
     from workflow.models import ReferralRecipient as RR
     return RR.objects.filter(referral__subject=s, target_user__username="penalties_emp").exists()
+
+
+class BootstrapTests(TestCase):
+    def test_bootstrap_idempotent(self):
+        from django.core.management import call_command
+        call_command("bootstrap_demo")
+        n = User.objects.count()
+        call_command("bootstrap_demo")
+        self.assertEqual(n, User.objects.count())
