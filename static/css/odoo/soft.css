@@ -34,9 +34,14 @@
 .btn.ok{background:var(--ox-success);border-color:var(--ox-success);color:var(--ox-on-brand)}
 .af-dlg{padding:var(--ox-s5);width:max-content;min-width:var(--ox-px-520);max-width:min(94vw,var(--ox-px-720))}
 .af-dlg::backdrop{background:var(--ox-overlay)}
-.af-opts{display:flex;gap:var(--ox-s2);margin:var(--ox-s3) 0}
-.af-opts label{flex:1;border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius);padding:var(--ox-s3);cursor:pointer}
-.af-opts label.on{border-color:var(--ox-brand);background:var(--ox-brand-soft)}
+.af-opts{display:flex;flex-wrap:wrap;gap:var(--ox-s2);margin:var(--ox-s3) 0}
+.af-opts label{flex:0 0 auto;display:inline-flex;align-items:center;gap:var(--ox-s2);border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius-pill);padding:var(--ox-px-4) var(--ox-s3);cursor:pointer;font-size:var(--ox-fs-sm);color:var(--ox-ink-2);background:transparent}
+.af-opts label:hover{border-color:var(--ox-muted)}
+.af-opts label input{position:absolute;opacity:0;width:0;height:0}
+.af-opts label i{font-style:normal;color:var(--ox-muted)}
+.af-opts label b{font-weight:var(--ox-fw-medium)}
+.af-opts label.on{border-color:var(--ox-brand);background:var(--ox-brand-soft);color:var(--ox-brand)}
+.af-opts label.on i{color:var(--ox-brand)}
 .af-dlg textarea{width:100%;border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius);padding:var(--ox-s2);font:inherit}
 .af-row{display:flex;gap:var(--ox-s2);justify-content:flex-end;margin-top:var(--ox-s3)}
 .sl-wrap [data-sl-cards]{flex:1;min-width:0}
