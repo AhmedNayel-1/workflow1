@@ -353,6 +353,33 @@ class CorrespondenceAccessPolicy:
         return Task.objects.filter(subject=subject, assigned_to_id__in=employee_ids).exists()
 
     @classmethod
+    def _closed_dept_unit_ids(cls, subject):
+        """وحدات من تعامل مع الموضوع (المنشئ والمالك والمحال إليهم والمحيلون) + وحدة الموضوع."""
+        ids = {subject.org_unit_id}
+        ReferralRecipient = apps.get_model("workflow", "ReferralRecipient")
+        uids = {subject.created_by_id, subject.current_owner_id}
+        for tu, rb in ReferralRecipient.objects.filter(referral__subject=subject).values_list("target_user_id", "referral__referred_by_id"):
+            uids.add(tu); uids.add(rb)
+        User = apps.get_model("accounts", "User")
+        for u in User.objects.filter(id__in={x for x in uids if x}).select_related("employee"):
+            if u.employee_id and u.employee.current_unit_id:
+                ids.add(u.employee.current_unit_id)
+        ids.discard(None)
+        return ids
+
+    @classmethod
+    def _is_closed_dept_viewer(cls, user, subject) -> bool:
+        """موضوع مغلق غير سري للغاية: كل موظفي قسم من تعامل معه يطّلعون عليه (داخل قطاعهم)."""
+        if subject.status != "CLOSED" or subject.confidentiality.overrides_hierarchy:
+            return False
+        unit = getattr(user, "current_unit", None)
+        if unit is None:
+            return False
+        if subject.sector_id not in cls.get_user_scope_boundaries(user)["allowed_sector_ids"]:
+            return False
+        return unit.id in cls._closed_dept_unit_ids(subject)
+
+    @classmethod
     def can_view_subject(cls, user, subject, _visited_delegators=None) -> bool:
         if not user or not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
             return False
@@ -404,6 +431,9 @@ class CorrespondenceAccessPolicy:
 
         # 5ب. التسلسل الإداري يعلم بما يُوجَّه لموظفيه (رئيس القطاع / المدير العام / مشرف القسم)
         if cls._is_directed_to_chain_employee(user, subject):
+            return True
+        # 5ج. بعد الإغلاق: كل موظفي القسم الذي تعامل مع الموضوع (غير السري للغاية)
+        if cls._is_closed_dept_viewer(user, subject):
             return True
 
         # 6. عزل القطاعات والوحدات التنظيمية في الطبقة المركزية
@@ -563,7 +593,20 @@ class CorrespondenceAccessPolicy:
         if gm_ids:
             chain_q |= Q(confidentiality__overrides_hierarchy=True) & cls._chain_directed_q(gm_ids)
 
-        positive_q = grant_q | direct_q | delegation_q | scope_q | chain_q
+        closed_q = Q(pk__in=[])
+        _u = getattr(user, "current_unit", None)
+        if _u is not None and boundaries["allowed_sector_ids"]:
+            _p = "employee__current_unit"
+            closed_q = (
+                Q(status="CLOSED", confidentiality__overrides_hierarchy=False, sector_id__in=boundaries["allowed_sector_ids"])
+                & (Q(org_unit=_u)
+                   | Q(created_by__employee__current_unit=_u)
+                   | Q(current_owner__employee__current_unit=_u)
+                   | Q(referrals__recipients__target_user__employee__current_unit=_u)
+                   | Q(referrals__referred_by__employee__current_unit=_u))
+            )
+
+        positive_q = grant_q | direct_q | delegation_q | scope_q | chain_q | closed_q
         return positive_q & deny_filter
 
     @classmethod
