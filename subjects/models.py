@@ -152,6 +152,8 @@ class Subject(models.Model):
     def is_overdue(self) -> bool:
         if not self.due_date:
             return False
+        if self.status == self.Status.SUSPENDED:
+            return False
         if self.status in {self.Status.CLOSED, self.Status.COMPLETED, self.Status.CANCELLED, self.Status.REJECTED}:
             return False
         return self.due_date < timezone.localdate()
@@ -482,3 +484,29 @@ class SubjectActionFile(models.Model):
     file_size = models.PositiveBigIntegerField(default=0)
     mime_type = models.CharField(max_length=120, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+
+class StepSuspension(models.Model):
+    """تعليق خطوة واحدة (صاحب العهدة) لاستيفاء مستند من شخص أو وحدة، دون إيقاف بقية الفروع."""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="step_suspensions")
+    recipient = models.ForeignKey("workflow.ReferralRecipient", on_delete=models.CASCADE, related_name="suspensions")
+    holder = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    required_item = models.CharField("المستند المطلوب", max_length=255)
+    requested_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    requested_unit = models.ForeignKey("organization.OrgUnit", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    follow_up_date = models.DateField("تاريخ المتابعة", null=True, blank=True)
+    prior_status = models.CharField(max_length=30)
+    suspended_at = models.DateTimeField(auto_now_add=True)
+    lifted_at = models.DateTimeField(null=True, blank=True)
+    lifted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    lift_kind = models.CharField(max_length=10, blank=True)  # UPLOAD / CANCEL
+    reminded = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-suspended_at"]
+
+    @property
+    def requested_label(self):
+        if self.requested_user_id:
+            return self.requested_user.get_full_name() or self.requested_user.username
+        return str(self.requested_unit) if self.requested_unit_id else ""
