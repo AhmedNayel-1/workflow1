@@ -861,6 +861,7 @@ def subject_detail(request, subject_id: int):
                     user=request.user,
                     closure_notes=request.POST.get("closure_notes", ""),
                     exceptional=exceptional,
+                    outcome=request.POST.get("closure_outcome", ""),
                 )
                 messages.success(request, "تم إغلاق الموضوع وأرشفته رسمياً.")
 
@@ -998,7 +999,7 @@ def subject_detail(request, subject_id: int):
         "can_suspend": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_SUSPEND", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_decide": can_act and PermissionService.user_has_permission(request.user, "DECISION_CREATE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_approve_decision": PermissionService.user_has_permission(request.user, "DECISION_APPROVE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
-        "can_close": can_act and (SubjectService.registrant_holds_unrouted(request.user, subject) or PermissionService.user_has_permission(request.user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject)),
+        "can_close": can_act and (SubjectService.registrant_holds_unrouted(request.user, subject) or AA.head_level(request.user) and PermissionService.user_has_permission(request.user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject)),
         "can_exceptional_close": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_EXCEPTIONAL_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_reopen": PermissionService.user_has_permission(request.user, "SUBJECT_REOPEN", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_manage_access": PermissionService.user_has_permission(request.user, "PERMISSIONS_MANAGE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
@@ -1578,7 +1579,10 @@ def subject_action_options(request, subject_id: int):
     sus_mode = bool(my_sus or (rec is None and can_cancel))
     info = [{"item": x.required_item, "from": x.requested_label, "holder": x.holder.get_full_name() or x.holder.username,
              "follow_up": x.follow_up_date.isoformat() if x.follow_up_date else ""} for x in (my_sus or act)]
+    from subjects import closing as CL
     return JsonResponse({
+        "can_close_now": bool((rec is not None or om) and CL.can_close_here(request.user, subject) and subject.status != Subject.Status.CLOSED),
+        "can_req_close": bool(rec is not None and not CL.can_close_here(request.user, subject) and rec.referral.referred_by_id),
         "sus_mode": sus_mode, "sus": info, "can_cancel": can_cancel,
         "can_suspend": bool(rec is not None and not my_sus),
         "people": [{"id": u.id, "name": u.get_full_name() or u.username} for u in User.objects.filter(is_active=True).exclude(id=request.user.id).order_by("first_name", "username")] if rec is not None else [],
@@ -1637,6 +1641,24 @@ def subject_quick_action(request, subject_id: int):
     self_hold = rec is None and AA.owner_mode(request.user, subject)
     pm = request.POST.get("mode")
     from subjects import suspension as SU
+    if pm in ("close", "request_close"):
+        from subjects import closing as CL
+        notes_c = (request.POST.get("notes") or "").strip()
+        if rec is None and not self_hold:
+            return JsonResponse({"ok": False, "error": "هذا الموضوع غير موجّه إليك حالياً."}, status=403)
+        try:
+            if pm == "request_close":
+                if rec is None or CL.can_close_here(request.user, subject):
+                    return JsonResponse({"ok": False, "error": "لديك صلاحية الإغلاق مباشرة."}, status=400)
+                CL.request_closure(request.user, subject, rec, notes_c)
+            else:
+                if not CL.can_close_here(request.user, subject):
+                    return JsonResponse({"ok": False, "error": "الإغلاق للمشرف ومن فوقه."}, status=403)
+                SubjectService.close_subject(subject=subject, user=request.user, closure_notes=notes_c,
+                                             outcome=request.POST.get("outcome", ""))
+        except (ValidationError, PermissionDenied) as exc:
+            return JsonResponse({"ok": False, "error": "; ".join(getattr(exc, "messages", [str(exc)]))}, status=400)
+        return JsonResponse({"ok": True})
     if pm == "unsuspend":
         if not SU.can_cancel(request.user, subject, AA.chain_mode(request.user, subject)):
             return JsonResponse({"ok": False, "error": "غير مسموح لك بإلغاء التعليق."}, status=403)
