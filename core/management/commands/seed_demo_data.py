@@ -330,6 +330,8 @@ class Command(BaseCommand):
         prod_head = make_user("prod_head", "أ. عادل رئيس قطاع الإنتاج", "EMP-019", "رئيس قطاعات الإنتاج", u_prod_sec, r_sector_head)
         hr_sector_admin = make_user("hr_sector_admin", "أ. منال مسؤول قطاع الموارد البشرية (سكرتارية)", "EMP-016", "مسؤول قطاع الموارد البشرية والسكرتارية", u_hr_sec, r_sector_admin, sector=sec_hr, is_sec=True)
 
+        chairman_sec = make_user("chairman_sec", "أ. هالة سكرتارية رئيس مجلس الإدارة", "EMP-030", "سكرتارية رئيس مجلس الإدارة", u_chair, r_sec, is_sec=True)
+
         # سيناريو الإسكان: موضوع ينشأ في قطاع الإنتاج ويُوجَّه إلى قطاع المالية والموارد البشرية؛ يُمنح المعنيون
         # صلاحيتهم على موضوعات الإسكان فقط في قطاع الإنتاج (لا اتساع في باقي الأنواع أو القطاعات)
         for _u, _r in ((fin_hr_head, r_sector_head), (admin_gm, r_gm), (housing_sup, r_sup), (housing_emp, r_emp)):
@@ -372,18 +374,7 @@ class Command(BaseCommand):
                 "valid_to": timezone.now() + timedelta(days=90),
             },
         )
-        Delegation.objects.get_or_create(
-            delegator=hr_head,
-            delegate=hr_sector_admin,
-            delegation_type=Delegation.DelegationType.SECRETARIAT,
-            defaults={
-                "scope_unit": u_hr_sec,
-                "allowed_actions": ["SUBJECT_CREATE", "SUBJECT_VIEW", "REFERRAL_CREATE", "MEMO_CREATE", "DOCUMENT_CREATE"],
-                "allow_confidential": True,
-                "valid_from": timezone.now() - timedelta(days=1),
-                "valid_to": timezone.now() + timedelta(days=90),
-            },
-        )
+        # مسؤول القطاع (hr_sector_admin) لإدارة المستخدمين فقط: لا تفويض ولا سكرتارية
 
         # 8. قوالب مسارات العمل الافتراضية بإصدار v1
         tpl_transfer, _ = WorkflowTemplate.objects.get_or_create(
