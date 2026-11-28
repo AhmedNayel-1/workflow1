@@ -7,8 +7,8 @@
   <div class="rf-pick">
     <div class="rf-pick-h"><b>إلى من؟</b><input type="search" class="rf-q" placeholder="ابحث بالاسم…" data-rf-q aria-label="بحث في المستلمين"><small data-referral-selected-count>لم يتم اختيار أحد</small></div>
     <div class="rf-list" data-rf-list>
-      {% for u in users %}<label class="rf-opt" data-rf-t="{{ u.get_full_name|default:u.username }} {{ u.job_display_title|default:'' }}"><input type="checkbox" name="target_user_ids" value="{{ u.id }}"> <span>{{ u.get_full_name|default:u.username }}{% if u.job_display_title %} <small>— {{ u.job_display_title }}</small>{% endif %}</span></label>{% endfor %}
-      {% for u in org_units %}<label class="rf-opt rf-unit" data-rf-t="{{ u.name }}"><input type="checkbox" name="target_unit_ids" value="{{ u.id }}"> <span>{{ u.name }} <small>(الوحدة كلها: تصل لرئيسها)</small></span></label>{% endfor %}
+      {% for u in pick_tree.loose %}<label class="rf-opt" data-rf-t="{{ u.get_full_name|default:u.username }}"><input type="checkbox" name="target_user_ids" value="{{ u.id }}"> <span>{{ u.get_full_name|default:u.username }}</span></label>{% endfor %}
+      {% include "workflow/_pick_node.html" with nodes=pick_tree.nodes %}
       {% if not users and not org_units %}<p class="nf-empty">لا يوجد مستلمون متاحون لك.</p>{% endif %}
     </div>
   </div>
@@ -18,5 +18,12 @@
 <script>(function(){var f=document.currentScript.previousElementSibling,q=f.querySelector('[data-rf-q]'),c=f.querySelector('[data-referral-selected-count]');
 function upd(){var n=f.querySelectorAll('.rf-opt input:checked').length;c.textContent=n?('تم اختيار '+n):'لم يتم اختيار أحد'}
 f.addEventListener('change',upd);
-q.addEventListener('input',function(){var s=q.value.trim();f.querySelectorAll('.rf-opt').forEach(function(o){o.hidden=!!s&&o.dataset.rfT.indexOf(s)<0})});
+q.addEventListener('input',function(){var s=q.value.trim();
+function vis(el){var own=!s||(el.dataset.rfT||'').indexOf(s)>-1,any=false;
+if(el.matches('details')){el.querySelectorAll(':scope > .rf-kids > .rf-opt, :scope > .rf-kids > details').forEach(function(c){if(vis(c))any=true});
+var sm=el.querySelector(':scope > summary .rf-opt');var selfHit=!!s&&(el.dataset.rfT||'').indexOf(s)>-1;
+if(selfHit){el.querySelectorAll('.rf-opt, details').forEach(function(c){c.hidden=false});any=true}
+el.hidden=!(!s||any||selfHit);if(s&&any)el.open=true;return !el.hidden}
+el.hidden=!own;return own}
+f.querySelectorAll('.rf-list > .rf-opt, .rf-list > details').forEach(vis)});
 q.addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault()})})()</script>
