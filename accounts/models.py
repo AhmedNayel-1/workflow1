@@ -210,6 +210,14 @@ class Delegation(models.Model):
     def __str__(self):
         return f"{self.delegate.username} نيابة عن {self.delegator.username}"
 
+    def allows(self, code: str) -> bool:
+        """السكرتارية تأخذ كل صلاحيات المسؤول المفوِّض؛ وغيرها يلتزم بقائمة الإجراءات."""
+        if code in (self.allowed_actions or []):
+            return True
+        if self.delegation_type == self.DelegationType.SECRETARIAT:
+            return self.delegate.role_assignments.filter(is_active=True, role__code="SECRETARIAT").exists()
+        return False
+
     def is_currently_valid(self) -> bool:
         now = timezone.now()
         return (
