@@ -1,0 +1,26 @@
+/* خطوط عربية اختيارية (OFL 1.1) — ملفات محلية بلا CDN. الاختيار يُحفظ في المتصفح فقط (localStorage: ox-font). */
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/tajawal-arabic-400-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/tajawal-latin-400-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:500;font-display:swap;src:url("../../fonts/tajawal-arabic-500-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:500;font-display:swap;src:url("../../fonts/tajawal-latin-500-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/tajawal-arabic-700-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxTajawal";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/tajawal-latin-700-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/cairo-arabic-400-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/cairo-latin-400-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:500;font-display:swap;src:url("../../fonts/cairo-arabic-500-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:500;font-display:swap;src:url("../../fonts/cairo-latin-500-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/cairo-arabic-700-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxCairo";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/cairo-latin-700-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxAlmarai";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/almarai-arabic-400-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxAlmarai";font-style:normal;font-weight:400;font-display:swap;src:url("../../fonts/almarai-latin-400-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:"OxAlmarai";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/almarai-arabic-700-normal.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+060C,U+061B,U+061F}
+@font-face{font-family:"OxAlmarai";font-style:normal;font-weight:700;font-display:swap;src:url("../../fonts/almarai-latin-700-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122}
+:root{--font:var(--ox-font)}
+body{font-family:var(--ox-font)}
+html[data-ox-font="plex"]{--ox-font:"Plex",Arial,sans-serif;--font:var(--ox-font)}
+html[data-ox-font="cairo"]{--ox-font:"OxCairo",Arial,sans-serif;--font:var(--ox-font)}
+html[data-ox-font="almarai"]{--ox-font:"OxAlmarai",Arial,sans-serif;--font:var(--ox-font)}
+.ox-fontpick{display:grid;gap:var(--ox-s1);padding:var(--ox-s2) var(--ox-s1) var(--ox-s1);border-top:var(--ox-px-1) solid var(--ox-line-soft);margin-top:var(--ox-s2)}
+.ox-fontpick label{font-size:var(--ox-fs-sm);color:var(--ox-muted)}
+.ox-fontpick select{width:100%;height:var(--ox-input-h);border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius);background:var(--ox-bg);font:inherit;color:var(--ox-ink);padding-inline:var(--ox-s2)}
+.ox-fontpick select:focus{outline:0;box-shadow:var(--ox-focus-ring);border-color:var(--ox-brand)}

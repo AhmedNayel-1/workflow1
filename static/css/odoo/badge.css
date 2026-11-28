@@ -1,0 +1,19 @@
+/* شارة واحدة: فاتحة افتراضياً (ترويسة النموذج)، وممتلئة داخل خلايا الجداول */
+.ox-badge,.pill,.tag{display:inline-flex;align-items:center;gap:var(--ox-s1);padding:var(--ox-px-1) var(--ox-s2);border-radius:var(--ox-radius-pill);font-size:var(--ox-fs-sm);font-weight:var(--ox-fw-medium);line-height:1.5;white-space:nowrap;background:var(--ox-muted-soft);color:var(--ox-muted)}
+.pill::before{content:"";width:var(--ox-px-6);height:var(--ox-px-6);border-radius:var(--ox-radius-pill);background:currentColor}
+.pill.nodot::before{display:none}
+.tag{background:var(--ox-bg-view);color:var(--ox-ink-2)}
+.tag.code{direction:ltr}
+.ox-badge.ok,.pill.ok{background:var(--ox-success-soft);color:var(--ox-success-ink)}
+.ox-badge.info,.pill.info{background:var(--ox-info-soft);color:var(--ox-info-ink)}
+.ox-badge.warn,.pill.warn{background:var(--ox-warning-soft);color:var(--ox-warning-ink)}
+.ox-badge.bad,.pill.bad{background:var(--ox-danger-soft);color:var(--ox-danger-ink)}
+.ox-badge.brand,.pill.brand{background:var(--ox-brand-soft);color:var(--ox-brand)}
+.tbl .pill{background:var(--ox-muted);color:var(--ox-on-brand)}
+.tbl .pill::before{display:none}
+.tbl .pill.ok{background:var(--ox-success);color:var(--ox-on-brand)}
+.tbl .pill.info{background:var(--ox-info);color:var(--ox-on-brand)}
+.tbl .pill.warn{background:var(--ox-warning);color:var(--ox-ink)}
+.tbl .pill.bad{background:var(--ox-danger);color:var(--ox-on-brand)}
+.tbl .pill.brand{background:var(--ox-brand);color:var(--ox-on-brand)}
+.tbl .tag.code{padding:0;background:transparent;color:var(--ox-ink-2)}

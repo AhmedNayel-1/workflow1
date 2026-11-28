@@ -1,0 +1,6 @@
+/* Login page, light touch: flat brand panel instead of the blue/teal gradient. Form and markup unchanged. */
+.auth-art{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:var(--ox-s6);color:var(--ox-on-brand);background:var(--ox-brand);overflow:hidden}
+.auth-art h2{font-size:var(--ox-fs-title);font-weight:var(--ox-fw-medium);line-height:1.35;max-width:14ch}
+.auth-f div{display:flex;gap:var(--ox-s3);align-items:center;padding:var(--ox-s3) var(--ox-s4);border-radius:var(--ox-radius);background:var(--ox-brand-hover)}
+.auth-card h1{font-size:var(--ox-fs-title);font-weight:var(--ox-fw-medium);margin-bottom:var(--ox-s1)}
+.auth .logo{background:var(--ox-brand-hover);box-shadow:none;border-radius:var(--ox-radius)}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Odoo kit — عرض المكوّنات</title>
+<link rel="stylesheet" href="/static/css/odoo/index.css">
+</head>
+<body class="ox">
+<header class="ox-navbar">
+  <div class="ox-brand"><span class="ox-brand-logo"></span>الاتصالات الإدارية</div>
+  <nav class="ox-menu"><button class="ox-menu-btn" aria-expanded="false">الموضوعات</button>
+    <div class="ox-dropdown"><div class="ox-dropdown-header">الموضوعات</div><a class="ox-dropdown-item" href="#">كل الموضوعات</a><a class="ox-dropdown-item" href="#">موضوعاتي</a></div></nav>
+  <nav class="ox-menu"><button class="ox-menu-btn" aria-expanded="false">الإحالات</button>
+    <div class="ox-dropdown"><a class="ox-dropdown-item" href="#">الوارد</a><a class="ox-dropdown-item" href="#">الصادر</a></div></nav>
+  <nav class="ox-menu"><button class="ox-menu-btn" aria-expanded="false">التقارير</button>
+    <div class="ox-dropdown"><div class="ox-dropdown-header">التقارير</div><a class="ox-dropdown-item" href="#">تقرير ديناميكي</a></div></nav>
+  <span class="ox-spacer"></span>
+  <div class="ox-systray">
+    <button class="ox-systray-btn" data-ox-tip="الرسائل">✉<span class="ox-count">5</span></button>
+    <button class="ox-systray-btn" data-ox-tip="الأنشطة">◔<span class="ox-count">49</span></button>
+    <span class="ox-avatar" aria-label="المستخدم">أ</span>
+  </div>
+</header>
+
+<!-- قائمة -->
+<section id="list-demo">
+  <div class="ox-cp">
+    <div class="ox-cp-lead"><button class="ox-btn ox-btn-primary">جديد</button>
+      <ol class="ox-breadcrumb"><li>الموضوعات</li></ol></div>
+    <div class="ox-cp-search"><div class="ox-search"><span class="ox-search-ico">⌕</span><input placeholder="بحث…"><button class="ox-search-toggle" aria-label="خيارات البحث">▾</button></div></div>
+    <div class="ox-cp-end"><span class="ox-pager"><span class="ox-num">1-3 / 3</span><span class="ox-btn-group"><a class="ox-btn ox-btn-icon" aria-disabled="true">›</a><a class="ox-btn ox-btn-icon" aria-disabled="true">‹</a></span></span>
+      <span class="ox-btn-group"><button class="ox-btn ox-btn-icon active" aria-label="قائمة">☰</button><button class="ox-btn ox-btn-icon" aria-label="كانبان">▦</button></span></div>
+  </div>
+  <div class="ox-table-wrap"><table class="ox-list" data-ox-list="subjects">
+    <thead><tr><th>المرجع</th><th>الجهة</th><th>الموعد</th><th class="num">المبلغ</th><th>الحالة</th></tr></thead>
+    <tbody>
+      <tr data-ox-row data-id="1" data-href="#r1"><td><b>SUB-2026-00005</b></td><td><a href="#">رئاسة القطاع</a></td><td class="is-late">منذ 6 أيام</td><td class="num ox-num">2,880.75</td><td><span class="ox-badge ox-badge-success">مغلق</span></td></tr>
+      <tr data-ox-row data-id="2" data-href="#r2"><td><b>SUB-2026-00004</b></td><td><a href="#">الشئون المالية</a></td><td>—</td><td class="num ox-num">12,500.00</td><td><span class="ox-badge ox-badge-info">قيد التنفيذ</span></td></tr>
+      <tr data-ox-row data-id="3" data-href="#r3"><td><b>SUB-2026-00003</b></td><td><a href="#">الموارد البشرية</a></td><td>—</td><td class="num ox-num">293.25</td><td><span class="ox-badge">جديد</span></td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="3"></td><td class="num ox-num">15,674.00</td><td></td></tr></tfoot>
+  </table></div>
+</section>
+
+<!-- سجل -->
+<section id="record-demo" data-ox-record data-ox-list-key="subjects" data-id="1" style="margin-top:24px">
+  <div class="ox-cp">
+    <div class="ox-cp-lead"><button class="ox-btn ox-btn-primary">جديد</button>
+      <ol class="ox-breadcrumb"><li><a data-ox-back href="#list-demo">الموضوعات</a></li><li>SUB-2026-00005</li></ol></div>
+    <div class="ox-cp-end"><span class="ox-pager"><span class="ox-num" data-ox-pager-text>1 / 3</span><span class="ox-btn-group"><a class="ox-btn ox-btn-icon" data-ox-next aria-label="التالي">›</a><a class="ox-btn ox-btn-icon" data-ox-prev aria-label="السابق">‹</a></span></span></div>
+    <div class="ox-cp-actions"><button class="ox-btn ox-btn-primary">إحالة</button><button class="ox-btn ox-btn-primary">إغلاق</button><button class="ox-btn">إرسال</button><button class="ox-btn" data-ox-dialog-open="dlg">معاينة</button><button class="ox-btn" id="t">تنبيه</button></div>
+    <div class="ox-cp-stages"><ol class="ox-statusbar"><li class="done">التسجيل</li><li class="now">التنفيذ</li><li>الإغلاق</li></ol></div>
+  </div>
+  <div class="ox-view">
+    <div class="ox-sheet">
+      <div class="ox-sheet-head"><h1 class="ox-title">SUB-2026-00005</h1><span class="ox-badge ox-badge-soft ox-badge-danger">متأخر</span></div>
+      <div class="ox-groups">
+        <div><div class="ox-field"><label>العميل<span class="ox-help" data-ox-tip="الجهة صاحبة الطلب">؟</span></label><div class="ox-field-value"><a href="#">رئاسة القطاع</a></div></div>
+          <div class="ox-field required"><label>نوع المعاملة</label><div class="ox-field-value">بيان عاجل</div></div></div>
+        <div><div class="ox-field"><label>تاريخ الاستحقاق</label><div class="ox-field-value ox-num">26/11/2026</div></div>
+          <div class="ox-field"><label>حقل للتحرير</label><div class="ox-field-value"><input class="ox-input" placeholder="اكتب هنا"></div></div></div>
+      </div>
+      <div data-ox-notebook>
+        <div class="ox-notebook-tabs" role="tablist">
+          <button class="ox-tab" role="tab" aria-controls="p1" aria-selected="true">التفاصيل</button>
+          <button class="ox-tab" role="tab" aria-controls="p2">المرفقات</button>
+        </div>
+        <div class="ox-tabpanel" id="p1" role="tabpanel">محتوى التفاصيل</div>
+        <div class="ox-tabpanel" id="p2" role="tabpanel" hidden>محتوى المرفقات</div>
+      </div>
+    </div>
+    <aside class="ox-chatter" style="margin-top:16px">
+      <div class="ox-chatter-bar"><button class="ox-btn ox-btn-soft">إرسال رسالة</button><button class="ox-btn">ملاحظة</button><button class="ox-btn">نشاط</button></div>
+      <div class="ox-chatter-date">26 نوفمبر 2026</div>
+      <div class="ox-msg"><span class="ox-avatar ox-avatar-lg">أ</span><div><div class="ox-msg-head"><b>أ.د. رئيس مجلس الإدارة</b><time>22:16</time></div>تم إنشاء الموضوع</div></div>
+    </aside>
+  </div>
+</section>
+
+<div class="ox-overlay" id="dlg" hidden>
+  <div class="ox-dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-t">
+    <div class="ox-dialog-head"><h2 id="dlg-t">اختيار السجلات</h2><button class="ox-btn ox-btn-icon" data-ox-dialog-close aria-label="إغلاق">×</button></div>
+    <div class="ox-dialog-body">محتوى النافذة</div>
+    <div class="ox-dialog-foot"><button class="ox-btn ox-btn-primary">اختيار</button><button class="ox-btn" data-ox-dialog-close>إلغاء</button></div>
+  </div>
+</div>
+<script src="/static/js/odoo/ox.js"></script>
+<script>document.getElementById('t').addEventListener('click',function(){OxUI.notify({type:'warning',title:'تحذير',message:'لا يمكن تنفيذ هذا الإجراء الآن'})});</script>
+</body>
+</html>

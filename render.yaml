@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: workflow1-preview
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: waitress-serve --host=0.0.0.0 --port=$PORT config.wsgi:application
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DB_ENGINE
+        value: sqlite

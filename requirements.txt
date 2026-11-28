@@ -1,0 +1,9 @@
+# Core dependencies (SQLite dev/local ready - no C++ compiler required)
+Django>=5.1,<5.2
+python-dotenv>=1.0.1,<2.0
+Pillow>=10.4,<14.0
+waitress>=3.0.0,<4.0
+openpyxl>=3.1.5,<4.0
+
+# Static files on Render (no C++ build)
+whitenoise>=6.6,<7.0

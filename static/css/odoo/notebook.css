@@ -1,0 +1,7 @@
+/* تبويبات: تعريف واحد. التبويب النشط بحد علوي بنفسجي سميك */
+.ox-notebook-tabs,.tabs,.nf-tabs{display:flex;gap:0;width:auto;max-width:100%;padding:0;margin:0;border:0;border-bottom:var(--ox-px-1) solid var(--ox-line);border-radius:0;background:transparent;overflow-x:auto;scrollbar-width:none}
+.ox-notebook-tabs::-webkit-scrollbar,.tabs::-webkit-scrollbar{display:none}
+.ox-tab,.tab,.nf-tabs button{display:inline-flex;align-items:center;gap:var(--ox-s2);height:var(--ox-px-36);padding:0 var(--ox-s4);margin-bottom:calc(-1 * var(--ox-px-1));border:var(--ox-px-1) solid transparent;border-top:var(--ox-px-3) solid transparent;border-bottom:0;border-radius:0;background:transparent;color:var(--ox-ink-2);font:inherit;font-size:var(--ox-fs-base);font-weight:var(--ox-fw-medium);white-space:nowrap;cursor:pointer}
+.ox-tab:hover,.tab:hover,.nf-tabs button:hover{color:var(--ox-ink)}
+.ox-tab.on,.tab.on,.nf-tabs button.on{background:var(--ox-bg);border-color:var(--ox-line);border-top-color:var(--ox-brand);border-bottom:var(--ox-px-1) solid var(--ox-bg);color:var(--ox-ink);font-weight:var(--ox-fw-bold)}
+.nf-tabs button small{color:var(--ox-muted);font-size:var(--ox-fs-sm)}

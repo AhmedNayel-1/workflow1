@@ -1,0 +1,7 @@
+{% for n in nodes %}<li class="rt-node">
+  {% if n.unit %}<div class="rt-unit">{% if n.selectable %}<label><input type="checkbox" name="route_unit_ids" value="{{ n.unit.id }}" data-route> <b>{{ n.unit.name }}</b> <small>(الوحدة كلها)</small></label>{% else %}<b>{{ n.unit.name }}</b>{% endif %}</div>{% endif %}
+  {% if n.users or n.children %}<ul class="rt-list">
+    {% for u in n.users %}<li class="rt-user"><label><input type="checkbox" name="route_user_ids" value="{{ u.id }}" data-route> {{ u.get_full_name|default:u.username }}{% if u.job_display_title %} <small>— {{ u.job_display_title }}</small>{% endif %}</label></li>{% endfor %}
+    {% if n.children %}{% include "subjects/_route_node.html" with nodes=n.children %}{% endif %}
+  </ul>{% endif %}
+</li>{% endfor %}

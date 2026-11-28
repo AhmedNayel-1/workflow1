@@ -1,0 +1,102 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}موضوع جديد{% endblock %}
+{% block heading %}موضوع جديد{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="nf" data-subject-form id="subject-form">{% csrf_token %}
+  <input type="hidden" name="compose_mode" value="document"><input type="hidden" name="wizard" value="1">
+  <input type="hidden" name="sector_id" value="{{ compose_meta.default_sector_id|default:sectors.0.id }}">
+  <input type="hidden" name="org_unit_id" value="{{ compose_meta.default_unit_id|default:org_units.0.id }}">
+  <div class="nf-cp">
+    <div class="nf-crumb"><a href="{% url 'subjects:subject_list' %}">الموضوعات</a> <span>/</span> <b>موضوع جديد</b></div>
+    <div class="nf-actions"><button class="btn primary" type="submit">حفظ وتسجيل الموضوع</button><a class="btn" href="{% url 'subjects:subject_list' %}">تجاهل</a></div>
+  </div>
+  <div class="nf-sheet">
+    <div class="nf-statusbar"><span class="nf-dir"><label class="nf-seg"><input type="radio" name="direction" value="IN" {% if start_dir != "OUT" %}checked{% endif %}><span>وارد</span></label><label class="nf-seg"><input type="radio" name="direction" value="OUT" {% if start_dir == "OUT" %}checked{% endif %}><span>صادر</span></label></span><small class="nf-hint">رقم النظام الداخلي يتولد تلقائيًا بعد الحفظ. <span data-dir="OUT" hidden>الاعتماد يتم على الورق خارج النظام.</span></small></div>
+    <div class="nf-body">
+
+      <section class="nf-sec"><h3 class="nf-sec-h"><span data-dir="IN">1. الورود</span><span data-dir="OUT" hidden>1. الصادر</span></h3>
+        <div class="nf-groups">
+          <div class="nf-group">
+            <label class="nf-f"><span><i data-dir="IN">الوارد من</i><i data-dir="OUT" hidden>الصادر إلى</i></span><select name="origin_type" id="f-ot" required><option value="">— اختر —</option><option value="INTERNAL">جهة داخلية</option><option value="EXTERNAL">جهة خارجية</option></select></label>
+            <label class="nf-f" data-origin-box="INTERNAL" hidden><span>الجهة الداخلية</span><select name="origin_unit_id" id="f-ou" data-ac><option value="">— اختر —</option>{% for u in outgoing_internal %}<option value="{{ u.id }}">{{ u.code }} — {{ u.name }}</option>{% endfor %}</select><small class="nf-hint">جهات أعلى أو موازية أو من قطاع آخر، بدون الجهات التابعة لك. اكتب للبحث.</small></label>
+            <label class="nf-f" data-origin-box="EXTERNAL" hidden><span>الجهة الخارجية</span><select name="origin_external_id" id="f-oe" data-ac><option value="">— اختر —</option>{% for e in external_entities %}<option value="{{ e.id }}">{{ e.code }} — {{ e.name }}</option>{% endfor %}</select>{% if not external_entities %}<small class="nf-hint">لا توجد جهات خارجية مسجلة. تُضاف من الإعدادات.</small>{% endif %}</label>
+          </div>
+          <div class="nf-group" data-dir="IN">
+            <label class="nf-f"><span>رقم الوارد (من الورق)</span><input name="incoming_number" maxlength="60"></label>
+            <label class="nf-f"><span>تاريخ الاستلام</span><input type="date" name="received_date" value="{{ today }}" max="{{ today }}"></label>
+          </div>
+          <div class="nf-group" data-dir="OUT" hidden>
+            <label class="nf-f"><span>رقم الصادر من الورق <small>(اختياري)</small></span><input name="outgoing_paper_number" maxlength="60"></label>
+            <label class="nf-f"><span>تاريخ الإرسال</span><input type="date" name="sent_date" value="{{ today }}" max="{{ today }}"></label>
+            <label class="nf-f"><span>اسم الموقّع <small>(اختياري)</small></span><input name="signer_name" maxlength="180"></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="nf-sec"><h3 class="nf-sec-h">2. الموضوع</h3>
+        <input class="nf-title" name="title" required data-subject-title maxlength="255" placeholder="عنوان الموضوع" aria-label="عنوان الموضوع">
+        <div class="nf-groups">
+          <div class="nf-group">
+            <label class="nf-f"><span>نوع المعاملة</span><select name="transaction_type_id" required data-ac><option value="">— اختر —</option>{% for t in transaction_types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
+          </div>
+          <div class="nf-group">
+            <label class="nf-f"><span>مقدم الطلب / المعني</span><input name="applicant_name"></label>
+          </div>
+        </div>
+        <div class="nf-book">
+          <div class="nf-tabs" role="tablist"><button type="button" class="on" role="tab" data-nf-tab="desc">الوصف</button><button type="button" role="tab" data-nf-tab="files">المرفقات <small>(اختياري)</small></button>{% if template_versions %}<button type="button" role="tab" data-nf-tab="more">خيارات إضافية <small>(اختيارية)</small></button>{% endif %}</div>
+          <div class="nf-pane" data-nf-pane="desc"><label class="nf-f nf-wide"><span>الوصف</span><textarea name="description" rows="3"></textarea></label></div>
+          <div class="nf-pane" data-nf-pane="files" hidden><label class="nf-f nf-wide"><span><i data-dir="IN">الملف</i><i data-dir="OUT" hidden>صورة الورقة المعتمدة (سكان)</i></span><input type="file" name="initial_attachment" multiple data-subject-files></label><small class="nf-hint" data-subject-file-count>لم يتم اختيار ملفات</small></div>
+          {% if template_versions %}<div class="nf-pane" data-nf-pane="more" hidden><label class="nf-f nf-wide"><span>قالب مسار العمل</span><select name="workflow_template_version_id"><option value="">— بدون قالب —</option>{% for tv in template_versions %}<option value="{{ tv.id }}">{{ tv.template.name }} (v{{ tv.version_number }})</option>{% endfor %}</select></label></div>{% endif %}
+        </div>
+      </section>
+
+      <section class="nf-sec"><h3 class="nf-sec-h">3. السرية والأهمية</h3>
+        <div class="nf-groups">
+          <div class="nf-group">
+            <label class="nf-f"><span>درجة السرية</span><select name="confidentiality_id" required><option value="">— اختر —</option>{% for c in confidentialities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+            <label class="nf-f"><span>الأهمية</span><select name="priority_id" required><option value="">— اختر —</option>{% for p in priorities %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+          </div>
+          <div class="nf-group" data-dir="IN">
+            <label class="nf-f"><span>تاريخ الاستحقاق</span><input type="date" name="due_date" min="{{ today }}"></label>
+            <small class="nf-hint">لو حددت تاريخًا يُتابَع الموضوع كعاجل وتظهر تنبيهات التأخير. لو تركته فارغًا يبقى مفتوحًا بدون تنبيهات تأخير.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="nf-sec" data-dir="IN"><h3 class="nf-sec-h">4. التوجيه <small>(اختياري، تظهر فقط الجهات والأشخاص التابعون لك)</small></h3>
+        {% if routing_tree %}<input type="search" id="rt-q" class="nf-rtq" placeholder="ابحث عن شخص أو وحدة للتوجيه..." aria-label="بحث في التوجيه"><ul class="rt-list rt-root">{% include "subjects/_route_node.html" with nodes=routing_tree %}</ul>
+        <label class="nf-f nf-wide"><span>تعليمات التوجيه</span><textarea name="sector_directive" rows="2"></textarea></label>
+        {% else %}<p class="nf-empty">لا يوجد أشخاص أو وحدات تابعة لك للتوجيه. يُسجَّل الموضوع باسمك.</p>{% endif %}
+      </section>
+
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block extra_js %}<script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add("odoo-ui");
+var f=document.getElementById('subject-form');
+document.querySelectorAll('[data-nf-tab]').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('[data-nf-tab]').forEach(function(x){x.classList.toggle('on',x===t)});document.querySelectorAll('[data-nf-pane]').forEach(function(p){p.hidden=p.dataset.nfPane!==t.dataset.nfTab})})});
+var ot=document.getElementById('f-ot');
+function dir(){var d=f.querySelector('[name=direction]:checked').value;
+f.querySelectorAll('[data-dir]').forEach(function(e){var on=e.dataset.dir===d;e.hidden=!on;if(e.matches('.nf-group,section'))e.querySelectorAll('input,select,textarea').forEach(function(i){i.disabled=!on})});
+}
+f.querySelectorAll('[name=direction]').forEach(function(r){r.addEventListener('change',dir)});
+function org(){f.querySelectorAll('[data-origin-box]').forEach(function(b){var on=b.dataset.originBox===ot.value;b.hidden=!on;var s=b.querySelector('select');s._ac.required=on;if(!on){s.value='';s._ac.value='';s._ac.setCustomValidity('')}})}
+function ac(sel){var id=sel.id||('ac'+Math.random().toString(36).slice(2)),inp=document.createElement('input'),dl=document.createElement('datalist');
+dl.id=id+'-dl';[].forEach.call(sel.options,function(o){if(o.value){var x=document.createElement('option');x.value=o.text;dl.appendChild(x)}});
+inp.type='text';inp.setAttribute('list',dl.id);inp.autocomplete='off';inp.placeholder='اكتب للبحث أو اختر...';inp.required=sel.required;sel.required=false;sel.hidden=true;
+sel.parentNode.insertBefore(inp,sel);sel.parentNode.insertBefore(dl,sel);sel._ac=inp;
+function sync(){var m=[].find.call(sel.options,function(o){return o.value&&o.text===inp.value});sel.value=m?m.value:'';inp.setCustomValidity(inp.required&&!m?'اختر من القائمة':'')}
+inp.addEventListener('input',sync);inp.addEventListener('change',sync);sync()}
+f.querySelectorAll('select[data-ac]').forEach(ac);
+var rq=document.getElementById('rt-q');
+if(rq){rq.addEventListener('input',function(){var q=rq.value.trim().toLowerCase();
+function show(li,force){var u=li.querySelector(':scope > .rt-unit'),own=u?u.textContent.toLowerCase():'',ownHit=!!q&&own.indexOf(q)>-1,usrHit=li.classList.contains('rt-user')&&!!q&&li.textContent.toLowerCase().indexOf(q)>-1,self=!q||force||ownHit||usrHit,any=false;
+li.querySelectorAll(':scope > ul > li').forEach(function(c){if(show(c,force||ownHit))any=true});
+var vis=self||any;li.hidden=!vis;return vis}
+document.querySelectorAll('.rt-root > li').forEach(function(li){show(li,false)})})}
+ot.addEventListener('change',org);dir();org();
+var fi=f.querySelector('[data-subject-files]'),fc=f.querySelector('[data-subject-file-count]');
+fi.addEventListener('change',function(){fc.textContent=fi.files.length?('تم اختيار '+fi.files.length+' ملف'):'لم يتم اختيار ملفات'});
+})</script>{% endblock %}

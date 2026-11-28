@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui_extras %}
+{% block title %}التطبيقات{% endblock %}
+{% block rail %}{% endblock %}
+{% block cp %}{% endblock %}
+{% block content %}
+<section class="ox-apps" aria-label="التطبيقات">
+  {% for app in apps %}
+  <a class="ox-app" href="{{ app.url }}" data-app="{{ app.key }}">
+    <span class="ox-app-icon">{% icon app.icon %}</span>
+    <span class="ox-app-name">{{ app.name }}</span>
+  </a>
+  {% endfor %}
+</section>
+{% endblock %}

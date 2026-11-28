@@ -1,0 +1,11 @@
+.od-cp .ox-cp-end{display:flex;align-items:center;gap:var(--ox-s2);flex:none}
+.ox-search-trigger{min-width:var(--ox-px-260);justify-content:flex-start;color:var(--ox-muted);font-weight:var(--ox-fw-normal)}
+.ox-search-trigger span{flex:1;text-align:start}
+.ox-search-trigger kbd{padding-inline:var(--ox-s1);border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius);background:var(--ox-bg-view);color:var(--ox-muted);font:inherit;font-size:var(--ox-fs-sm)}
+.ox-search-trigger .icon{width:var(--ox-px-16);height:var(--ox-px-16)}
+.od-cp{flex-wrap:wrap}
+.od-cp .ox-statusbar{order:2;flex:1 0 100%;box-sizing:border-box;overflow-x:auto;max-width:100%}
+.od-cp .ox-statusbar li{flex:1;text-align:center}
+.od-cp .ox-spacer{order:1}
+.od-cp .ox-cp-end{order:1}
+.ox-statusbar li.now{border-block-end:var(--ox-px-2) solid var(--ox-brand)}

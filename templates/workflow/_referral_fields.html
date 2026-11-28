@@ -1,0 +1,22 @@
+<form method="post" action="{% url 'workflow:referral_create' subject.id %}" class="nf rf" data-referral-form>{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+  <div class="rf-grid">
+    <label class="nf-f"><span>الغرض</span><select name="purpose">{% for v, l in purpose_choices %}<option value="{{ v }}" {% if v == "FOR_EXECUTION" %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    <label class="nf-f"><span>طريقة الإرسال</span><select name="routing_mode"><option value="TOGETHER">لكل المختارين معًا</option><option value="SEQUENTIAL">واحدًا بعد الآخر بالترتيب</option></select></label>
+    <label class="nf-f"><span>الموعد النهائي <small>(اختياري)</small></span><input type="date" name="due_date" min="{{ today }}"></label>
+  </div>
+  <div class="rf-pick">
+    <div class="rf-pick-h"><b>إلى من؟</b><input type="search" class="rf-q" placeholder="ابحث بالاسم…" data-rf-q aria-label="بحث في المستلمين"><small data-referral-selected-count>لم يتم اختيار أحد</small></div>
+    <div class="rf-list" data-rf-list>
+      {% for u in users %}<label class="rf-opt" data-rf-t="{{ u.get_full_name|default:u.username }} {{ u.job_display_title|default:'' }}"><input type="checkbox" name="target_user_ids" value="{{ u.id }}"> <span>{{ u.get_full_name|default:u.username }}{% if u.job_display_title %} <small>— {{ u.job_display_title }}</small>{% endif %}</span></label>{% endfor %}
+      {% for u in org_units %}<label class="rf-opt rf-unit" data-rf-t="{{ u.name }}"><input type="checkbox" name="target_unit_ids" value="{{ u.id }}"> <span>{{ u.name }} <small>(الوحدة كلها: تصل لرئيسها)</small></span></label>{% endfor %}
+      {% if not users and not org_units %}<p class="nf-empty">لا يوجد مستلمون متاحون لك.</p>{% endif %}
+    </div>
+  </div>
+  <label class="nf-f nf-wide"><span>ملاحظات / توجيه</span><textarea name="notes" rows="2" data-referral-notes></textarea></label>
+  <div class="rf-act"><button class="btn primary" type="submit">تسجيل الإحالة</button><a class="btn" href="{% url 'subjects:subject_detail' subject.id %}" data-rf-cancel>إلغاء</a></div>
+</form>
+<script>(function(){var f=document.currentScript.previousElementSibling,q=f.querySelector('[data-rf-q]'),c=f.querySelector('[data-referral-selected-count]');
+function upd(){var n=f.querySelectorAll('.rf-opt input:checked').length;c.textContent=n?('تم اختيار '+n):'لم يتم اختيار أحد'}
+f.addEventListener('change',upd);
+q.addEventListener('input',function(){var s=q.value.trim();f.querySelectorAll('.rf-opt').forEach(function(o){o.hidden=!!s&&o.dataset.rfT.indexOf(s)<0})});
+q.addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault()})})()</script>

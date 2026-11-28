@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}مهامي{% endblock %}
+{% block heading %}{% if folder == "sent" %}ما أرسلته{% elif folder == "archive" %}الأرشيف{% elif folder == "overdue" %}المتأخرة{% elif folder == "pending" %}بانتظار الاستلام{% else %}مهامي{% endif %}{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
+{% block content %}
+{% if folder == "inbox" %}{% include "partials/guide.html" with guide=guide %}
+<div class="tabs mb">
+  <a class="tab {% if tab == 'primary' %}on{% endif %}" href="?folder=inbox&tab=primary">عهدتي <span class="cnt">{{ tab_counts.primary }}</span></a>
+  <a class="tab {% if tab == 'readonly' %}on{% endif %}" href="?folder=inbox&tab=readonly">للاطلاع <span class="cnt">{{ tab_counts.readonly }}</span></a>
+  <a class="tab {% if tab == 'overdue' %}on{% endif %}" href="?folder=inbox&tab=overdue">متأخرة <span class="cnt {% if tab_counts.overdue %}bad{% endif %}">{{ tab_counts.overdue }}</span></a>
+</div>
+{% else %}
+<div class="page-h"><div><h2>{% if folder == "sent" %}ما أرسلته{% elif folder == "archive" %}الأرشيف{% elif folder == "overdue" %}المتأخرة{% elif folder == "pending" %}بانتظار الاستلام{% else %}الموضوعات{% endif %}</h2><p>{{ total_count }} موضوع</p></div></div>
+{% endif %}
+
+{% if folder == "inbox" and tab == "tasks" %}
+<div class="grid g2">
+  <section class="panel" data-table><div class="panel-h"><h3>المهام التنفيذية المسندة إليّ <span class="cnt">{{ tasks_list|length }}</span></h3><a class="btn sm" href="{% url 'workflow:task_list' %}">عرض الكل</a></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>المهمة</th><th>الموضوع</th><th>الحالة</th><th>الاستحقاق</th></tr></thead><tbody>
+      {% for t in tasks_list %}<tr><td><a class="title" href="{% url 'subjects:subject_detail' t.subject_id %}">{{ t.title }}</a></td><td><span class="tag code">{{ t.subject.internal_number }}</span></td><td><span class="pill {{ t.status|tone }}">{{ t.get_status_display }}</span></td><td class="num">{% if t.due_date %}{{ t.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="4">{% include "partials/empty.html" with title="لا توجد مهام مفتوحة" icon_name="task" %}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+  <section class="panel"><div class="panel-h"><h3>القرارات الإدارية المرتبطة <span class="cnt">{{ decisions_list|length }}</span></h3><a class="btn sm" href="{% url 'decisions:decision_list' %}">عرض الكل</a></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>رقم القرار</th><th>العنوان</th><th>الحالة</th></tr></thead><tbody>
+      {% for d in decisions_list %}<tr><td><a class="title num" href="{% url 'decisions:decision_detail' d.id %}">{{ d.decision_number }}</a></td><td>{{ d.title|short:50 }}</td><td><span class="pill {{ d.status|tone }}">{{ d.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="3">{% include "partials/empty.html" with title="لا توجد قرارات مرتبطة" icon_name="gavel" %}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+</div>
+{% else %}
+<section class="panel">
+  <form class="toolbar" method="get"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="tab" value="{{ tab }}">
+    <div class="search-in grow">{% icon 'search' 'sm' %}<input class="in" name="q" value="{{ q }}" placeholder="رقم المعاملة أو العنوان أو الوحدة…"></div>
+    {% if q %}<a class="btn sm" href="?folder={{ folder }}&tab={{ tab }}">مسح</a>{% endif %}
+    {% if can_create_subject %}<a class="btn pri" href="{% url 'subjects:subject_create' %}">جديد</a>{% endif %}
+  </form>
+  <div class="tbl-wrap"><table class="tbl inbox-tbl"><thead><tr><th>الرقم</th><th>العنوان</th><th>الوحدة</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>
+    {% for s in displayed_subjects %}
+    <tr class="{% if s.has_pending_ref %}unread{% endif %}"><td><span class="tag code">{{ s.internal_number }}</span></td>
+      <td><a class="title" href="{% url 'subjects:subject_detail' s.id %}">{{ s.title }}</a></td>
+      <td>{{ s.org_unit }}</td>
+      <td><span class="pill {{ s.status|tone }}">{{ s.get_status_display }}</span>{% if s.is_overdue %} <span class="pill bad">متأخر</span>{% endif %}</td>
+      <td class="num xs">{{ s.created_at|date:"Y-m-d" }}</td></tr>
+    {% empty %}<tr><td colspan="5">{% include "partials/empty.html" with title="لا توجد مواضيع هنا" text="سيظهر هنا كل ما يصلك أو ما يطابق بحثك." icon_name="inbox" %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include "partials/pager.html" %}
+</section>
+{% endif %}
+{% endblock %}

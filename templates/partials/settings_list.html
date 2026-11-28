@@ -1,0 +1,44 @@
+{% load ui_extras %}
+<div class="settings-workspace" data-settings-workspace>
+  <div class="settings-tools">
+    <label class="search-in settings-search"><span class="sr-only">البحث في عناصر القائمة</span><input class="in" type="search" data-settings-search placeholder="ابحث بالاسم أو الكود…" autocomplete="off"></label>
+    <span class="muted xs" data-settings-count aria-live="polite"></span>
+  </div>
+  <div class="grid g-main settings-layout" style="grid-template-columns:minmax(0,1fr) 340px;align-items:start">
+    <section class="panel">
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>{% if has_code %}<th>الكود</th>{% endif %}<th>الاسم</th>{% if has_rank %}<th>الترتيب</th>{% endif %}{% if has_sla %}<th>مهلة الإنجاز</th>{% endif %}{% if is_tx %}<th>SLA</th><th>اشتراطات</th>{% endif %}<th style="width:1%"></th></tr></thead><tbody>
+      {% for it in items %}
+        <tr data-settings-row>
+          {% if has_code %}<td><span class="tag code">{{ it.code }}</span></td>{% endif %}
+          <td><b>{{ it.name }}</b>{% if it.is_active == False %} <span class="pill nodot">معطّل</span>{% endif %}</td>
+          {% if has_rank %}<td class="num">{{ it.rank }}</td>{% endif %}
+          {% if has_sla %}<td class="num">{{ it.sla_days|default:"—" }} يوم</td>{% endif %}
+          {% if is_tx %}<td class="num">{{ it.sla_days|default:"—" }}</td><td><div class="chips">{% if it.requires_committee %}<span class="tag">لجنة</span>{% endif %}{% if it.requires_decision %}<span class="tag">قرار</span>{% endif %}{% if it.requires_execution_proof %}<span class="tag">إثبات تنفيذ</span>{% endif %}</div></td>{% endif %}
+          <td><div class="settings-row-actions">
+            <details class="settings-edit"><summary class="btn sm line" aria-label="تعديل {{ it.name }}">تعديل</summary>
+              <form method="post" class="settings-edit-form">{% csrf_token %}
+                <input type="hidden" name="list_type" value="{{ tab }}"><input type="hidden" name="op" value="edit"><input type="hidden" name="item_id" value="{{ it.id }}">
+                <label class="fld"><span>الاسم</span><input class="in" name="name" value="{{ it.name }}" required></label>
+                {% if has_code %}<label class="fld"><span>الكود</span><input class="in ltr" name="code" value="{{ it.code }}"></label>{% endif %}
+                {% if has_rank %}<label class="fld"><span>الترتيب / الرتبة</span><input class="in" type="number" name="rank" value="{{ it.rank|default:1 }}" min="0"></label>{% endif %}
+                {% if has_sla %}<label class="fld"><span>مهلة الإنجاز (أيام)</span><input class="in" type="number" name="sla_days" value="{{ it.sla_days|default:5 }}" min="1" max="90"></label>{% endif %}
+                {% if is_tx %}<label class="chk"><input type="checkbox" name="requires_committee" {% if it.requires_committee %}checked{% endif %}> تتطلب لجنة</label><label class="chk"><input type="checkbox" name="requires_decision" {% if it.requires_decision %}checked{% endif %}> تتطلب قراراً</label><label class="chk"><input type="checkbox" name="requires_execution_proof" {% if it.requires_execution_proof %}checked{% endif %}> تتطلب إثبات تنفيذ</label>{% endif %}
+                <button class="btn primary sm" type="submit">حفظ التعديل</button>
+              </form>
+            </details>
+            <form method="post" data-confirm="حذف «{{ it.name }}»؟ قد يُمنع إن كان مستخدماً." data-danger>{% csrf_token %}<input type="hidden" name="list_type" value="{{ tab }}"><input type="hidden" name="op" value="delete"><input type="hidden" name="item_id" value="{{ it.id }}"><button class="btn sm line-bad" type="submit" aria-label="حذف {{ it.name }}">{% icon 'trash' 'sm' %}</button></form>
+          </div></td>
+        </tr>
+      {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with title="القائمة فارغة" icon_name="cog" %}</td></tr>{% endfor %}
+      </tbody></table></div>
+      <div class="settings-no-results" data-settings-empty hidden>لا توجد عناصر مطابقة لعبارة البحث.</div>
+    </section>
+    <form method="post" class="panel sticky settings-add-form"><div class="panel-h"><h3>{% icon 'plus' %} إضافة عنصر</h3></div><div class="panel-b col">{% csrf_token %}<input type="hidden" name="list_type" value="{{ tab }}"><input type="hidden" name="op" value="add">
+      {% if has_code %}<label class="fld"><span>الكود</span><input class="in ltr" name="code" required></label>{% endif %}<label class="fld"><span>الاسم</span><input class="in" name="name" required></label>
+      {% if has_rank %}<label class="fld"><span>الترتيب / الرتبة</span><input class="in" type="number" name="rank" value="1" min="0"></label>{% endif %}
+      {% if has_sla %}<label class="fld"><span>مهلة الإنجاز (أيام)</span><input class="in" type="number" name="sla_days" value="5" min="1" max="90"></label>{% endif %}
+      {% if is_tx %}<label class="fld"><span>مهلة الإنجاز (أيام)</span><input class="in" type="number" name="sla_days" value="5" min="0"></label><label class="chk"><input type="checkbox" name="requires_committee"> تتطلب لجنة</label><label class="chk"><input type="checkbox" name="requires_decision"> تتطلب قراراً</label><label class="chk"><input type="checkbox" name="requires_execution_proof"> تتطلب إثبات تنفيذ</label>{% endif %}
+      <button class="btn primary" type="submit">إضافة</button>
+    </div></form>
+  </div>
+</div>

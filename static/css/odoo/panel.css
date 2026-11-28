@@ -1,0 +1,26 @@
+/* Panel (sheet/card), page heading, toolbar, search box. One definition; the old panel/page-h/toolbar look rules were deleted. */
+.panel,.card{background:var(--ox-bg);border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius);box-shadow:none}
+.panel.tight .panel-b{padding:var(--ox-s3)}
+.panel>.panel-h{display:flex;align-items:center;gap:var(--ox-s2);min-height:var(--ox-row-h);padding:var(--ox-s2) var(--ox-s4);background:var(--ox-bg-view);border-bottom:var(--ox-px-1) solid var(--ox-line)}
+.panel>.panel-h h3{font-size:var(--ox-fs-base);font-weight:var(--ox-fw-bold);color:var(--ox-ink);margin:0;display:flex;align-items:center;gap:var(--ox-s2)}
+.panel>.panel-h h3 svg{width:var(--ox-px-20);height:var(--ox-px-20);color:var(--ox-brand)}
+.panel>.panel-b{padding:var(--ox-s3) var(--ox-s4)}
+.panel[data-pane]{border-top-left-radius:0;border-top-right-radius:0}
+.panel .doc-card,.panel .dcard{box-shadow:none;border-radius:var(--ox-radius);border-color:var(--ox-line)}
+.subject-form>.panel{border:0;border-bottom:var(--ox-px-1) solid var(--ox-line-soft);border-radius:0;background:transparent;margin:0}
+
+.page-h{display:flex;align-items:center;justify-content:space-between;gap:var(--ox-s3);flex-wrap:wrap;margin:var(--ox-s2) 0 var(--ox-s3);padding:0 0 var(--ox-s2);border-bottom:var(--ox-px-1) solid var(--ox-line-soft)}
+.page-h>div{display:flex;align-items:baseline;gap:var(--ox-s3);flex-wrap:wrap}
+.page-h h2{font-size:var(--ox-fs-title);font-weight:var(--ox-fw-medium);margin:0;line-height:1.3;color:var(--ox-ink)}
+.page-h p{margin:0;font-size:var(--ox-fs-base);color:var(--ox-muted)}
+
+.toolbar,.referral-tools{display:flex;align-items:center;gap:var(--ox-s2);flex-wrap:wrap;padding:var(--ox-s2) var(--ox-s3);background:var(--ox-bg);border-bottom:var(--ox-px-1) solid var(--ox-line-soft)}
+.referral-tools.panel,.odoo-pg .toolbar{border:var(--ox-px-1) solid var(--ox-line);border-radius:var(--ox-radius)}
+.panel>.toolbar{border:0;border-bottom:var(--ox-px-1) solid var(--ox-line-soft);border-radius:var(--ox-radius) var(--ox-radius) 0 0}
+.toolbar .spacer{flex:1}
+.toolbar .in,.toolbar select,.referral-tools .in{height:var(--ox-input-h);font-size:var(--ox-fs-base);border-radius:var(--ox-radius);box-shadow:none}
+.search-in{position:relative}
+.search-in .icon{position:absolute;inset-inline-start:var(--ox-s3);top:50%;transform:translateY(-50%);color:var(--ox-muted)}
+.search-in .in{padding-inline-start:var(--ox-px-32)}
+.referral-filter{font-weight:var(--ox-fw-medium)}
+.referral-filter .in{background:var(--ox-bg)}

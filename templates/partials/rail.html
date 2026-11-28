@@ -1,0 +1,67 @@
+{% load ui_extras %}{% with v=request.resolver_match.view_name a=request.resolver_match.app_name c=gmail_folder_counts %}
+<aside class="rail" id="main-rail" aria-label="القائمة الرئيسية">
+  <div class="rail-brand">
+    <span class="logo">غ د</span>
+    <div><b>الاتصالات الإدارية</b><small>غرب الدلتا لإنتاج الكهرباء</small></div>
+  </div>
+  <nav class="rail-scroll" aria-label="روابط النظام">
+    {% if can_create_subject %}<button type="button" class="btn primary block rail-new" data-compose="document">{% icon 'plus' %}<span>موضوع جديد (وارد)</span></button><a class="btn block rail-new-out" href="{% url 'subjects:subject_create' %}?dir=out">{% icon 'plus' %}<span>صادر جديد</span></a>{% endif %}
+
+    <div data-cap="القائمة الرئيسية"><div class="nav-cap">القائمة الرئيسية</div>
+      <a class="nav {% if v == 'core:dashboard' and folder == 'inbox' %}on{% endif %}" href="{% url 'core:dashboard' %}?folder=inbox&tab=primary" data-label="مهامي — الوارد">{% icon 'inbox' %}<span>مهامي</span><span class="cnt brand">{{ c.inbox|default:0 }}</span></a>
+      <a class="nav {% if v == 'core:dashboard' and folder == 'pending' %}on{% endif %}" href="{% url 'core:dashboard' %}?folder=pending" data-label="بانتظار الاستلام">{% icon 'clock' %}<span>بانتظار الاستلام</span>{% if c.pending %}<span class="cnt warn">{{ c.pending }}</span>{% endif %}</a>
+      <a class="nav {% if v == 'core:dashboard' and folder == 'overdue' %}on{% endif %}" href="{% url 'core:dashboard' %}?folder=overdue" data-label="المتأخرة">{% icon 'alert' %}<span>المتأخرة</span>{% if c.overdue %}<span class="cnt bad">{{ c.overdue }}</span>{% endif %}</a>
+      <a class="nav {% if v == 'core:dashboard' and folder == 'sent' %}on{% endif %}" href="{% url 'core:dashboard' %}?folder=sent" data-label="ما أرسلته">{% icon 'send' %}<span>ما أرسلته</span>{% if c.sent %}<span class="cnt">{{ c.sent }}</span>{% endif %}</a>
+      <a class="nav {% if v == 'core:dashboard' and folder == 'archive' %}on{% endif %}" href="{% url 'core:dashboard' %}?folder=archive" data-label="الأرشيف">{% icon 'archive' %}<span>الأرشيف</span></a>
+    </div>
+
+    <div data-cap="سير العمل"><div class="nav-cap">سير العمل</div>
+      <a class="nav {% if v == 'workflow:referral_inbox' %}on{% endif %}" href="{% url 'workflow:referral_inbox' %}" data-label="صندوق الإحالات">{% icon 'share' %}<span>صندوق الإحالات</span></a>
+      <a class="nav {% if v == 'workflow:task_list' %}on{% endif %}" href="{% url 'workflow:task_list' %}" data-label="المهام التنفيذية">{% icon 'task' %}<span>المهام التنفيذية</span>{% if c.open_tasks %}<span class="cnt">{{ c.open_tasks }}</span>{% endif %}</a>
+      <a class="nav {% if a == 'subjects' %}on{% endif %}" href="{% url 'subjects:subject_list' %}" data-label="جميع الموضوعات">{% icon 'folder' %}<span>جميع الموضوعات</span></a>
+      <a class="nav {% if a == 'documents' %}on{% endif %}" href="{% url 'documents:document_list' %}" data-label="سجل المستندات">{% icon 'file' %}<span>سجل المستندات</span></a>
+      <a class="nav {% if a == 'decisions' %}on{% endif %}" href="{% url 'decisions:decision_list' %}" data-label="القرارات الإدارية">{% icon 'gavel' %}<span>القرارات الإدارية</span></a>
+      <a class="nav {% if a == 'committees' %}on{% endif %}" href="{% url 'committees:committee_list' %}" data-label="اللجان والاجتماعات">{% icon 'calendar' %}<span>اللجان والاجتماعات</span></a>
+    </div>
+
+    <div data-cap="البحث والتقارير"><div class="nav-cap">البحث والتقارير</div>
+      <a class="nav {% if v == 'core:archive_search' %}on{% endif %}" href="{% url 'core:archive_search' %}" data-label="البحث السريع في الأرشيف">{% icon 'search' %}<span>البحث في الأرشيف</span></a>
+      <a class="nav {% if v == 'core:search' %}on{% endif %}" href="{% url 'core:search' %}" data-label="البحث المتقدم">{% icon 'filter' %}<span>البحث المتقدم</span></a>
+      <a class="nav {% if a == 'reports' %}on{% endif %}" href="{% url 'reports:dashboard' %}" data-label="التقارير والإحصاءات">{% icon 'chart' %}<span>التقارير والإحصاءات</span></a>
+    </div>
+
+    <div data-cap="التنظيم والإدارة"><div class="nav-cap">التنظيم والإدارة</div>
+      <a class="nav {% if v == 'workflow:templates_list' %}on{% endif %}" href="{% url 'workflow:templates_list' %}" data-label="قوالب مسارات العمل">{% icon 'flow' %}<span>قوالب المسارات</span></a>
+      <a class="nav {% if a == 'organization' %}on{% endif %}" href="{% url 'organization:org_tree' %}" data-label="الهيكل التنظيمي">{% icon 'tree' %}<span>الهيكل التنظيمي</span></a>
+      <a class="nav {% if v == 'accounts:delegations' %}on{% endif %}" href="{% url 'accounts:delegations' %}" data-label="الإنابات والسكرتارية">{% icon 'usercheck' %}<span>الإنابات والسكرتارية</span></a>
+      {% if can_manage_users_scoped %}<a class="nav {% if v == 'accounts:users_list' %}on{% endif %}" href="{% url 'accounts:users_list' %}" data-label="إدارة المستخدمين">{% icon 'users' %}<span>إدارة المستخدمين</span></a>{% endif %}
+      {% if can_view_audit %}<a class="nav {% if a == 'audit' %}on{% endif %}" href="{% url 'audit:audit_log' %}" data-label="سجل التدقيق والمتابعة">{% icon 'shield' %}<span>سجل التدقيق</span></a>{% endif %}
+      {% if request.user.is_superuser %}
+        <a class="nav {% if v == 'accounts:permissions_matrix' %}on{% endif %}" href="{% url 'accounts:permissions_matrix' %}" data-label="مصفوفة الصلاحيات">{% icon 'lock' %}<span>مصفوفة الصلاحيات</span></a>
+        <a class="nav {% if v == 'core:db_admin' %}on{% endif %}" href="{% url 'core:db_admin' %}" data-label="إدارة قاعدة البيانات">{% icon 'db' %}<span>قاعدة البيانات</span></a>
+      {% endif %}
+      <a class="nav {% if v == 'core:settings' %}on{% endif %}" href="{% url 'core:settings' %}" data-label="إعدادات المنظومة">{% icon 'cog' %}<span>الإعدادات</span></a>
+      <a class="nav {% if v == 'core:user_guide' %}on{% endif %}" href="{% url 'core:user_guide' %}" data-label="دليل الاستخدام">{% icon 'help' %}<span>دليل الاستخدام</span></a>
+    </div>
+  </nav>
+
+  <div class="rail-foot" style="position:relative">
+    <button type="button" class="me" data-pop="me-pop" aria-haspopup="true">
+      <span class="avatar">{{ request.user.get_full_name|default:request.user.username|initials }}</span>
+      <div class="grow"><b class="trunc">{{ request.user.get_full_name|default:request.user.username }}</b><small class="trunc" style="display:block">{{ request.user.job_display_title|default:"مستخدم المنظومة" }}</small></div>
+      {% icon 'chevd' 'sm' %}
+    </button>
+    <div class="pop" id="me-pop" hidden style="bottom:70px;inset-inline-start:12px;inset-inline-end:12px">
+      {% if user_access_scope.scope_label %}<div class="note brand xs" style="margin:2px 0 8px">{{ user_access_scope.scope_label }}</div>{% endif %}
+      {% if enable_dev_account_switcher and dev_switch_users %}
+      <form method="post" action="{% url 'accounts:switch_user' %}" style="padding:4px 4px 8px">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label class="fld"><span class="xs">تبديل الحساب (وضع التطوير)</span><select name="user_id" class="in sm" onchange="this.form.submit()">{% for su in dev_switch_users %}<option value="{{ su.id }}" {% if su.id == request.user.id %}selected{% endif %}>{{ su.label }}</option>{% endfor %}</select></label>
+      </form>{% endif %}
+      <a href="{% url 'notifications:center' %}">{% icon 'bell' %}مركز الإشعارات</a>
+      <a href="{% url 'accounts:delegations' %}">{% icon 'usercheck' %}الإنابات والسكرتارية</a>
+      <button type="button" data-theme-toggle>{% icon 'moon' %}تبديل المظهر (فاتح / داكن)</button>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" style="color:var(--bad)">{% icon 'logout' %}تسجيل الخروج</button></form>
+    </div>
+  </div>
+</aside>
+{% endwith %}

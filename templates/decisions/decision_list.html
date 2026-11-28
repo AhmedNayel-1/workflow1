@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}القرارات الإدارية{% endblock %}
+{% block heading %}القرارات الإدارية{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui');</script>{% endblock %}
+{% block content %}
+{% include "partials/breadcrumbs.html" with current="القرارات" %}
+<div class="page-h od-list-heading"><div><h2>القرارات الإدارية</h2><p>القرارات المرتبطة بالموضوعات المتاحة لك.</p></div></div>
+<section class="panel od-list-view decision-workbench" data-decision-root data-odoo-list data-filter-chip-root><div class="toolbar od-list-toolbar decision-tools">
+  <label class="search-in decision-search">{% icon 'search' 'sm' %}<input class="in sm" data-decision-search data-filter-chip="بحث" type="search" placeholder="ابحث برقم القرار أو العنوان أو الموضوع…" aria-label="البحث في القرارات"></label>
+  <select class="in sm decision-filter" data-decision-type data-filter-chip="النوع" aria-label="تصفية حسب نوع القرار"><option value="">كل الأنواع</option></select>
+  <select class="in sm decision-filter" data-decision-status data-filter-chip="الحالة" aria-label="تصفية حسب حالة القرار"><option value="">كل الحالات</option></select>
+  <button class="btn sm ghost" type="button" data-decision-clear>مسح التصفية</button>
+  <span class="spacer"></span><span class="muted sm" data-decision-count aria-live="polite">{{ decisions|length }} قرار</span>
+</div>
+  {% include "partials/filter_chips.html" %}
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>رقم القرار</th><th>العنوان</th><th>النوع</th><th>الموضوع</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>
+    {% for d in decisions %}<tr data-decision-item data-decision-type="{{ d.decision_type }}" data-decision-type-label="{{ d.get_decision_type_display }}" data-decision-status="{{ d.status }}" data-decision-status-label="{{ d.get_status_display }}"><td><a class="title num" href="{% url 'decisions:decision_detail' d.id %}">{{ d.decision_number }}</a></td><td style="max-width:320px">{{ d.title|short:70 }}</td><td><span class="tag">{{ d.get_decision_type_display }}</span></td><td><a href="{% url 'subjects:subject_detail' d.subject_id %}"><span class="tag code">{{ d.subject.internal_number }}</span></a></td><td><span class="pill {{ d.status|tone }}">{{ d.get_status_display }}</span></td><td class="num">{{ d.created_at|date:"Y-m-d" }}</td></tr>
+    {% empty %}<tr><td colspan="6">{% include "partials/empty.html" with title="لا توجد قرارات" icon_name="gavel" %}</td></tr>{% endfor %}
+  </tbody></table></div><p class="decision-no-results muted sm" data-decision-empty hidden>مفيش قرارات مطابقة للفلاتر الحالية.</p></section>
+{% endblock %}

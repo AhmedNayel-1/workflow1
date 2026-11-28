@@ -1,0 +1,67 @@
+{% load static ui_extras %}<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{var f=localStorage.getItem("ox-font");if(f)document.documentElement.setAttribute("data-ox-font",f)}catch(e){}</script>
+  <link rel="manifest" href="{% static 'pwa/manifest.webmanifest' %}">
+  <meta name="theme-color" content="#714b67">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}الرئيسية{% endblock %} — منظومة الاتصالات الإدارية</title>
+  <script>try{var t=JSON.parse(localStorage.getItem("theme")||"null")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
+  <style>.drawer:not(.open),.overlay:not(.open),.scrim:not(.open){display:none!important}[hidden]{display:none!important}</style>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=5.3">
+  <link rel="stylesheet" href="{% static 'css/experience.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=52">
+  <link rel="stylesheet" href="{% static 'css/odoo-shell.css' %}?v=101">
+  <link rel="stylesheet" href="{% static 'css/odoo/index.css' %}?v=13">
+  {% block extra_head %}{% endblock %}
+</head>
+<body{% if request.user.is_authenticated %} class="odoo-ui"{% endif %}>
+  <a class="skip" href="#main">تخطَّ إلى المحتوى</a>
+  {% if request.user.is_authenticated %}
+  <div class="shell">
+    {% block rail %}{% include "partials/rail.html" %}{% endblock %}
+    <div class="main">
+      <header class="top ox-navbar">
+        {% include "partials/odoo_navbar.html" %}
+        <span class="ox-spacer"></span>
+        <button type="button" class="ox-systray-btn" data-fs-toggle aria-label="ملء الشاشة" title="ملء الشاشة">⛶</button>
+        <button type="button" class="ox-systray-btn" data-drawer="dr-notif" aria-label="التنبيهات">{% icon 'bell' %}<span id="notif-badge" class="ox-count" data-poll="1" {% if not unread_notifications_count and not overdue_alerts_count %}hidden{% endif %}>{{ unread_notifications_count|add:overdue_alerts_count }}</span></button>
+        <button type="button" class="ox-systray-btn" data-drawer="dr-chat" aria-label="المحادثات">{% icon 'chat' %}<span id="chat-badge" class="ox-count" {% if not chat_unread_count %}hidden{% endif %}>{{ chat_unread_count }}</span></button>
+        <div class="ox-user"><button type="button" class="ox-user-btn" data-pop="od-me" aria-haspopup="true"><span class="ox-avatar">{{ request.user.get_full_name|default:request.user.username|initials }}</span><span class="ox-status-dot" aria-hidden="true"></span></button>
+          <div class="pop" id="od-me" hidden style="inset-inline-end:0;top:44px;min-width:260px">
+            <div class="note xs" style="margin:2px 0 8px"><b>{{ request.user.get_full_name|default:request.user.username }}</b><br>{{ request.user.job_display_title|default:"مستخدم المنظومة" }}</div>
+            {% if enable_dev_account_switcher and dev_switch_users %}<form method="post" action="{% url 'accounts:switch_user' %}" style="padding:4px 4px 8px">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><label class="fld"><span class="xs">تبديل الحساب (وضع التطوير)</span><select name="user_id" class="in sm" onchange="this.form.submit()">{% for su in dev_switch_users %}<option value="{{ su.id }}" {% if su.id == request.user.id %}selected{% endif %}>{{ su.label }}</option>{% endfor %}</select></label></form>{% endif %}
+            <div class="ox-fontpick"><label for="ox-font-sel">الخط</label><select id="ox-font-sel" data-ox-font-select><option value="">Tajawal (الافتراضي)</option><option value="plex">IBM Plex Sans Arabic</option><option value="cairo">Cairo</option><option value="almarai">Almarai</option></select></div>
+            <a href="{% url 'notifications:center' %}">{% icon 'bell' %}مركز الإشعارات</a>
+            <button type="button" data-theme-toggle>{% icon 'moon' %}تبديل المظهر</button>
+            <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" style="color:var(--bad)">{% icon 'logout' %}تسجيل الخروج</button></form>
+          </div></div>
+      </header>
+      {% block cp %}<div class="od-cp" id="od-cp"><h1 class="od-crumb trunc">{% block heading %}{% endblock %}</h1>{% block cp_extra %}{% endblock %}<span class="ox-spacer"></span><div class="ox-cp-end"><button type="button" class="ox-btn ox-search-trigger" data-cmdk aria-label="بحث سريع (Ctrl+K)">{% icon 'search' 'sm' %}<span>ابحث أو اكتب أمراً…</span><kbd class="kbd">Ctrl K</kbd></button>{% if can_create_subject %}<button type="button" class="ox-btn ox-btn-primary" data-compose="document">{% icon 'plus' %}<span class="hide-sm">جديد</span></button>{% endif %}</div></div>{% endblock %}
+      <main class="page" id="main">{% block content %}{% endblock %}</main>
+    </div>
+  </div>
+  {% include "partials/overlays.html" %}
+  {% include "partials/drawers.html" %}
+  {% else %}
+  {% block auth_content %}{% endblock %}
+  {% endif %}
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  {% if messages %}
+  <div id="server-msgs" hidden>{% for m in messages %}<span data-t="{% if 'error' in m.tags %}error{% elif 'warning' in m.tags %}warning{% elif 'success' in m.tags %}success{% else %}info{% endif %}">{{ m }}</span>{% endfor %}</div>
+  {% endif %}
+  <script src="{% static 'js/app.js' %}?v=13" defer></script>
+  <script src="{% static 'js/referral_popup.js' %}?v=1" defer></script>
+  <script src="{% static 'js/subject_flow.js' %}?v=5" defer></script>
+  <script src="{% static 'js/table_pager.js' %}?v=2" defer></script>
+  <script src="{% static 'js/fullscreen.js' %}?v=1" defer></script>
+  <script src="{% static 'js/experience.js' %}?v=20" defer></script>
+  <script src="{% static 'js/path.js' %}?v=12" defer></script>
+  <script src="{% static 'js/datepicker.js' %}?v=2" defer></script>
+  <script src="{% static 'js/odoo/font-switch.js' %}?v=1" defer></script>
+  <script>setTimeout(function(){var css=getComputedStyle(document.documentElement).getPropertyValue("--ui-version").trim(),js=window.UI_VERSION,bad=[];if(css!=="4")bad.push(css?"ملف التنسيق app.css قديم":"لم يُحمَّل app.css");if(js!==4)bad.push(js?"ملف app.js قديم":"لم يُحمَّل app.js أو توقف بخطأ (F12 ثم Console)");if(!bad.length)return;var d=document.createElement("div");d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#b00020;color:#fff;padding:10px 16px;text-align:center;font:14px Tahoma,sans-serif";d.textContent=bad.join(" · ")+" — يُقدَّم من مسار static قديم أو من الكاش. نفّذ collectstatic ثم Ctrl+F5.";document.body.insertBefore(d,document.body.firstChild)},2500)</script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

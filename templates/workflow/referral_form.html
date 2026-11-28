@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}إحالة موضوع{% endblock %}
+{% block heading %}<span class="crumb">إحالة /</span> <span class="num">{{ subject.internal_number }}</span>{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>إحالة الموضوع</h2><p>{{ subject.title }}</p></div></div>
+<div class="note brand">{% icon 'info' 'sm' %} {{ routing_hint }}</div>
+<div class="nf-sheet rf-page">{% include "workflow/_referral_fields.html" %}</div>
+{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}

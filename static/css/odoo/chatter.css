@@ -1,0 +1,23 @@
+/* Chatter (activity stream). One definition; replaces ~80 stacked .od-chatter rules in odoo.css and odoo-shell.css. Filter chips (.sd-chips) are styled elsewhere and stay. */
+.od-chatter .case-chronology{display:block;margin-top:var(--ox-s2);padding-inline-start:0}
+.od-chatter .case-chronology::before{display:none}
+.od-chatter .panel-h{display:none}
+.od-chatter .panel-b{padding:0}
+.od-chatter .activity-tools,.od-chatter .sd-note,.od-chatter .sd-trunc,.od-chatter .note.brand{margin:var(--ox-s2) var(--ox-s3)}
+.od-chatter .activity-tools{display:flex;flex-wrap:wrap;gap:var(--ox-px-6)}
+.od-chatter .sd-stream article.chronology-item{display:grid;grid-template-columns:var(--ox-px-32) minmax(0,1fr);column-gap:var(--ox-s3);align-items:start;margin:0;padding:var(--ox-s3) var(--ox-s4);border:0;border-bottom:var(--ox-px-1) solid var(--ox-line-soft);border-radius:0;position:relative}
+.od-chatter .sd-stream article.chronology-item>.avatar,.od-chatter .sd-stream article.chronology-item>.chronology-marker{grid-column:1;grid-row:1;position:static;display:grid;place-items:center;width:var(--ox-px-32);height:var(--ox-px-32);margin:0;border-radius:var(--ox-radius-pill);font-size:var(--ox-fs-sm);flex:none}
+.od-chatter .sd-stream article.chronology-item>.avatar{background:var(--ox-brand);color:var(--ox-on-brand)}
+.od-chatter .sd-stream article.chronology-item>.chronology-marker{background:var(--ox-info-soft);color:var(--ox-info-ink)}
+.od-chatter .sd-stream article.chronology-item>.fi-b{grid-column:2;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--ox-s2);row-gap:var(--ox-px-2);align-items:baseline;min-width:0;padding:0;border:0;background:transparent;box-shadow:none}
+.od-chatter .sd-stream article.chronology-item .fi-b>small{grid-column:1;grid-row:1;font-size:var(--ox-fs-base);font-weight:var(--ox-fw-bold);color:var(--ox-ink);line-height:1.35;margin:0;padding:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.od-chatter .sd-stream article.chronology-item .fi-b .activity-heading{display:contents}
+.od-chatter .sd-stream article.chronology-item .fi-b .activity-heading time{grid-column:2;grid-row:1;justify-self:end;font-size:var(--ox-fs-sm);color:var(--ox-muted);margin:0;white-space:nowrap}
+.od-chatter .sd-stream article.chronology-item .fi-b .activity-type{grid-column:1/-1;grid-row:2;font-size:var(--ox-fs-sm);color:var(--ox-muted);background:transparent;padding:0;margin-top:var(--ox-px-2)}
+.od-chatter .sd-stream article.chronology-item .activity-type .tl-ico{position:static;display:inline-grid;width:var(--ox-px-18);height:var(--ox-px-18);margin-inline-end:var(--ox-px-4);vertical-align:middle}
+.od-chatter .sd-stream article.chronology-item .fi-b>p,.od-chatter .sd-stream article.chronology-item .fi-b>.chronology-route{grid-column:1/-1;grid-row:3;margin:var(--ox-px-4) 0 0;padding:0;font-size:var(--ox-fs-base);line-height:1.5;color:var(--ox-ink-2)}
+.od-chatter .sd-stream article.chronology-stage .fi-b>.chronology-route{grid-row:3}
+.od-chatter .sd-stream article.chronology-stage .fi-b>p{grid-row:4}
+.od-chatter .sd-stream article.chronology-item .fi-b>.sd-ch,.od-chatter .sd-has-card .sd-ch{display:contents}
+.od-chatter .sd-has-card .fi-b{border:0;box-shadow:none;background:transparent}
+.od-chatter .sd-stream .chronology-day{font-size:var(--ox-fs-sm);color:var(--ox-muted)}

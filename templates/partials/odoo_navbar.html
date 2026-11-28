@@ -1,0 +1,37 @@
+{% load ui_extras %}{% with v=request.resolver_match.view_name a=request.resolver_match.app_name c=gmail_folder_counts %}
+<a class="ox-apps-btn" href="{% url 'core:apps' %}" aria-label="كل التطبيقات" title="كل التطبيقات">{% icon 'grid' %}</a>
+<a class="ox-brand" href="{% url 'core:dashboard' %}"><span class="ox-brand-logo" aria-hidden="true"></span><span>الاتصالات الإدارية</span></a>
+<nav class="ox-menus" aria-label="القوائم">
+  <div class="ox-menu"><button type="button" class="ox-menu-btn"{% if v == 'core:dashboard' %} aria-current="page"{% endif %} data-pop="od-m1" aria-haspopup="true">مهامي{% if c.inbox %} <span class="ox-count-inline">{{ c.inbox }}</span>{% endif %}</button>
+    <div class="ox-dropdown" id="od-m1" hidden>
+      <a class="ox-dropdown-item" href="{% url 'core:dashboard' %}?folder=inbox&tab=primary">{% icon 'inbox' %}<span>الوارد</span>{% if c.inbox %}<em class="ox-count-inline">{{ c.inbox }}</em>{% endif %}</a>
+      <a class="ox-dropdown-item" href="{% url 'core:dashboard' %}?folder=pending">{% icon 'clock' %}<span>بانتظار الاستلام</span>{% if c.pending %}<em class="ox-count-inline">{{ c.pending }}</em>{% endif %}</a>
+      <a class="ox-dropdown-item" href="{% url 'core:dashboard' %}?folder=overdue">{% icon 'alert' %}<span>المتأخرة</span>{% if c.overdue %}<em class="ox-count-inline bad">{{ c.overdue }}</em>{% endif %}</a>
+      <a class="ox-dropdown-item" href="{% url 'core:dashboard' %}?folder=sent">{% icon 'send' %}<span>ما أرسلته</span></a>
+      <a class="ox-dropdown-item" href="{% url 'core:dashboard' %}?folder=archive">{% icon 'archive' %}<span>الأرشيف</span></a>
+    </div></div>
+  <a class="ox-menu-btn"{% if a == 'subjects' %} aria-current="page"{% endif %} href="{% url 'subjects:subject_list' %}">الموضوعات</a>
+  <a class="ox-menu-btn"{% if v == 'workflow:referral_inbox' %} aria-current="page"{% endif %} href="{% url 'workflow:referral_inbox' %}">صندوق الإحالات</a>
+  <a class="ox-menu-btn"{% if v == 'workflow:task_list' %} aria-current="page"{% endif %} href="{% url 'workflow:task_list' %}">المهام{% if c.open_tasks %} <span class="ox-count-inline">{{ c.open_tasks }}</span>{% endif %}</a>
+  <a class="ox-menu-btn"{% if a == 'documents' %} aria-current="page"{% endif %} href="{% url 'documents:document_list' %}">المستندات</a>
+  <a class="ox-menu-btn"{% if a == 'decisions' %} aria-current="page"{% endif %} href="{% url 'decisions:decision_list' %}">القرارات</a>
+  <a class="ox-menu-btn"{% if a == 'committees' %} aria-current="page"{% endif %} href="{% url 'committees:committee_list' %}">اللجان</a>
+  <div class="ox-menu"><button type="button" class="ox-menu-btn" data-pop="od-m2" aria-haspopup="true">البحث والتقارير</button>
+    <div class="ox-dropdown" id="od-m2" hidden>
+      <a class="ox-dropdown-item" href="{% url 'core:archive_search' %}">{% icon 'search' %}<span>البحث في الأرشيف</span></a>
+      <a class="ox-dropdown-item" href="{% url 'core:search' %}">{% icon 'filter' %}<span>البحث المتقدم</span></a>
+      <a class="ox-dropdown-item" href="{% url 'reports:dashboard' %}">{% icon 'chart' %}<span>التقارير والإحصاءات</span></a>
+    </div></div>
+  <div class="ox-menu"><button type="button" class="ox-menu-btn" data-pop="od-m3" aria-haspopup="true">الإدارة</button>
+    <div class="ox-dropdown" id="od-m3" hidden>
+      <a class="ox-dropdown-item" href="{% url 'workflow:templates_list' %}">{% icon 'flow' %}<span>قوالب المسارات</span></a>
+      <a class="ox-dropdown-item" href="{% url 'organization:org_tree' %}">{% icon 'tree' %}<span>الهيكل التنظيمي</span></a>
+      <a class="ox-dropdown-item" href="{% url 'accounts:delegations' %}">{% icon 'usercheck' %}<span>الإنابات والسكرتارية</span></a>
+      {% if can_manage_users_scoped %}<a class="ox-dropdown-item" href="{% url 'accounts:users_list' %}">{% icon 'users' %}<span>إدارة المستخدمين</span></a>{% endif %}
+      {% if can_view_audit %}<a class="ox-dropdown-item" href="{% url 'audit:audit_log' %}">{% icon 'shield' %}<span>سجل التدقيق</span></a>{% endif %}
+      {% if request.user.is_superuser %}<a class="ox-dropdown-item" href="{% url 'accounts:permissions_matrix' %}">{% icon 'lock' %}<span>مصفوفة الصلاحيات</span></a><a class="ox-dropdown-item" href="{% url 'core:db_admin' %}">{% icon 'db' %}<span>قاعدة البيانات</span></a>{% endif %}
+      <a class="ox-dropdown-item" href="{% url 'core:settings' %}">{% icon 'cog' %}<span>الإعدادات</span></a>
+      <a class="ox-dropdown-item" href="{% url 'core:user_guide' %}">{% icon 'help' %}<span>دليل الاستخدام</span></a>
+    </div></div>
+</nav>
+{% endwith %}

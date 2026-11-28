@@ -1,0 +1,196 @@
+/* odoo-version: subject page = work area (tabs) + permanent activity panel. Presentation only. */
+@media (min-width:1201px){
+  .odoo-ui .gh-layout{grid-template-columns:minmax(0,1fr) 400px!important;gap:0!important;align-items:start}
+  .odoo-ui .gh-layout>.col:first-child{padding-inline-end:20px}
+  .odoo-ui .od-chatter{position:sticky;top:calc(var(--top) + 8px);height:calc(100vh - var(--top) - 24px);overflow-y:auto;overscroll-behavior:contain;border-inline-start:1px solid var(--line-2);background:var(--panel);border-radius:8px;border:1px solid var(--line-2)}
+  .odoo-ui .od-chatter>section.panel{border:0!important;border-radius:0;display:block!important}}
+
+
+
+
+.odoo-ui .od-chatter>section.panel{display:block!important}
+
+
+
+
+.odoo-ui .gh-layout>.col:first-child>section.panel:not(.specialist-action-menu){display:none!important}
+
+
+
+
+.odoo-ui .gh-layout>.col:first-child>section.panel.od-on{display:block!important}
+
+
+
+
+.odoo-ui #sec-stages .steps{padding-top:10px}
+
+
+
+
+.odoo-ui .gh-compose{position:static}
+
+
+
+
+/* v3 cleanup */
+
+
+
+
+.odoo-ui .subnav{overflow-y:hidden!important}
+@media (max-width:1200px){.odoo-ui .od-chatter{margin-top:16px;max-height:none;overflow:visible}}
+
+
+
+
+/* v4: win over shell.css .sd-stream rules */
+
+
+
+
+.od-modal{position:fixed;inset:0;z-index:9000;background:rgba(20,20,30,.5);display:grid;place-items:center;padding:20px}
+
+
+
+
+/* نافذة التأكيد (حذف/إغلاق) يجب أن تظهر فوق نافذة الإجراء */
+
+
+
+
+.overlay.open{z-index:9500}
+
+
+
+
+.od-modal-box{background:var(--panel);border-radius:10px;width:min(640px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+
+
+
+
+.od-modal-h{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+
+
+
+
+.od-modal-h .iconbtn{font-size:22px;line-height:1}
+
+
+
+
+.od-modal-b{padding:14px 16px;overflow:auto}
+
+
+
+
+.od-modal-b .dd-b{border:0;padding:0}
+
+
+
+
+/* attachment viewer takes the activity column (no overlap); wide screens only. Activity returns on close. */
+@media (min-width:1300px){
+  .odoo-ui.od-viewing .gh-layout{grid-template-columns:minmax(0,1fr) clamp(400px,38vw,580px)!important}
+  .odoo-ui.od-viewing #od-chatter>section.panel{display:none!important}
+  .odoo-ui.od-viewing #od-chatter{overflow:hidden}
+  .odoo-ui #od-chatter>.modal{width:100%!important;max-width:none!important;height:100%!important;max-height:none!important;border:0;border-radius:0;box-shadow:none;margin:0}}
+
+
+
+
+.odoo-ui #pv.od-docked{display:none!important}
+
+
+
+
+
+/* The subject layout is authored in HTML; it must remain visible without JavaScript. */
+
+
+
+
+.odoo-ui .gh-layout{visibility:visible;animation:none}
+
+
+
+
+
+
+/* RTL workflow statusbar and readable sizing. First stage stays at the right. */
+
+
+
+
+.odoo-ui .case-h h2{font-size:26px}
+
+
+
+
+.odoo-ui .od-sheet .subnav a{font-size:15px;min-height:40px}
+
+
+
+
+.odoo-ui #sec-stages .case-meta small,
+.odoo-ui #sec-stages .sd-side-sec small{font-size:14px}
+
+
+
+
+.odoo-ui #sec-stages .case-meta b,
+.odoo-ui #sec-stages .sd-side-sec b{font-size:15px}
+
+
+
+
+
+
+/* Specialist view: one action selector replaces the legacy action clusters.
+   Existing action forms are moved into the shared modal only when selected. */
+
+
+
+
+.specialist-mode .specialist-action-menu{border:1px solid var(--line-2)}
+
+
+
+
+.specialist-mode .specialist-action-menu .panel-b{display:flex;flex-direction:column;gap:8px}
+
+
+
+
+.specialist-mode .specialist-action-menu .fld{max-width:520px;margin:0}
+
+
+
+
+.specialist-mode .specialist-action-menu select{width:100%;min-height:42px}
+
+
+
+
+.specialist-mode #sec-documents .panel-h a,
+.specialist-mode #sec-referrals .panel-h a,
+.specialist-mode #sec-referrals .panel-b form,
+.specialist-mode #sec-referrals .panel-b details,
+.specialist-mode #sec-tasks .panel-h a,
+.specialist-mode #sec-tasks .panel-b form,
+.specialist-mode #sec-tasks .panel-b details,
+.specialist-mode #sec-documents #action-upload,
+.specialist-mode #sec-closure .panel-b>.grid,
+.specialist-mode #sec-closure .note details,
+.specialist-mode #sec-closure [data-outgoing-item],
+.specialist-mode .case-actions{display:none!important}
+
+
+
+
+.specialist-action-sources{display:none!important}
+
+
+
+
+.specialist-action-launchers{display:none!important}

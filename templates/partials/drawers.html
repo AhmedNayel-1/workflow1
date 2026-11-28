@@ -1,0 +1,22 @@
+{% load ui_extras %}
+<div id="scrim" class="scrim"></div>
+
+<aside id="dr-notif" class="drawer" aria-label="التنبيهات">
+  <div class="drawer-h"><h3>التنبيهات</h3><div class="row"><button type="button" class="btn sm" id="notif-all">تعليم الكل كمقروء</button><button type="button" class="iconbtn" data-close aria-label="إغلاق">{% icon 'x' %}</button></div></div>
+  <div class="drawer-b">
+    <div id="notif-cats" class="chips mb"></div>
+    <div id="notif-list" data-url="{% url 'notifications:drawer_state' %}" data-mark="{% url 'notifications:mark_read_api' %}"><div class="empty">جارٍ التحميل…</div></div>
+  </div>
+  <div class="drawer-f"><a class="btn block" href="{% url 'notifications:center' %}">مركز الإشعارات الكامل</a></div>
+</aside>
+
+<aside id="dr-chat" class="drawer" aria-label="المحادثات">
+  <div class="drawer-h"><div class="row"><button type="button" class="iconbtn" id="chat-back" hidden aria-label="رجوع">{% icon 'chevr' %}</button><h3 id="chat-title">المحادثات</h3></div><button type="button" class="iconbtn" data-close aria-label="إغلاق">{% icon 'x' %}</button></div>
+  <div class="drawer-b" id="chat-body" data-url="{% url 'chat:state' %}" data-read="{% url 'chat:read' %}" data-direct="{% url 'chat:direct' %}" data-groups="{% url 'chat:groups' %}" data-send="{% url 'chat:messages' %}"><div class="empty">جارٍ التحميل…</div></div>
+  <div class="drawer-f" id="chat-foot" hidden>
+    <form id="chat-form" class="composer" data-multi>
+      <textarea rows="2" placeholder="اكتب رسالة… (Enter للإرسال)"></textarea>
+      <div class="row between"><label class="btn sm ghost" style="cursor:pointer">{% icon 'clip' 'sm' %}<span id="chat-file-l">إرفاق</span><input type="file" hidden></label><button class="btn primary sm" type="submit">{% icon 'send' 'sm' %}إرسال</button></div>
+    </form>
+  </div>
+</aside>

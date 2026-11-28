@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}إعداد قرار{% endblock %}
+{% block heading %}<span class="crumb">قرار /</span> <span class="num">{{ subject.internal_number }}</span>{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('odoo-ui','odoo-pg');</script>{% endblock %}
+{% block content %}
+<div class="page-h"><div><h2>إعداد قرار إداري</h2><p>{{ subject.title }}</p></div><a class="btn" href="{% url 'subjects:subject_detail' subject.id %}">إلغاء</a></div>
+<div class="decision-form-context"><span class="decision-form-mark">قرار</span><div><b>الموضوع المرتبط بالقرار</b><span class="num">{{ subject.internal_number }}</span><p>{{ subject.title }}</p></div></div>
+<form method="post" class="panel decision-form">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ idempotency_key }}"><div class="panel-b form">
+  <label class="fld"><span>نوع القرار</span><select class="in" name="decision_type" required>{% for v, l in decision_types %}<option value="{{ v }}" {% if v == "GENERAL" %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label class="fld"><span>عنوان القرار</span><input class="in" name="title" required value="{{ subject.title }}"></label>
+  <label class="fld"><span>جهة الإصدار</span><input class="in" name="issuing_authority" required></label>
+  <label class="fld"><span>جهة الاعتماد</span><input class="in" name="approving_authority" required></label>
+  <label class="fld full"><span>نص القرار</span><textarea class="in" name="body" rows="10" required data-decision-body aria-describedby="decision-body-count"></textarea><small class="muted xs" id="decision-body-count" data-decision-body-count aria-live="polite">0 حرف</small></label>
+</div><div class="panel-f row end"><a class="btn" href="{% url 'subjects:subject_detail' subject.id %}">إلغاء</a><button class="btn primary" type="submit">حفظ القرار كمسودة</button></div></form>
+{% endblock %}

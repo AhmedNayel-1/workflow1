@@ -1,0 +1,1 @@
+<form method="post" class="inline">{% csrf_token %}<input type="hidden" name="op" value="toggle_role_flag"><input type="hidden" name="role_id" value="{{ role.id }}"><input type="hidden" name="flag_name" value="{{ flag }}"><button type="submit" class="switch" role="switch" aria-checked="{% if val %}true{% else %}false{% endif %}" aria-label="تبديل"></button></form>

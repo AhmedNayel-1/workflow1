@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% load ui_extras %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block auth_content %}
+<div class="auth">
+  <div class="auth-art">
+    <div class="row"><span class="logo" style="background:rgba(255,255,255,.18)">غ د</span><b style="font-size:17px">منظومة الاتصالات الإدارية</b></div>
+    <div><h2>كل معاملة في مكانها، وكل خطوة واضحة.</h2><p>إدارة المراسلات والدورة المستندية والقرارات واللجان في منظومة واحدة آمنة، تقودك في كل مرحلة بخيارات محددة.</p>
+      <div class="auth-f"><div>{% icon 'spark' %}<span>كل موضوع يعرض لك «الخطوة التالية» المناسبة لدورك</span></div><div>{% icon 'shield' %}<span>صلاحيات وسرية تُطبَّق تلقائياً على كل معاملة</span></div><div>{% icon 'list' %}<span>سجل حركة كامل لكل إجراء</span></div></div></div>
+    <small style="opacity:.7">شركة غرب الدلتا لإنتاج الكهرباء</small>
+  </div>
+  <div class="auth-form"><div class="auth-card login-card">
+    <h1>تسجيل الدخول</h1><p class="muted mb">أدخل بياناتك للمتابعة إلى لوحة مهامك.</p>
+    <form method="post" class="col login-form" style="gap:14px">{% csrf_token %}<input type="hidden" name="next" value="{{ request.GET.next }}">
+      <label class="fld"><span>اسم المستخدم</span><input class="in" name="username" autocomplete="username" autofocus required></label>
+      <label class="fld"><span>كلمة المرور</span><input class="in" type="password" name="password" autocomplete="current-password" required></label>
+      <button class="btn primary lg block" type="submit">دخول</button>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

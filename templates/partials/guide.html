@@ -1,0 +1,6 @@
+{% load ui_extras %}{% if guide %}
+<section class="guide {{ guide.tone }} ui-guide" role="region" aria-label="الخطوة التالية">
+  <div class="grow"><div class="eyebrow">{% icon 'spark' 'sm' %}{{ guide.eyebrow }}</div><h3>{{ guide.title }}</h3><p>{{ guide.text }}</p></div>
+  <div class="acts">{% include "partials/guide_act.html" with a=guide.primary cls="btn primary lg" %}</div>
+  {% if guide.secondary %}<div class="alts"><span>أو اختر:</span>{% for act in guide.secondary %}{% include "partials/guide_act.html" with a=act cls="alt" %}{% endfor %}</div>{% endif %}
+</section>{% endif %}

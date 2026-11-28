@@ -1,0 +1,86 @@
+/* ==========================================================================
+   tokens.css — المصدر الوحيد للقيم. كل قيمة هنا تقديرية من لقطات Odoo 17/18.
+   VERIFY = تُقاس من المتصفح الحي (DevTools) وتُستبدل قبل اعتماد المرحلة.
+   ممنوع أي hex / px خارج هذا الملف.
+   ========================================================================== */
+
+:root{
+  /* الخط — قرار واحد (VERIFY مقابل ما يظهر في لقطات المستخدم) */
+  --ox-font:"OxTajawal",Arial,Tahoma,sans-serif;
+  --ox-fs-base:13px;      /* VERIFY */
+  --ox-fs-sm:12px;        /* VERIFY */
+  --ox-fs-lg:15px;        /* VERIFY */
+  --ox-fs-title:28px;     /* عنوان السجل — VERIFY */
+  --ox-fw-normal:400; --ox-fw-medium:500; --ox-fw-bold:700;
+  --ox-lh:1.5;
+
+  /* الألوان */
+  --ox-brand:#714b67;           /* VERIFY */
+  --ox-brand-hover:#5d3f55;
+  --ox-brand-soft:#f1e9ef;
+  --ox-link:#017e84;            /* VERIFY */
+  --ox-teal-soft:#e0f0f1;       /* تحديد صف / مرحلة حالية — VERIFY */
+  --ox-on-brand:#ffffff;
+  --ox-bg:#ffffff;
+  --ox-bg-view:#f9fafb;
+  --ox-muted-soft:#eceeef;
+  --ox-ink:#212529;
+  --ox-ink-2:#495057;
+  --ox-muted:#6c757d;
+  --ox-line:#e4e7ea;
+  --ox-line-soft:#f0f2f4;
+  --ox-success:#28a745; --ox-success-soft:#d9f0df;
+  --ox-info:#17a2b8;    --ox-info-soft:#d6eef2;
+  --ox-warning:#e8a317; --ox-warning-soft:#fdf0d0;
+  --ox-danger:#dc3545;  --ox-danger-soft:#f9dadd;
+  --ox-success-ink:#1b6b30; --ox-info-ink:#0c6270; --ox-warning-ink:#7a5400; --ox-danger-ink:#a01c28;
+  --ox-tooltip-bg:#000; --ox-tooltip-ink:#fff;
+  --ox-overlay:rgba(0,0,0,.5);
+  --ox-focus-ring:0 0 0 2px rgba(113,75,103,.35);
+
+  /* المسافات (سلم واحد) */
+  --ox-s1:4px; --ox-s2:8px; --ox-s3:12px; --ox-s4:16px; --ox-s5:24px; --ox-s6:32px;
+
+  /* المقاسات */
+  --ox-navbar-h:46px;     /* VERIFY */
+  --ox-cp-row-h:44px;     /* VERIFY */
+  --ox-btn-h:32px;        /* VERIFY — ارتفاع واحد لكل الأزرار */
+  --ox-btn-h-lg:36px;
+  --ox-btn-h-sm:24px;
+  --ox-input-h:32px;
+  --ox-row-h:44px;        /* صف القائمة: Ahmed 34-41 فاخترنا الوسط */
+  --ox-avatar:24px; --ox-avatar-lg:36px;
+  --ox-radius:8px; --ox-radius-lg:12px;        /* VERIFY */
+  --ox-radius-pill:999px;
+  --ox-shadow-sheet:0 1px 3px rgba(16,24,40,.07), 0 1px 2px rgba(16,24,40,.04);
+  --ox-shadow-pop:0 4px 14px rgba(0,0,0,.15);
+  --ox-shadow-modal:0 10px 30px rgba(0,0,0,.25);
+  --ox-z-navbar:40; --ox-z-dropdown:60; --ox-z-modal:80; --ox-z-toast:90; --ox-z-tooltip:100;
+  --ox-ease:.15s ease;
+  --ox-green:#28a745;
+  --ox-app-tile:70px; --ox-app-col:136px; --ox-app-row:131px; --ox-app-radius:8px; --ox-app-icon:36px;
+  --ox-grad-a:#f4f2f7; --ox-grad-b:#e4e1ee;
+  --ox-shadow-tile:0 2px 6px rgba(0,0,0,.18);
+  --ox-dot:10px;
+  /* raw sizes used by components (names are the value) */
+  --ox-px-18:18px;
+  --ox-px-20:20px;
+  --ox-px-1:1px;
+  --ox-px-2:2px;
+  --ox-px-4:4px;
+  --ox-px-6:6px;
+  --ox-px-3:3px;
+  --ox-px-36:36px;
+  --ox-px-10:10px;
+  --ox-px-16:16px;
+  --ox-px-24:24px;
+  --ox-px-28:28px;
+  --ox-px-32:32px;
+  --ox-px-130:130px;
+  --ox-px-200:200px;
+  --ox-px-260:260px;
+  --ox-px-340:340px;
+  --ox-px-520:520px;
+  --ox-px-720:720px;
+  --ox-px-760:760px;
+}

@@ -1,0 +1,4 @@
+# Optional SQL Server production dependencies
+# Install only when DB_ENGINE=mssql is configured and Microsoft ODBC Driver 17/18 is installed
+mssql-django>=1.5,<2.0
+pyodbc>=5.1,<6.0

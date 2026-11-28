@@ -1,0 +1,11 @@
+/* جدول القوائم: تعريف واحد. بلا خطوط عمودية، صف بارتفاع واحد، تظليل مائل للفيروزي عند المرور */
+.ox-list,.tbl{width:100%;border-collapse:collapse;font-size:var(--ox-fs-base)}
+.ox-list th,.tbl th{position:sticky;inset-block-start:0;padding:var(--ox-s2) var(--ox-s3);background:var(--ox-bg);border-bottom:var(--ox-px-1) solid var(--ox-line);color:var(--ox-ink);font-size:var(--ox-fs-base);font-weight:var(--ox-fw-bold);text-align:start}
+.ox-list td,.tbl td{height:var(--ox-row-h);padding:var(--ox-s1) var(--ox-s3);border-bottom:var(--ox-px-1) solid var(--ox-line-soft);color:var(--ox-ink);vertical-align:middle}
+.ox-list tbody tr:hover,.tbl tbody tr:hover,.tbl tbody tr:focus-within{background:var(--ox-teal-soft)}
+.ox-list tbody tr.sel,.tbl tbody tr.sel{background:var(--ox-brand-soft);box-shadow:inset var(--ox-px-3) 0 0 var(--ox-brand)}
+.tbl .w-chk{width:var(--ox-px-36)}
+.tbl a.title,.tbl .title{color:var(--ox-ink);font-weight:var(--ox-fw-medium)}
+.tbl a.title:hover,.tbl .title:hover{color:var(--ox-link)}
+.tbl .code{color:var(--ox-ink-2)}
+.sl-tbl td.sl-ref{white-space:nowrap}
