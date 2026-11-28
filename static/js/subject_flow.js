@@ -14,10 +14,47 @@
   }
 
   function action(id) {
+    fetch("/subjects/" + id + "/action-options/", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (o) {
+      if (o.mode === "chain") chainDlg(id, o); else actionFull(id, o);
+    });
+  }
+
+  function chainDlg(id, o) {
+    var row = rowOf(id); var title = row ? row.dataset.odTitle : "";
+    var d = document.createElement("dialog"); d.className = "af-dlg";
+    d.innerHTML = '<h3>إجراء على: ' + esc(title) + '</h3>' +
+      '<div class="af-opts"><label class="on" data-ch-o="contribute"><input type="radio" name="ch" checked> مساهمة / إضافة معلومة</label>' +
+      (o.can_takeover ? '<label data-ch-o="takeover"><input type="radio" name="ch"> أتولّى الموضوع بدلاً من ' + esc(o.holder) + ' (لغيابه)</label>' : '') + '</div>' +
+      '<p class="muted" data-ch-hint>تُسجَّل مساهمتك في ملخص الإجراءات دون تغيير حالة الموضوع أو صاحب العهدة.</p>' +
+      '<label class="af-f"><span data-ch-lbl>المعلومة / الملاحظة</span><textarea rows="4" data-ch-notes></textarea></label>' +
+      '<label class="af-f" data-ch-fw>مرفقات (اختياري)<input type="file" multiple data-ch-files></label>' +
+      '<div class="af-err" data-ch-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-ch-go>تسجيل</button></div>';
+    document.body.appendChild(d); d.showModal(); d.addEventListener("close", function () { d.remove(); });
+    var mode = "contribute";
+    d.addEventListener("click", function (ev) {
+      var m = ev.target.closest("[data-ch-o]");
+      if (m) {
+        mode = m.dataset.chO; d.querySelectorAll("[data-ch-o]").forEach(function (x) { x.classList.toggle("on", x === m); }); m.querySelector("input").checked = true;
+        d.querySelector("[data-ch-lbl]").textContent = mode === "takeover" ? "سبب التولّي (إجباري)" : "المعلومة / الملاحظة";
+        d.querySelector("[data-ch-hint]").textContent = mode === "takeover" ? "يصبح الموضوع في عهدتك ثم يمكنك التنفيذ أو التوجيه." : "تُسجَّل مساهمتك في ملخص الإجراءات دون تغيير حالة الموضوع أو صاحب العهدة.";
+        d.querySelector("[data-ch-fw]").hidden = mode === "takeover";
+      }
+      if (ev.target.closest("[data-af-close]")) d.close();
+      if (ev.target.closest("[data-ch-go]")) {
+        var notes = d.querySelector("[data-ch-notes]").value.trim(), err = d.querySelector("[data-ch-err]");
+        var fd = new FormData(); fd.append("mode", mode); fd.append("notes", notes);
+        if (mode === "contribute") Array.prototype.forEach.call(d.querySelector("[data-ch-files]").files, function (f) { fd.append("files", f); });
+        else if (!notes) { err.textContent = "اكتب السبب."; return; }
+        post("/subjects/" + id + "/action/", fd).then(function (j) { if (j.ok) back(); else err.textContent = j.error || "تعذّر التنفيذ"; });
+      }
+    });
+  }
+
+  function actionFull(id, o) {
     var row = rowOf(id); if (!row) return;
     var d = document.createElement("dialog"); d.className = "af-dlg";
     d.innerHTML = '<h3>إجراء على: ' + esc(row.dataset.odTitle) + '</h3>' +
-      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked> أوجّهه لشخص</label><label data-af-o="do"><input type="radio" name="af"> أنفّذه بنفسي</label><label data-af-o="ret" hidden><input type="radio" name="af"> ليس من اختصاصي، أرفضه وأعيده للمحيل</label></div>' +
+      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked> أوجّهه لشخص</label><label data-af-o="do"><input type="radio" name="af"> أنفّذه بنفسي</label><label data-af-o="part" hidden><input type="radio" name="af"> أُضيف مشاركاً وأواصل عملي</label><label data-af-o="ret" hidden><input type="radio" name="af"> ليس من اختصاصي، أرفضه وأعيده للمحيل</label></div>' +
       '<div class="muted af-why" data-af-why hidden></div>' +
       '<div data-af-ret hidden><label class="af-f">سبب الرفض / الإرجاع (إجباري)<textarea rows="3" data-af-rnotes></textarea></label>' +
       '<div class="af-err" data-af-rerr></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-retdone>إرجاع للمحيل</button></div></div>' +
@@ -28,10 +65,12 @@
       '<div class="af-err" data-af-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-done>تأكيد التنفيذ</button></div></div>';
     document.body.appendChild(d); d.showModal();
     d.addEventListener("close", function () { d.remove(); });
+    var routeMode = "route";
     var rb = d.querySelector("[data-af-route]"), db = d.querySelector("[data-af-do]"), sel = d.querySelector("[data-af-choice]");
-    fetch("/subjects/" + id + "/action-options/", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (o) {
+    Promise.resolve(o).then(function (o) {
       sel.innerHTML = o.choices.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join("");
       if (o.can_return) d.querySelector('[data-af-o="ret"]').hidden = false;
+      if (o.can_participant) d.querySelector('[data-af-o="part"]').hidden = false;
     });
     fetch(row.dataset.odRefer + "?partial=1", { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (html) {
       rb.innerHTML = html;
@@ -45,7 +84,7 @@
       var form = rb.querySelector("form");
       if (form) form.addEventListener("submit", function (ev) {
         ev.preventDefault(); ev.stopImmediatePropagation();
-        var fd = new FormData(form); fd.set("mode", "route");
+        var fd = new FormData(form); fd.set("mode", routeMode);
         post("/subjects/" + id + "/action/", fd).then(function (j) { if (j.ok) back(); else showErr(rb, j.error); });
       }, true);
       var c = rb.querySelector("[data-rf-cancel]"); if (c) c.addEventListener("click", function (ev) { ev.preventDefault(); d.close(); });
@@ -56,7 +95,7 @@
     }
     d.addEventListener("click", function (ev) {
       var o = ev.target.closest("[data-af-o]");
-      if (o) { var doit = o.dataset.afO === "do"; d.querySelectorAll("[data-af-o]").forEach(function (x) { x.classList.toggle("on", x === o); }); o.querySelector("input").checked = true; var k = o.dataset.afO; rb.hidden = k !== "route"; db.hidden = k !== "do"; d.querySelector("[data-af-ret]").hidden = k !== "ret"; }
+      if (o) { var doit = o.dataset.afO === "do"; d.querySelectorAll("[data-af-o]").forEach(function (x) { x.classList.toggle("on", x === o); }); o.querySelector("input").checked = true; var k = o.dataset.afO; routeMode = k === "part" ? "addpart" : "route"; rb.hidden = k !== "route" && k !== "part"; db.hidden = k !== "do"; d.querySelector("[data-af-ret]").hidden = k !== "ret"; }
       if (ev.target.closest("[data-af-close]")) d.close();
       if (ev.target.closest("[data-af-retdone]")) {
         var rn = d.querySelector("[data-af-rnotes]").value.trim();
@@ -102,6 +141,13 @@
     });
     d.addEventListener("click", function (ev) { if (ev.target.closest("[data-af-close]")) d.close(); });
   }
+
+  document.addEventListener("click", function (e) {
+    var ab = e.target.closest("[data-af-ackret]"); if (!ab) return;
+    e.stopPropagation();
+    var fd = new FormData(); fd.append("mode", "ack");
+    post("/subjects/" + ab.dataset.afId + "/action/", fd).then(function () { back(); });
+  }, true);
 
   document.addEventListener("click", function (e) {
     var mb = e.target.closest("[data-af-manage]"); if (!mb) return;
