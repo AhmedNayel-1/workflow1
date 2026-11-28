@@ -40,6 +40,7 @@ erDiagram
     User ||--o{ SubjectAccessGrant : "مستخدم مستثنى"
     Subject ||--o{ SubjectSuspension : "سجلات تعليق"
     SuspensionReason ||--o{ SubjectSuspension : "سبب مرجعي"
+    Subject ||--o{ StepSuspension : "تعليق خطوة لاستيفاء مستند"
     Subject ||--o{ SubjectStatusHistory : "سجل تغير الحالة"
     Subject ||--o{ Memo : "مذكرات"
     Subject ||--o{ Annotation : "تأشيرات إدارية"
@@ -103,6 +104,7 @@ erDiagram
 | `TransactionType` (`core_transactiontype`) | `id` (PK), `code` (Char 50, UNIQUE), `name` (Char 150), `sector_id` (FK→`Sector`, null), `requires_committee` (Bool), `requires_decision` (Bool), `requires_execution_proof` (Bool), `is_active` (Bool) | `sector`: `SET_NULL` |
 | `DocumentType` (`core_documenttype`) | `id` (PK), `code` (Char 50, UNIQUE), `name` (Char 150), `is_active` (Bool) | مرجعي لتجميع المرفقات داخل الموضوع |
 | `SuspensionReason` (`core_suspensionreason`) | `id` (PK), `code` (Char 50, UNIQUE), `name` (Char 200), `is_active` (Bool) | يرتبط بـ `SubjectSuspension` |
+| `StepSuspension` (`subjects_stepsuspension`) | `id` (PK), `subject_id` (FK), `recipient_id` (FK ReferralRecipient), `holder_id` (FK User), `required_item` (Char 255), `requested_user_id` (FK User, اختياري), `requested_unit_id` (FK OrgUnit, اختياري), `follow_up_date` (Date), `prior_status` (Char 30), `suspended_at`, `lifted_at`, `lifted_by_id`, `lift_kind`, `reminded` (Bool) | تعليق خطوة واحدة؛ إلغاؤه يعيد الحالة السابقة |
 | `RetentionPolicy` (`core_retentionpolicy`) | `id` (PK), `code` (Char 50, UNIQUE), `name` (Char 150), `retention_years` (PositiveSmallInt), `allow_auto_disposal` (Bool=False), `description` (Text), `is_active` (Bool) | يمنع الإتلاف الآلي افتراضياً |
 | `SystemSequence` (`core_systemsequence`) | `id` (PK), `key` (Char 50), `year` (PositiveInt), `prefix` (Char 20), `last_number` (PositiveInt) | `unique_together=[("key","year")]`؛ قفل صف ذري بـ `select_for_update()` |
 | `SystemErrorLog` (`core_systemerrorlog`) | `id` (PK), `component` (Char 100), `operation` (Char 150), `error_message` (Text), `reference_type` (Char 80), `reference_id` (Char 80), `is_resolved` (Bool), `created_at` (DateTime) | عزل أخطاء التنبيهات عن المعاملات الأساسية |
