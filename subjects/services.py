@@ -498,9 +498,17 @@ class SubjectService:
         user,
         closure_notes: str = "",
         exceptional: bool = False,
+        outcome: str = "",
     ) -> Subject:
+        from subjects import closing as CL
+        from subjects import action_access as _AA
         if subject.status == Subject.Status.CLOSED:
             raise ValidationError("الموضوع مغلق بالفعل.")
+        if not cls.registrant_holds_unrouted(user, subject) and not _AA.head_level(user):
+            raise PermissionDenied("الإغلاق للمشرف ومن فوقه؛ أرسل طلب إغلاق لمشرفك.")
+        blk = CL.blockers(subject, user)
+        if blk:
+            raise ValidationError(" | ".join(blk))
 
         if not cls.registrant_holds_unrouted(user, subject) and not PermissionService.user_has_permission(
             user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=subject.confidentiality.rank, subject=subject
@@ -524,6 +532,8 @@ class SubjectService:
             user,
             reason=f"{'إغلاق استثنائي' if exceptional else 'إغلاق رسمي وأرشفة'}: {closure_notes}",
         )
+        CL.finish_own_steps(user, subject)
+        subject.closure_outcome = (outcome or "").strip()[:255]
         subject.retention_status = Subject.RetentionStatus.ARCHIVED
         subject.closed_at = timezone.now()
         subject.closed_by = user
@@ -535,9 +545,12 @@ class SubjectService:
                 "closed_at",
                 "closed_by",
                 "closure_notes",
+                "closure_outcome",
                 "is_exceptional_closure",
             ]
         )
+        CL.notify_chain(subject, user, f"أُغلق الموضوع {subject.internal_number}",
+                        (f"النتيجة: {subject.closure_outcome}. " if subject.closure_outcome else "") + f"أغلقه {user.get_full_name() or user.username}.")
 
         AuditService.record_activity(
             subject=subject,
@@ -576,6 +589,8 @@ class SubjectService:
         )
         subject.retention_status = Subject.RetentionStatus.ACTIVE
         subject.save(update_fields=["retention_status"])
+        from subjects import closing as CL
+        CL.notify_chain(subject, user, f"أُعيد فتح الموضوع {subject.internal_number}", f"السبب: {reason}")
 
         AuditService.record_activity(
             subject=subject,
