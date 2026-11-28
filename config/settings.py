@@ -109,7 +109,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / sqlite_path,
+            "NAME": (Path(sqlite_path) if Path(sqlite_path).is_absolute() else BASE_DIR / sqlite_path),
             "OPTIONS": {
                 "timeout": 20,
             },
@@ -216,3 +216,20 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
+
+# --- النشر خلف وكيل HTTPS (Render وغيره) ---
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+_csrf_origins = [o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+if _render_host:
+    _csrf_origins.append("https://" + _render_host)
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = _csrf_origins
+if os.environ.get("DJANGO_BEHIND_PROXY", "").lower() in ("1", "true", "yes"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+# جلسات موقّعة في الكوكي: تبقى صالحة بعد إعادة تشغيل الخادم أو تصفير القرص المؤقت
+# (يتطلب DJANGO_SECRET_KEY ثابتاً). تُفعّل بالمتغير ليبقى التركيب المحلي كما هو.
+if os.environ.get("DJANGO_SIGNED_COOKIE_SESSIONS", "").lower() in ("1", "true", "yes"):
+    SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
