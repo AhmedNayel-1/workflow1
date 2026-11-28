@@ -653,6 +653,91 @@ class WorkflowEngineService:
         return referral
 
     @classmethod
+    def can_manage_referral(cls, user, referral) -> bool:
+        """من يحق له سحب الإحالة أو استبدال مستلمها: المحيل، المفوض عنه، أو من هو أعلى منه في السلسلة. ليس المستلم ولا مرؤوسوه."""
+        if not user or not user.is_authenticated or not user.is_active:
+            return False
+        if getattr(user, "is_superuser", False) or getattr(user, "is_system_admin", False):
+            return True
+        if referral.referred_by_id == user.id:
+            return True
+        delegation = PermissionService.get_acting_delegation(user, "REFERRAL_CREATE", subject=referral.subject)
+        if delegation is not None and delegation.delegator_id == referral.referred_by_id:
+            return True
+        if referral.recipients.filter(target_user=user).exists():
+            return False
+        sender_unit = getattr(referral.referred_by, "current_unit", None)
+        my_unit = getattr(user, "current_unit", None)
+        if sender_unit is None or my_unit is None or my_unit.id == sender_unit.id:
+            return False
+        if not my_unit.is_ancestor_of(sender_unit):
+            return False
+        return PermissionService.user_has_permission(
+            user, "REFERRAL_CREATE", sector=referral.subject.sector,
+            confidentiality_rank=referral.subject.confidentiality.rank, subject=referral.subject,
+        )
+
+    @classmethod
+    @transaction.atomic
+    def replace_recipient(cls, *, recipient_item, new_user, user, reason: str, notes: str = ""):
+        """إحالة بديلة: يُسحب المستلم الحالي (قيد الانتظار أو الاستلام) وتُنشأ إحالة جديدة لشخص آخر."""
+        if new_user is None or not getattr(new_user, "is_active", False):
+            raise ValidationError("يجب اختيار شخص نشط للإحالة البديلة.")
+        if not (reason or "").strip():
+            raise ValidationError("يجب كتابة سبب الاستبدال.")
+        referral = Referral.objects.select_for_update().select_related("subject", "referred_by").get(id=recipient_item.referral_id)
+        if not cls.can_manage_referral(user, referral):
+            raise PermissionDenied("ليس لديك صلاحية استبدال هذه الإحالة.")
+        if referral.is_completed or referral.is_withdrawn:
+            raise ValidationError("لا يمكن استبدال مستلم في إحالة مكتملة أو مسحوبة.")
+        item = referral.recipients.select_for_update().get(id=recipient_item.id)
+        if item.status not in (ReferralRecipient.RecipientStatus.PENDING, ReferralRecipient.RecipientStatus.RECEIVED, ReferralRecipient.RecipientStatus.WAITING_TURN):
+            raise ValidationError("الاستبدال متاح للمستلم الذي لم ينفّذ بعد فقط.")
+        if item.target_user_id == new_user.id:
+            raise ValidationError("المستخدم المختار هو نفسه المستلم الحالي.")
+        if not PermissionService.get_allowed_referral_targets(user, referral.subject).filter(id=new_user.id).exists():
+            raise PermissionDenied("المستخدم المختار خارج نطاق المستلمين المسموح بهم.")
+        now = timezone.now()
+        old_label = str(item.target_user or item.target_unit or "غير محدد")
+        clean = reason.strip()
+        item.status = ReferralRecipient.RecipientStatus.WITHDRAWN
+        item.is_active_step = False
+        item.response_notes = clean
+        item.responded_at = now
+        item.save(update_fields=["status", "is_active_step", "response_notes", "responded_at"])
+        if not referral.recipients.filter(is_active_step=True).exists():
+            referral.is_withdrawn = True
+            referral.is_completed = True
+            referral.completed_at = now
+            referral.save(update_fields=["is_withdrawn", "is_completed", "completed_at"])
+        locked_subject = Subject.objects.select_for_update().get(id=referral.subject_id)
+        locked_subject.current_owner = user
+        locked_subject.save(update_fields=["current_owner"])
+        referral.subject.current_owner = user
+        cls.create_referral(
+            subject=referral.subject, referred_by=user, routing_mode=Referral.RoutingMode.DIRECT,
+            purpose=referral.purpose, notes=(notes or "").strip() or f"إحالة بديلة عن {old_label}",
+            target_users=[new_user], target_units=[],
+        )
+        AuditService.record_activity(
+            subject=referral.subject, action_type="REFERRAL_REPLACED", actor_user=user,
+            description=f"استبدال {old_label} بـ {new_user} بواسطة {user} — {clean}",
+            metadata={"reason": clean, "old": old_label, "new": str(new_user), "referral_id": referral.id},
+        )
+        if item.target_user_id and item.target_user_id != user.id:
+            subj = referral.subject
+            try:
+                NotificationService.notify(
+                    recipient=item.target_user, subject=subj, category=Notification.Category.SYSTEM,
+                    priority=getattr(subj.priority, "code", "NORMAL") if subj.priority_id else "NORMAL",
+                    title=f"استُبدلت إحالتك على الموضوع {subj.internal_number}",
+                    message=f"قام {user} بإحالة الموضوع إلى شخص آخر ({clean}).", link_url=f"/subjects/{subj.id}/",
+                )
+            except Exception:
+                logger.exception("تعذر إشعار المستلم المستبدل")
+        return item
+
+    @classmethod
     @transaction.atomic
     def withdraw_referral(
         cls,
@@ -672,38 +757,29 @@ class WorkflowEngineService:
         )
 
         delegation = PermissionService.get_acting_delegation(user, "REFERRAL_CREATE", subject=locked_ref.subject)
-        is_authorized = (
-            getattr(user, "is_superuser", False)
-            or locked_ref.referred_by_id == user.id
-            or (delegation is not None and delegation.delegator_id == locked_ref.referred_by_id)
-        )
-        if not is_authorized:
-            raise PermissionDenied("سحب الإحالة متاح للمحيل أو المفوض عنه فقط.")
+        if not cls.can_manage_referral(user, locked_ref):
+            raise PermissionDenied("سحب الإحالة متاح للمحيل أو المفوض عنه أو لمن هو أعلى منه في السلسلة فقط.")
+        if not (reason or "").strip():
+            raise ValidationError("يجب كتابة سبب سحب الإحالة.")
 
         if locked_ref.is_withdrawn or locked_ref.is_completed:
             raise ValidationError("لا يمكن سحب إحالة مكتملة أو مسحوبة مسبقاً.")
 
-        already_received = any(
-            rec.received_at is not None
-            or rec.status in (
-                ReferralRecipient.RecipientStatus.RECEIVED,
-                ReferralRecipient.RecipientStatus.RESPONDED,
-                ReferralRecipient.RecipientStatus.VIEWED_ONLY,
-                ReferralRecipient.RecipientStatus.RETURNED,
-            )
-            for rec in locked_recipients
-        )
-        if already_received:
-            raise ValidationError("تعذر سحب الإحالة لأنها استُلمت بالفعل من أحد المحال إليهم.")
+        if any(rec.status in (ReferralRecipient.RecipientStatus.RESPONDED, ReferralRecipient.RecipientStatus.VIEWED_ONLY) for rec in locked_recipients):
+            raise ValidationError("تعذر سحب الإحالة لأن أحد المحال إليهم نفّذها بالفعل. استخدم «إحالة بديلة» أو إعادة فتح الموضوع.")
 
         now = timezone.now()
         notified_users = []
         for rec in locked_recipients:
+            if rec.status == ReferralRecipient.RecipientStatus.RETURNED:
+                continue
             if rec.target_user and rec.target_user_id != user.id:
                 notified_users.append(rec.target_user)
             rec.status = ReferralRecipient.RecipientStatus.WITHDRAWN
             rec.is_active_step = False
-            rec.save(update_fields=["status", "is_active_step"])
+            rec.response_notes = (reason or "").strip()
+            rec.responded_at = now
+            rec.save(update_fields=["status", "is_active_step", "response_notes", "responded_at"])
 
         locked_ref.is_withdrawn = True
         locked_ref.is_completed = True
@@ -750,6 +826,7 @@ class WorkflowEngineService:
             acting_on_behalf_of=delegation.delegator if delegation else None,
             delegation=delegation,
             description=f"تم سحب الإحالة رقم {locked_ref.id} بواسطة {user}" + (f" — {clean_reason}" if clean_reason else ""),
+            metadata={"reason": clean_reason, "referral_id": locked_ref.id},
         )
 
         if notified_users:
@@ -766,7 +843,7 @@ class WorkflowEngineService:
                             category=Notification.Category.SYSTEM,
                             priority=prio_code,
                             title=f"تم سحب الإحالة على الموضوع {subj.internal_number}",
-                            message=f"قام {user} بسحب الإحالة قبل استلامها" + (f" ({clean_reason})" if clean_reason else "."),
+                            message=f"قام {user} بسحب الإحالة" + (f" ({clean_reason})" if clean_reason else "."),
                             link_url=f"/subjects/{subj.id}/",
                         )
                     except Exception:
@@ -917,4 +994,3 @@ class WorkflowEngineService:
 def apply_template(subject: Subject, template_version: WorkflowTemplateVersion, user) -> list[Referral]:
     """واجهة مختصرة لتطبيق إصدار قالب مسار عمل على الموضوع."""
     return WorkflowEngineService.apply_template(subject=subject, template_version=template_version, user=user)
-
