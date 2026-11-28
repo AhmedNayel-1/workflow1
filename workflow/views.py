@@ -165,6 +165,7 @@ def referral_create(request, subject_id: int):
             "subject": subject,
             "users": allowed_users,
             "org_units": allowed_units,
+            "pick_tree": _pick_tree(allowed_users, allowed_units),
             "routing_choices": Referral.RoutingMode.choices,
             "purpose_choices": Referral.Purpose.choices,
             "parallel_rules": Referral.ParallelCompletionRule.choices,
@@ -487,3 +488,35 @@ def workflow_templates_list(request):
         "versions__steps__suggested_unit"
     )
     return render(request, "workflow/templates_list.html", {"templates": templates})
+
+
+def _pick_tree(users, units):
+    """شجرة المستلمين: وحدات قابلة للطي وتحت كل وحدة موظفوها المسموح التوجيه إليهم."""
+    from organization.models import OrgUnit
+    users = list(users)
+    units = list(units)
+    unit_ok = {u.id for u in units}
+    by_unit = {}
+    for u in users:
+        emp = getattr(u, "employee", None)
+        uid = getattr(emp, "current_unit_id", None) if emp else None
+        by_unit.setdefault(uid, []).append(u)
+    shown = (set(by_unit) | unit_ok) - {None}
+    known = {x.id: x for x in OrgUnit.objects.filter(id__in=shown)}
+    for uid in list(shown):
+        cur = known[uid].parent_id if uid in known else None
+        while cur and cur not in shown:
+            o = OrgUnit.objects.filter(id=cur).first()
+            if not o:
+                break
+            known[o.id] = o
+            shown.add(o.id)
+            cur = o.parent_id
+    def node(uid):
+        return {
+            "unit": known[uid], "selectable": uid in unit_ok,
+            "users": sorted(by_unit.get(uid, []), key=lambda x: x.get_full_name() or x.username),
+            "children": [node(c) for c in sorted((i for i in shown if i in known and known[i].parent_id == uid), key=lambda i: known[i].name)],
+        }
+    roots = sorted((i for i in shown if i in known and known[i].parent_id not in shown), key=lambda i: known[i].name)
+    return {"nodes": [node(i) for i in roots], "loose": sorted(by_unit.get(None, []), key=lambda x: x.get_full_name() or x.username)}
