@@ -85,6 +85,7 @@ def subject_list(request):
         item.rec_pending = bool(r and r.status == _RR.RecipientStatus.PENDING)
         item.is_mine = bool(r)
         item.self_hold = (not r) and SubjectService.registrant_holds_unrouted(request.user, item)
+        item.can_manage_ref = bool(_manageable_recipients(request.user, item))
         last = item.actions.order_by("-created_at", "-id").first()
         item.last_action = last.label if last else ""
         groups.setdefault(item.status, []).append(item)
@@ -1668,6 +1669,59 @@ def subject_quick_action(request, subject_id: int):
     return JsonResponse({"ok": True})
 
 
+def _manageable_recipients(user, subject):
+    """المستلمون الذين لم ينفّذوا بعد في إحالات يحق للمستخدم سحبها أو استبدالها."""
+    out = []
+    refs = subject.referrals.filter(is_completed=False, is_withdrawn=False).exclude(purpose=Referral.Purpose.FOR_INFO).select_related("referred_by", "subject__confidentiality", "subject__sector")
+    for ref in refs:
+        if not WorkflowEngineService.can_manage_referral(user, ref):
+            continue
+        for rc in ref.recipients.select_related("target_user", "target_unit"):
+            if rc.status in (ReferralRecipient.RecipientStatus.PENDING, ReferralRecipient.RecipientStatus.RECEIVED, ReferralRecipient.RecipientStatus.WAITING_TURN):
+                out.append((ref, rc))
+    return out
+
+
+@login_required
+def subject_referrals_manage(request, subject_id: int):
+    """سحب إحالة أو استبدال مستلمها (إحالة بديلة) مع سبب إجباري."""
+    subject = get_object_or_404(Subject, id=subject_id)
+    if not PermissionService.can_view_subject(request.user, subject):
+        raise PermissionDenied("غير مصرح لك بالوصول للموضوع.")
+    items = _manageable_recipients(request.user, subject)
+    if request.method != "POST":
+        try:
+            targets = [{"id": u.id, "name": (u.get_full_name() or u.username)} for u in PermissionService.get_allowed_referral_targets(request.user, subject)]
+        except Exception:
+            targets = []
+        return JsonResponse({
+            "items": [{"referral_id": r.id, "recipient_id": c.id, "name": (c.target_user.get_full_name() or c.target_user.username) if c.target_user_id else str(c.target_unit),
+                       "status": c.get_status_display(), "purpose": r.get_purpose_display()} for r, c in items],
+            "targets": targets,
+        })
+    reason = (request.POST.get("reason") or "").strip()
+    mode = request.POST.get("mode")
+    try:
+        if mode == "withdraw":
+            ref = next((r for r, c in items if r.id == int(request.POST.get("referral_id") or 0)), None)
+            if ref is None:
+                raise PermissionDenied("لا يمكنك سحب هذه الإحالة.")
+            WorkflowEngineService.withdraw_referral(referral=ref, user=request.user, reason=reason)
+        elif mode == "replace":
+            rc = next((c for r, c in items if c.id == int(request.POST.get("recipient_id") or 0)), None)
+            if rc is None:
+                raise PermissionDenied("لا يمكنك استبدال هذا المستلم.")
+            new_user = User.objects.filter(id=request.POST.get("new_user_id"), is_active=True).first()
+            WorkflowEngineService.replace_recipient(recipient_item=rc, new_user=new_user, user=request.user, reason=reason, notes=request.POST.get("notes", ""))
+        else:
+            return JsonResponse({"ok": False, "error": "اختر سحب الإحالة أو الإحالة البديلة."}, status=400)
+    except PermissionDenied as exc:
+        return JsonResponse({"ok": False, "error": str(exc) or "غير مسموح."}, status=403)
+    except (ValidationError, ValueError) as exc:
+        return JsonResponse({"ok": False, "error": "; ".join(exc.messages) if hasattr(exc, "messages") else "بيانات غير صحيحة."}, status=400)
+    return JsonResponse({"ok": True})
+
+
 @login_required
 def subject_timeline_json(request, subject_id: int):
     """ملخص الإجراءات والملاحظات مرتبة بالأحداث وتاريخها (لمن له صلاحية الاطلاع)."""
@@ -1686,8 +1740,17 @@ def subject_timeline_json(request, subject_id: int):
         for x in r.recipients.all():
             if x.received_at:
                 ev.append((x.received_at, x.target_user, "استلم الموضوع", "", []))
-            if x.responded_at:
+            if x.responded_at and x.status not in (ReferralRecipient.RecipientStatus.WITHDRAWN, ReferralRecipient.RecipientStatus.RETURNED):
                 ev.append((x.responded_at, x.target_user, "أنهى خطوته", x.response_notes, []))
+            elif x.responded_at and x.status == ReferralRecipient.RecipientStatus.RETURNED and not subject.actions.filter(user=x.target_user, choice__kind="RETURN").exists():
+                ev.append((x.responded_at, x.target_user, "أرجع الموضوع للمحيل", x.response_notes, []))
+    from audit.models import ActivityLog
+    for lg in ActivityLog.objects.filter(subject=subject, action_type__in=["REFERRAL_WITHDRAWN", "REFERRAL_REPLACED"]).select_related("actor_user"):
+        md = lg.metadata_json or {}
+        if lg.action_type == "REFERRAL_WITHDRAWN":
+            ev.append((lg.created_at, lg.actor_user, "سحب الإحالة", md.get("reason", ""), []))
+        else:
+            ev.append((lg.created_at, lg.actor_user, f"إحالة بديلة: من {md.get('old', '')} إلى {md.get('new', '')}", md.get("reason", ""), []))
     ev.sort(key=lambda e: e[0])
     return JsonResponse({"events": [
         {"at": timezone.localtime(e[0]).strftime("%Y-%m-%d %H:%M"), "who": nm(e[1]), "role": role(e[1]), "what": e[2], "notes": e[3], "files": e[4]} for e in ev]})
