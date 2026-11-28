@@ -98,7 +98,7 @@ def dashboard(request):
     active_delegations = PermissionService.get_active_delegations_for_delegate(request.user)
     delegator_ids = {
         d.delegator_id for d in active_delegations
-        if "REFERRAL_CREATE" in (d.allowed_actions or [])
+        if d.allows("REFERRAL_CREATE")
     }
     user_unit = getattr(request.user, "current_unit", None)
     unit_filter = Q(target_unit=user_unit, target_user__isnull=True) if user_unit else Q(pk__in=[])
