@@ -30,6 +30,7 @@ from notifications.models import Notification
 from notifications.services import NotificationService
 from organization.models import ExternalEntity, OrgUnit, Sector
 from workflow.models import Referral, ReferralRecipient, Task, WorkflowTemplateVersion
+from subjects import action_access as AA
 from workflow.services import WorkflowEngineService, apply_template
 from core.models import MemoTypeRef
 from .models import SubjectActionFile
@@ -84,7 +85,10 @@ def subject_list(request):
         item.rec_id = r.id if r else ""
         item.rec_pending = bool(r and r.status == _RR.RecipientStatus.PENDING)
         item.is_mine = bool(r)
-        item.self_hold = (not r) and SubjectService.registrant_holds_unrouted(request.user, item)
+        item.self_hold = (not r) and AA.owner_mode(request.user, item)
+        item.returned = AA.returned_info(item) if item.self_hold else None
+        item.ret_ack = bool(item.returned) and AA.returned_pending_ack(request.user, item) is None
+        item.can_chain = bool((not r) and (not item.self_hold) and AA.chain_mode(request.user, item)["contribute"])
         item.can_manage_ref = bool(_manageable_recipients(request.user, item))
         last = item.actions.order_by("-created_at", "-id").first()
         item.last_action = last.label if last else ""
@@ -1554,7 +1558,12 @@ def subject_action_options(request, subject_id: int):
         targets = []
     rec = _my_active_recipient(request.user, subject)[0]
     can_return = bool(rec is not None and rec.referral.referred_by_id and rec.referral.purpose != Referral.Purpose.FOR_INFO)
+    om = rec is None and AA.owner_mode(request.user, subject)
+    chain = AA.chain_mode(request.user, subject) if (rec is None and not om) else {"contribute": False, "takeover": False, "holder": ""}
     return JsonResponse({
+        "can_participant": bool(rec is not None and targets),
+        "mode": "chain" if (chain["contribute"] and rec is None and not om) else "full",
+        "can_contribute": chain["contribute"], "can_takeover": chain["takeover"], "holder": chain["holder"],
         "choices": [{"id": c.id, "name": c.name, "kind": c.kind} for c in ActionChoice.objects.filter(is_active=True).exclude(kind__in=[ActionChoice.Kind.ROUTE, ActionChoice.Kind.RETURN])],
         "can_return": can_return,
         "targets": targets,
@@ -1603,9 +1612,80 @@ def subject_quick_action(request, subject_id: int):
     if not PermissionService.can_view_subject(request.user, subject):
         raise PermissionDenied("غير مصرح لك بالوصول للموضوع.")
     rec = _my_active_recipient(request.user, subject)[0]
-    self_hold = rec is None and SubjectService.registrant_holds_unrouted(request.user, subject)
-    if self_hold and request.POST.get("mode") == "route":
-        return JsonResponse({"ok": False, "error": "لا يمكنك توجيه هذا الموضوع. استخدم «أنفّذه بنفسي»."}, status=400)
+    self_hold = rec is None and AA.owner_mode(request.user, subject)
+    pm = request.POST.get("mode")
+    if pm in ("contribute", "takeover", "ack"):
+        notes_in = (request.POST.get("notes") or "").strip()
+        if rec is not None or self_hold and pm != "ack":
+            return JsonResponse({"ok": False, "error": "هذا الموضوع في عهدتك؛ استخدم الإجراء الكامل."}, status=400)
+        if pm == "ack":
+            if not (self_hold and AA.returned_pending_ack(request.user, subject)):
+                return JsonResponse({"ok": False, "error": "لا يوجد موضوع مرفوض بانتظار الاستلام."}, status=400)
+            SubjectAction.objects.create(subject=subject, user=request.user, choice=None, label=AA.LBL_ACK, notes="")
+            return JsonResponse({"ok": True})
+        ch = AA.chain_mode(request.user, subject)
+        if pm == "contribute":
+            if not ch["contribute"]:
+                return JsonResponse({"ok": False, "error": "غير مسموح لك بالمساهمة في هذا الموضوع."}, status=403)
+            files = request.FILES.getlist("files")
+            if not notes_in and not files:
+                return JsonResponse({"ok": False, "error": "اكتب المعلومة أو أرفق ملفاً."}, status=400)
+            act = SubjectAction.objects.create(subject=subject, user=request.user, choice=None, label=AA.LBL_CONTRIB, notes=notes_in)
+            _save_action_files(act, files)
+            owner = subject.current_owner
+            if owner and owner.id != request.user.id:
+                try:
+                    from notifications.models import Notification
+                    from notifications.services import NotificationService
+                    NotificationService.notify(
+                        recipient=owner, subject=subject, category=Notification.Category.SYSTEM,
+                        priority=getattr(subject.priority, "code", "NORMAL") if subject.priority_id else "NORMAL",
+                        title=f"مساهمة جديدة على الموضوع {subject.internal_number}",
+                        message=f"أضاف {request.user.get_full_name() or request.user.username} معلومة على الموضوع.",
+                        link_url=f"/subjects/{subject.id}/",
+                    )
+                except Exception:
+                    pass
+            return JsonResponse({"ok": True})
+        if not ch["takeover"]:
+            return JsonResponse({"ok": False, "error": "غير مسموح لك بتولّي هذا الموضوع."}, status=403)
+        try:
+            old = AA.take_over(request.user, subject, notes_in)
+        except ValidationError as exc:
+            return JsonResponse({"ok": False, "error": "; ".join(exc.messages)}, status=400)
+        if old and old.id != request.user.id:
+            try:
+                from notifications.models import Notification
+                from notifications.services import NotificationService
+                NotificationService.notify(
+                    recipient=old, subject=subject, category=Notification.Category.SYSTEM,
+                    priority=getattr(subject.priority, "code", "NORMAL") if subject.priority_id else "NORMAL",
+                    title=f"تولّى {request.user.get_full_name() or request.user.username} الموضوع {subject.internal_number}",
+                    message=f"السبب: {notes_in}", link_url=f"/subjects/{subject.id}/",
+                )
+            except Exception:
+                pass
+        return JsonResponse({"ok": True})
+    if pm == "addpart":
+        if rec is None:
+            return JsonResponse({"ok": False, "error": "إضافة مشارك متاحة لمن بيده خطوة نشطة على الموضوع."}, status=403)
+        targets = list(User.objects.filter(id__in=request.POST.getlist("target_user_ids"), is_active=True))
+        if not targets:
+            return JsonResponse({"ok": False, "error": "اختر المشارك المطلوب إضافته."}, status=400)
+        prev_owner = subject.current_owner_id
+        try:
+            WorkflowEngineService.create_referral(
+                subject=subject, referred_by=request.user,
+                routing_mode=Referral.RoutingMode.PARALLEL if len(targets) > 1 else Referral.RoutingMode.DIRECT,
+                purpose=Referral.Purpose.FOR_EXECUTION, notes=(request.POST.get("notes") or "").strip() or "إضافة مشارك",
+                target_users=targets,
+            )
+        except ValidationError as exc:
+            return JsonResponse({"ok": False, "error": "; ".join(exc.messages)}, status=400)
+        Subject.objects.filter(id=subject.id).update(current_owner_id=prev_owner)
+        SubjectAction.objects.create(subject=subject, user=request.user, choice=None, label=AA.LBL_PARTICIPANT,
+                                     notes=(request.POST.get("notes") or "").strip(), target_user=targets[0])
+        return JsonResponse({"ok": True})
     if rec is None and not self_hold:
         return JsonResponse({"ok": False, "error": "هذا الموضوع غير موجّه إليك حالياً."}, status=403)
     if request.POST.get("mode") == "route":
@@ -1628,7 +1708,7 @@ def subject_quick_action(request, subject_id: int):
             WorkflowEngineService.acknowledge_or_complete_recipient(recipient_item=rec, user=request.user, complete=False)
             rec.refresh_from_db()
         text = f"{choice.name}" + (f": {notes}" if notes else "")
-        if self_hold:
+        if self_hold and choice.kind != ActionChoice.Kind.ROUTE:
             pass
         elif choice.kind == ActionChoice.Kind.RETURN:
             if not notes:
@@ -1646,14 +1726,17 @@ def subject_quick_action(request, subject_id: int):
             ) or not PermissionService.can_act_on_subject(request.user, subject):
                 raise PermissionDenied("ليس لديك صلاحية توجيه الموضوع.")
             WorkflowEngineService.create_referral(
-                subject=subject, referred_by=request.user, routing_mode=Referral.RoutingMode.DIRECT,
+                subject=subject, referred_by=request.user,
+                routing_mode=Referral.RoutingMode.PARALLEL if (len(targets) + len(units)) > 1 else Referral.RoutingMode.DIRECT,
                 purpose=Referral.Purpose.FOR_EXECUTION, notes=notes, target_users=targets, target_units=units,
             )
             try:  # بعد التوجيه تنتهي خطوتي فلا يبقى زر الإجراء عندي
+                if rec is None:
+                    raise ValidationError("no step")
                 rec.refresh_from_db()
                 WorkflowEngineService.acknowledge_or_complete_recipient(
                     recipient_item=rec, user=request.user, response_notes="وجّه الموضوع إلى " + "، ".join([(t.get_full_name() or t.username) for t in targets] + [u.name for u in units]),
-                    complete=True, force_complete_parallel=True,
+                    complete=True,
                 )
             except ValidationError:
                 pass
@@ -1731,19 +1814,24 @@ def subject_timeline_json(request, subject_id: int):
     ev = []
     nm = lambda u: (u.get_full_name() or u.username) if u else "—"
     role = lambda u: ((getattr(u, "job_display_title", "") or (u.employee.job_title if getattr(u, "employee", None) else "")) if u else "")
-    for a in subject.actions.select_related("user", "target_user").prefetch_related("files"):
+    act_list = list(subject.actions.all())
+    for a in subject.actions.select_related("user", "target_user", "choice").prefetch_related("files"):
         txt = a.label + (f" ← {nm(a.target_user)}" if a.target_user_id else "")
-        ev.append((a.created_at, a.user, txt, a.notes, [{"name": f.original_filename, "url": reverse("subjects:subject_action_file", args=[f.id])} for f in a.files.all()]))
+        if a.choice_id and a.choice.kind == "RETURN":
+            txt = f"رُفض من {nm(a.user)} ({role(a.user)}) وأُعيد للمحيل"
+        ev.append((a.created_at, a.user, txt, ("السبب: " + a.notes) if (a.choice_id and a.choice.kind == "RETURN" and a.notes) else a.notes, [{"name": f.original_filename, "url": reverse("subjects:subject_action_file", args=[f.id])} for f in a.files.all()]))
     for r in subject.referrals.select_related("referred_by").prefetch_related("recipients__target_user", "recipients__target_unit"):
         tg = "، ".join(nm(x.target_user) if x.target_user_id else str(x.target_unit) for x in r.recipients.all())
         ev.append((r.created_at, r.referred_by, f"إحالة إلى {tg}، للغرض: {r.get_purpose_display()}", r.notes or "", []))
         for x in r.recipients.all():
             if x.received_at:
                 ev.append((x.received_at, x.target_user, "استلم الموضوع", "", []))
-            if x.responded_at and x.status not in (ReferralRecipient.RecipientStatus.WITHDRAWN, ReferralRecipient.RecipientStatus.RETURNED):
+            if x.responded_at and x.status not in (ReferralRecipient.RecipientStatus.WITHDRAWN, ReferralRecipient.RecipientStatus.RETURNED) and not any(
+                aa.user_id == x.target_user_id and abs((aa.created_at - x.responded_at).total_seconds()) < 10 for aa in act_list
+            ):
                 ev.append((x.responded_at, x.target_user, "أنهى خطوته", x.response_notes, []))
             elif x.responded_at and x.status == ReferralRecipient.RecipientStatus.RETURNED and not subject.actions.filter(user=x.target_user, choice__kind="RETURN").exists():
-                ev.append((x.responded_at, x.target_user, "أرجع الموضوع للمحيل", x.response_notes, []))
+                ev.append((x.responded_at, x.target_user, f"رُفض من {nm(x.target_user)} ({role(x.target_user)}) وأُعيد للمحيل", "السبب: " + (x.response_notes or ""), []))
     from audit.models import ActivityLog
     for lg in ActivityLog.objects.filter(subject=subject, action_type__in=["REFERRAL_WITHDRAWN", "REFERRAL_REPLACED"]).select_related("actor_user"):
         md = lg.metadata_json or {}
