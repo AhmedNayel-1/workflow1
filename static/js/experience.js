@@ -313,6 +313,7 @@
   }
 
   // Subject list workbench: local search is intentionally limited to rows on this page.
+  window.__slInit = () => {
   const subjectList = document.querySelector("[data-subject-list]");
   if (subjectList) {
     const search = subjectList.querySelector("[data-subject-search]");
@@ -419,12 +420,15 @@
     if (openParam) setTimeout(() => window.__slOpen(openParam), 0);
     subjectList.addEventListener("click", e => { const b = e.target.closest("[data-af-details]"); if (b) { e.stopPropagation(); window.__slOpen(b.dataset.afId); } });
     side?.addEventListener("click", e => { if (e.target.closest("[data-sl-close]")) closeSide(); });
-    document.addEventListener("keydown", e => { if (e.key === "Escape" && !side.hidden) closeSide(); });
+    window.__slEsc = () => { if (!side.hidden) closeSide(); };
     subjectList.addEventListener("change", () => setTimeout(totals, 0));
     subjectList.addEventListener("input", () => setTimeout(totals, 0));
     subjectList.addEventListener("click", e => { if (e.target.closest("[data-subject-clear],[data-clear]")) setTimeout(totals, 0); });
     totals();
   }
+  };
+  window.__slInit();
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && window.__slEsc) window.__slEsc(); });
 
   // Subject registration: informational preview, section navigation, and file count.
   const subjectForm = document.querySelector("[data-subject-form]");
