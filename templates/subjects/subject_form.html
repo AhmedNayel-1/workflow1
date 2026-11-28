@@ -83,12 +83,21 @@ f.querySelectorAll('[data-dir]').forEach(function(e){var on=e.dataset.dir===d;e.
 }
 f.querySelectorAll('[name=direction]').forEach(function(r){r.addEventListener('change',dir)});
 function org(){f.querySelectorAll('[data-origin-box]').forEach(function(b){var on=b.dataset.originBox===ot.value;b.hidden=!on;var s=b.querySelector('select');s._ac.required=on;if(!on){s.value='';s._ac.value='';s._ac.setCustomValidity('')}})}
-function ac(sel){var id=sel.id||('ac'+Math.random().toString(36).slice(2)),inp=document.createElement('input'),dl=document.createElement('datalist');
-dl.id=id+'-dl';[].forEach.call(sel.options,function(o){if(o.value){var x=document.createElement('option');x.value=o.text;dl.appendChild(x)}});
-inp.type='text';inp.setAttribute('list',dl.id);inp.autocomplete='off';inp.placeholder='اكتب للبحث أو اختر...';inp.required=sel.required;sel.required=false;sel.hidden=true;
-sel.parentNode.insertBefore(inp,sel);sel.parentNode.insertBefore(dl,sel);sel._ac=inp;
-function sync(){var m=[].find.call(sel.options,function(o){return o.value&&o.text===inp.value});sel.value=m?m.value:'';inp.setCustomValidity(inp.required&&!m?'اختر من القائمة':'')}
-inp.addEventListener('input',sync);inp.addEventListener('change',sync);sync()}
+function nz(t){return String(t||'').toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/\s+/g,' ').trim()}
+function ac(sel){var inp=document.createElement('input'),box=document.createElement('ul'),wrap=document.createElement('div'),opts=[].filter.call(sel.options,function(o){return o.value}),act=-1;
+wrap.className='ac-wrap';box.className='ac-list';box.hidden=true;box.setAttribute('role','listbox');
+inp.type='text';inp.autocomplete='off';inp.placeholder='اكتب للبحث أو اختر...';inp.required=sel.required;sel.required=false;sel.hidden=true;
+sel.parentNode.insertBefore(wrap,sel);wrap.appendChild(inp);wrap.appendChild(box);sel._ac=inp;
+function sync(){var m=opts.find(function(o){return o.text===inp.value});sel.value=m?m.value:'';inp.setCustomValidity(inp.required&&!m?'اختر من القائمة':'')}
+function render(){var q=nz(inp.value).split(' ').filter(Boolean);var hit=opts.filter(function(o){var t=nz(o.text);return q.every(function(w){return t.indexOf(w)>-1})});act=-1;
+box.innerHTML='';hit.forEach(function(o){var li=document.createElement('li');li.textContent=o.text;li.setAttribute('role','option');li.addEventListener('mousedown',function(e){e.preventDefault();pick(o)});box.appendChild(li)});
+if(!hit.length){var li=document.createElement('li');li.className='ac-none';li.textContent='لا نتائج';box.appendChild(li)}box.hidden=false}
+function pick(o){inp.value=o.text;sync();box.hidden=true}
+inp.addEventListener('input',function(){sync();render()});inp.addEventListener('focus',render);inp.addEventListener('click',render);
+inp.addEventListener('blur',function(){setTimeout(function(){box.hidden=true},100)});
+inp.addEventListener('keydown',function(e){var it=[].slice.call(box.querySelectorAll('li:not(.ac-none)'));if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(box.hidden)render();act=(act+(e.key==='ArrowDown'?1:-1)+it.length)%it.length;it.forEach(function(x,k){x.classList.toggle('on',k===act)});if(it[act])it[act].scrollIntoView({block:'nearest'})}
+else if(e.key==='Enter'&&!box.hidden&&it.length){e.preventDefault();var t=it[act>=0?act:0].textContent;pick(opts.find(function(o){return o.text===t}))}else if(e.key==='Escape')box.hidden=true});
+sync()}
 f.querySelectorAll('select[data-ac]').forEach(ac);
 var rq=document.getElementById('rt-q');
 if(rq){rq.addEventListener('input',function(){var q=rq.value.trim().toLowerCase();
