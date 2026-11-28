@@ -81,6 +81,11 @@ def subject_list(request):
         rank = (r.target_user_id is not None, r.status == _RR.RecipientStatus.PENDING)
         if cur is None or rank > (cur.target_user_id is not None, cur.status == _RR.RecipientStatus.PENDING):
             rec_map[r.referral.subject_id] = r
+    from subjects import suspension as SU_
+    try:
+        SU_.send_due_reminders()
+    except Exception:
+        pass
     groups = {}
     for item in page_obj.object_list:
         r = rec_map.get(item.id)
@@ -91,6 +96,9 @@ def subject_list(request):
         item.returned = AA.returned_info(item) if item.self_hold else None
         item.ret_ack = bool(item.returned) and AA.returned_pending_ack(request.user, item) is None
         item.can_chain = bool((not r) and (not item.self_hold) and AA.chain_mode(request.user, item)["contribute"])
+        item.sus_list = list(SU_.active_for(item))
+        item.sus_tag = " · ".join(x.required_item for x in item.sus_list)[:80]
+
         item.can_manage_ref = bool(_manageable_recipients(request.user, item))
         last = item.actions.order_by("-created_at", "-id").first()
         item.last_action = last.label if last else ""
@@ -1562,7 +1570,19 @@ def subject_action_options(request, subject_id: int):
     can_return = bool(rec is not None and rec.referral.referred_by_id and rec.referral.purpose != Referral.Purpose.FOR_INFO)
     om = rec is None and AA.owner_mode(request.user, subject)
     chain = AA.chain_mode(request.user, subject) if (rec is None and not om) else {"contribute": False, "takeover": False, "holder": ""}
+    from subjects import suspension as SU
+    from organization.models import OrgUnit
+    act = list(SU.active_for(subject))
+    my_sus = [x for x in act if rec is not None and x.recipient_id == rec.id]
+    can_cancel = bool(act) and SU.can_cancel(request.user, subject, chain)
+    sus_mode = bool(my_sus or (rec is None and can_cancel))
+    info = [{"item": x.required_item, "from": x.requested_label, "holder": x.holder.get_full_name() or x.holder.username,
+             "follow_up": x.follow_up_date.isoformat() if x.follow_up_date else ""} for x in (my_sus or act)]
     return JsonResponse({
+        "sus_mode": sus_mode, "sus": info, "can_cancel": can_cancel,
+        "can_suspend": bool(rec is not None and not my_sus),
+        "people": [{"id": u.id, "name": u.get_full_name() or u.username} for u in User.objects.filter(is_active=True).exclude(id=request.user.id).order_by("first_name", "username")] if rec is not None else [],
+        "units": [{"id": u.id, "name": str(u)} for u in OrgUnit.objects.filter(is_active=True).order_by("id")] if rec is not None else [],
         "can_participant": bool(rec is not None and targets),
         "mode": "chain" if (chain["contribute"] and rec is None and not om) else "full",
         "can_contribute": chain["contribute"], "can_takeover": chain["takeover"], "holder": chain["holder"],
@@ -1616,6 +1636,31 @@ def subject_quick_action(request, subject_id: int):
     rec = _my_active_recipient(request.user, subject)[0]
     self_hold = rec is None and AA.owner_mode(request.user, subject)
     pm = request.POST.get("mode")
+    from subjects import suspension as SU
+    if pm == "unsuspend":
+        if not SU.can_cancel(request.user, subject, AA.chain_mode(request.user, subject)):
+            return JsonResponse({"ok": False, "error": "غير مسموح لك بإلغاء التعليق."}, status=403)
+        SU.cancel(request.user, subject)
+        return JsonResponse({"ok": True})
+    if pm == "suspend":
+        if rec is None:
+            return JsonResponse({"ok": False, "error": "التعليق متاح لمن بيده خطوة نشطة على الموضوع."}, status=403)
+        fu = None
+        if request.POST.get("follow_up"):
+            try:
+                from datetime import date as _d
+                fu = _d.fromisoformat(request.POST["follow_up"])
+            except ValueError:
+                return JsonResponse({"ok": False, "error": "تاريخ المتابعة غير صحيح."}, status=400)
+        frm = request.POST.get("from") or ""
+        try:
+            SU.suspend_step(request.user, subject, rec, request.POST.get("item"),
+                            user_id=frm[2:] if frm.startswith("p:") else None, unit_id=frm[2:] if frm.startswith("u:") else None, follow_up=fu)
+        except ValidationError as exc:
+            return JsonResponse({"ok": False, "error": "; ".join(exc.messages)}, status=400)
+        return JsonResponse({"ok": True})
+    if rec is not None and pm != "unsuspend" and SU.active_for(subject).filter(recipient=rec).exists():
+        return JsonResponse({"ok": False, "error": "خطوتك معلّقة لاستيفاء مستند؛ يُستأنف الموضوع عند رفع المستند أو إلغاء التعليق."}, status=400)
     if pm in ("contribute", "takeover", "ack"):
         notes_in = (request.POST.get("notes") or "").strip()
         if rec is not None or self_hold and pm != "ack":
@@ -1844,3 +1889,19 @@ def subject_timeline_json(request, subject_id: int):
     ev.sort(key=lambda e: e[0])
     return JsonResponse({"events": [
         {"at": timezone.localtime(e[0]).strftime("%Y-%m-%d %H:%M"), "who": nm(e[1]), "role": role(e[1]), "what": e[2], "notes": e[3], "files": e[4]} for e in ev]})
+
+@login_required
+def suspension_request(request, subject_id: int):
+    """صفحة المطلوب منه: يرى المطلوب فقط ويستطيع إرسال «طلب إلغاء التعليق» لصاحب الخطوة."""
+    from subjects import suspension as SU
+    subject = get_object_or_404(Subject, id=subject_id)
+    mine = [x for x in SU.active_for(subject) if SU.can_supply(request.user, x)]
+    if not mine:
+        raise PermissionDenied("لا يوجد طلب مستند موجّه إليك.")
+    sent = False
+    if request.method == "POST":
+        SU.request_cancel(request.user, subject)
+        sent = True
+    secret = subject.confidentiality.overrides_hierarchy
+    return render(request, "subjects/suspension_request.html", {
+        "items": mine, "number": "" if secret else subject.internal_number, "sent": sent})
