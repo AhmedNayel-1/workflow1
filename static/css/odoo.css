@@ -6,7 +6,7 @@
   .odoo-ui .od-chatter>section.panel{border:0!important;border-radius:0;display:block!important}
 }
 .odoo-ui .od-chatter>section.panel{display:block!important}
-.odoo-ui .gh-layout>.col:first-child>section.panel{display:none!important}
+.odoo-ui .gh-layout>.col:first-child>section.panel:not(.specialist-action-menu){display:none!important}
 .odoo-ui .gh-layout>.col:first-child>section.panel.od-on{display:block!important}
 .odoo-ui .od-chatter .case-chronology{padding-inline-start:0;margin-top:10px}
 .odoo-ui .od-chatter .case-chronology::before{display:none}
