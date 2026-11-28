@@ -54,7 +54,7 @@
     var row = rowOf(id); if (!row) return;
     var d = document.createElement("dialog"); d.className = "af-dlg";
     d.innerHTML = '<h3>إجراء على: ' + esc(row.dataset.odTitle) + '</h3>' +
-      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked> أوجّهه لشخص</label><label data-af-o="do"><input type="radio" name="af"> أنفّذه بنفسي</label><label data-af-o="part" hidden><input type="radio" name="af"> أُضيف مشاركاً وأواصل عملي</label><label data-af-o="ret" hidden><input type="radio" name="af"> ليس من اختصاصي، أرفضه وأعيده للمحيل</label></div>' +
+      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked><i>↪</i><b>أوجّهه لشخص</b></label><label data-af-o="do"><input type="radio" name="af"><i>✓</i><b>أنفّذه بنفسي</b></label><label data-af-o="part" hidden><input type="radio" name="af"><i>＋</i><b>أضيف مشاركاً</b></label><label data-af-o="ret" hidden><input type="radio" name="af"><i>↩</i><b>ليس من اختصاصي، أرفضه</b></label></div>' +
       '<div class="muted af-why" data-af-why hidden></div>' +
       '<div data-af-ret hidden><label class="af-f">سبب الرفض / الإرجاع (إجباري)<textarea rows="3" data-af-rnotes></textarea></label>' +
       '<div class="af-err" data-af-rerr></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-retdone>إرجاع للمحيل</button></div></div>' +
