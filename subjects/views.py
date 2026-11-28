@@ -84,6 +84,7 @@ def subject_list(request):
         item.rec_id = r.id if r else ""
         item.rec_pending = bool(r and r.status == _RR.RecipientStatus.PENDING)
         item.is_mine = bool(r)
+        item.self_hold = (not r) and SubjectService.registrant_holds_unrouted(request.user, item)
         last = item.actions.order_by("-created_at", "-id").first()
         item.last_action = last.label if last else ""
         groups.setdefault(item.status, []).append(item)
@@ -982,7 +983,7 @@ def subject_detail(request, subject_id: int):
         "can_suspend": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_SUSPEND", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_decide": can_act and PermissionService.user_has_permission(request.user, "DECISION_CREATE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_approve_decision": PermissionService.user_has_permission(request.user, "DECISION_APPROVE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
-        "can_close": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
+        "can_close": can_act and (SubjectService.registrant_holds_unrouted(request.user, subject) or PermissionService.user_has_permission(request.user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject)),
         "can_exceptional_close": can_act and PermissionService.user_has_permission(request.user, "SUBJECT_EXCEPTIONAL_CLOSE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_reopen": PermissionService.user_has_permission(request.user, "SUBJECT_REOPEN", sector=subject.sector, confidentiality_rank=rank, subject=subject),
         "can_manage_access": PermissionService.user_has_permission(request.user, "PERMISSIONS_MANAGE", sector=subject.sector, confidentiality_rank=rank, subject=subject),
@@ -1598,7 +1599,10 @@ def subject_quick_action(request, subject_id: int):
     if not PermissionService.can_view_subject(request.user, subject):
         raise PermissionDenied("غير مصرح لك بالوصول للموضوع.")
     rec = _my_active_recipient(request.user, subject)[0]
-    if rec is None:
+    self_hold = rec is None and SubjectService.registrant_holds_unrouted(request.user, subject)
+    if self_hold and request.POST.get("mode") == "route":
+        return JsonResponse({"ok": False, "error": "لا يمكنك توجيه هذا الموضوع. استخدم «أنفّذه بنفسي»."}, status=400)
+    if rec is None and not self_hold:
         return JsonResponse({"ok": False, "error": "هذا الموضوع غير موجّه إليك حالياً."}, status=403)
     if request.POST.get("mode") == "route":
         choice = ActionChoice.objects.filter(kind=ActionChoice.Kind.ROUTE, is_active=True).first()
@@ -1609,11 +1613,16 @@ def subject_quick_action(request, subject_id: int):
     notes = (request.POST.get("notes") or "").strip()
     target = None
     try:
-        if rec.status == ReferralRecipient.RecipientStatus.PENDING:
+        if self_hold:
+            if choice.kind == ActionChoice.Kind.RETURN:
+                return JsonResponse({"ok": False, "error": "لا يوجد محيل لإرجاع الموضوع إليه."}, status=400)
+        elif rec.status == ReferralRecipient.RecipientStatus.PENDING:
             WorkflowEngineService.acknowledge_or_complete_recipient(recipient_item=rec, user=request.user, complete=False)
             rec.refresh_from_db()
         text = f"{choice.name}" + (f": {notes}" if notes else "")
-        if choice.kind == ActionChoice.Kind.RETURN:
+        if self_hold:
+            pass
+        elif choice.kind == ActionChoice.Kind.RETURN:
             if not notes:
                 return JsonResponse({"ok": False, "error": "اكتب سبب الإرجاع في الملاحظات."}, status=400)
             WorkflowEngineService.reject_or_return_recipient(recipient_item=rec, user=request.user, reason=notes)

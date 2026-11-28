@@ -438,6 +438,16 @@ class SubjectService:
         return subject
 
     @staticmethod
+    def registrant_holds_unrouted(user, subject) -> bool:
+        """المسجِّل الذي يحتفظ بموضوع لم يُحل لأحد (بلا إحالات) يغلقه أو يسجّل عليه إجراءً بنفسه."""
+        return bool(
+            user and user.is_authenticated and subject.created_by_id == user.id
+            and subject.current_owner_id == user.id
+            and subject.status != Subject.Status.CLOSED
+            and not subject.referrals.exists()
+        )
+
+    @staticmethod
     def validate_closure_requirements(subject: Subject) -> list[str]:
         """التحقق من شروط الإغلاق الرسمية للموضوع قبل السماح بإغلاقه."""
         errors = []
@@ -492,7 +502,7 @@ class SubjectService:
         if subject.status == Subject.Status.CLOSED:
             raise ValidationError("الموضوع مغلق بالفعل.")
 
-        if not PermissionService.user_has_permission(
+        if not cls.registrant_holds_unrouted(user, subject) and not PermissionService.user_has_permission(
             user, "SUBJECT_CLOSE", sector=subject.sector, confidentiality_rank=subject.confidentiality.rank, subject=subject
         ):
             raise PermissionDenied("ليس لديك صلاحية إغلاق الموضوع.")
