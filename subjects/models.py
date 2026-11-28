@@ -131,6 +131,7 @@ class Subject(models.Model):
         verbose_name="أُغلق بواسطة",
     )
     closure_notes = models.TextField("ملاحظات / مبرر الإغلاق", blank=True)
+    closure_outcome = models.CharField("نتيجة الإغلاق", max_length=255, blank=True)
     is_exceptional_closure = models.BooleanField("إغلاق استثنائي", default=False)
 
     class Meta:
