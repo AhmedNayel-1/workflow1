@@ -1551,8 +1551,11 @@ def subject_action_options(request, subject_id: int):
                    for u in PermissionService.get_allowed_referral_targets(request.user, subject)]
     except Exception:
         targets = []
+    rec = _my_active_recipient(request.user, subject)[0]
+    can_return = bool(rec is not None and rec.referral.referred_by_id and rec.referral.purpose != Referral.Purpose.FOR_INFO)
     return JsonResponse({
-        "choices": [{"id": c.id, "name": c.name, "kind": c.kind} for c in ActionChoice.objects.filter(is_active=True).exclude(kind=ActionChoice.Kind.ROUTE)],
+        "choices": [{"id": c.id, "name": c.name, "kind": c.kind} for c in ActionChoice.objects.filter(is_active=True).exclude(kind__in=[ActionChoice.Kind.ROUTE, ActionChoice.Kind.RETURN])],
+        "can_return": can_return,
         "targets": targets,
     })
 
@@ -1606,6 +1609,10 @@ def subject_quick_action(request, subject_id: int):
         return JsonResponse({"ok": False, "error": "هذا الموضوع غير موجّه إليك حالياً."}, status=403)
     if request.POST.get("mode") == "route":
         choice = ActionChoice.objects.filter(kind=ActionChoice.Kind.ROUTE, is_active=True).first()
+    elif request.POST.get("mode") == "return":
+        choice = (ActionChoice.objects.filter(kind=ActionChoice.Kind.RETURN, is_active=True).first()
+                  or ActionChoice.objects.filter(kind=ActionChoice.Kind.RETURN).first()
+                  or ActionChoice.objects.create(name="إرجاع للمحيل", kind=ActionChoice.Kind.RETURN))
     else:
         choice = ActionChoice.objects.filter(id=request.POST.get("choice_id"), is_active=True).exclude(kind=ActionChoice.Kind.ROUTE).first()
     if choice is None:
@@ -1669,18 +1676,18 @@ def subject_timeline_json(request, subject_id: int):
         raise PermissionDenied("غير مصرح لك بالوصول للموضوع.")
     ev = []
     nm = lambda u: (u.get_full_name() or u.username) if u else "—"
+    role = lambda u: ((getattr(u, "job_display_title", "") or (u.employee.job_title if getattr(u, "employee", None) else "")) if u else "")
     for a in subject.actions.select_related("user", "target_user").prefetch_related("files"):
         txt = a.label + (f" ← {nm(a.target_user)}" if a.target_user_id else "")
-        ev.append((a.created_at, nm(a.user), txt, a.notes, [{"name": f.original_filename, "url": reverse("subjects:subject_action_file", args=[f.id])} for f in a.files.all()]))
+        ev.append((a.created_at, a.user, txt, a.notes, [{"name": f.original_filename, "url": reverse("subjects:subject_action_file", args=[f.id])} for f in a.files.all()]))
     for r in subject.referrals.select_related("referred_by").prefetch_related("recipients__target_user", "recipients__target_unit"):
         tg = "، ".join(nm(x.target_user) if x.target_user_id else str(x.target_unit) for x in r.recipients.all())
-        ev.append((r.created_at, nm(r.referred_by), f"إحالة إلى {tg}", r.notes or "", []))
+        ev.append((r.created_at, r.referred_by, f"إحالة إلى {tg}، للغرض: {r.get_purpose_display()}", r.notes or "", []))
         for x in r.recipients.all():
-            who = nm(x.target_user) if x.target_user_id else str(x.target_unit)
             if x.received_at:
-                ev.append((x.received_at, who, "استلم الموضوع", "", []))
+                ev.append((x.received_at, x.target_user, "استلم الموضوع", "", []))
             if x.responded_at:
-                ev.append((x.responded_at, who, "أنهى خطوته", x.response_notes, []))
+                ev.append((x.responded_at, x.target_user, "أنهى خطوته", x.response_notes, []))
     ev.sort(key=lambda e: e[0])
     return JsonResponse({"events": [
-        {"at": timezone.localtime(e[0]).strftime("%Y-%m-%d %H:%M"), "who": e[1], "what": e[2], "notes": e[3], "files": e[4]} for e in ev]})
+        {"at": timezone.localtime(e[0]).strftime("%Y-%m-%d %H:%M"), "who": nm(e[1]), "role": role(e[1]), "what": e[2], "notes": e[3], "files": e[4]} for e in ev]})
