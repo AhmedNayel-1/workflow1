@@ -2,7 +2,9 @@
 (function () {
   var csrf = function () { var m = document.querySelector('meta[name="csrf-token"]'); return m ? m.content : ""; };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var post = function (url, fd) { return fetch(url, { method: "POST", body: fd, credentials: "same-origin", headers: { "X-CSRFToken": csrf() } }).then(function (r) { return r.json().catch(function () { return { ok: false, error: "تعذّر التنفيذ" }; }); }); };
+  var post = function (url, fd) { return fetch(url, { method: "POST", body: fd, credentials: "same-origin", headers: { "X-CSRFToken": csrf() } }).then(function (r) { return r.json().catch(function () { return { ok: false, error: r.status >= 500 ? "الخادم لم يرد بشكل صحيح (" + r.status + ")، حاول مرة أخرى" : "تعذّر التنفيذ (" + r.status + ")، حدّث الصفحة وحاول مرة أخرى" }; }); }).catch(function () { return { ok: false, error: "تعذّر الاتصال بالخادم، حاول مرة أخرى بعد قليل" }; }); };
+  // يعطّل الزر أثناء الإرسال ويُظهر «جارٍ التنفيذ…» ثم يعيده عند الفشل (حتى لا يبدو أن الضغط لم يعمل)
+  var busy = function (btn, pr) { if (!btn) return pr; var t = btn.textContent; btn.disabled = true; btn.textContent = "جارٍ التنفيذ…"; return pr.then(function (j) { if (!j.ok) { btn.disabled = false; btn.textContent = t; } return j; }); };
   var rowOf = function (id) { return document.querySelector('[data-subject-row][data-od-id="' + id + '"]'); };
   var back = function () { location.reload(); };
 
@@ -25,33 +27,47 @@
   function susDlg(id, o) {
     var row = rowOf(id); var title = row ? row.dataset.odTitle : "";
     var i = o.sus[0] || {};
-    var opts = [];
-    if (o.can_cancel) opts.push(["unsuspend", "ألغي التعليق وأعيد الموضوع"]);
-    if (o.can_takeover) opts.push(["takeover", "أتولّى الموضوع وأحوّله لغيره"]);
     var d = document.createElement("dialog"); d.className = "af-dlg";
     d.innerHTML = '<h3>موضوع معلّق: ' + esc(title) + '</h3>' +
       '<p class="muted">المطلوب: <b>' + esc(i.item) + '</b> · من: ' + esc(i.from) + (i.follow_up ? ' · المتابعة: ' + esc(i.follow_up) : '') + '<br>صاحب الخطوة: ' + esc(i.holder) + '</p>' +
-      (opts.length ? '<div class="af-opts">' + opts.map(function (x, n) { return '<label class="' + (n ? '' : 'on') + '" data-su-o="' + x[0] + '"><input type="radio" name="su"' + (n ? '' : ' checked') + '> ' + x[1] + '</label>'; }).join("") + '</div>' +
-      '<label class="af-f"><span data-su-lbl></span><textarea rows="3" data-su-notes></textarea></label>' +
-      '' : '<p class="muted">يمكن لصاحب الخطوة أو المشرف أو المدير العام أو المطلوب منه إلغاء التعليق.</p>') +
-      '<div class="af-err" data-su-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إغلاق</button>' + (opts.length ? '<button type="button" class="btn primary" data-su-go>تنفيذ</button>' : '') + '</div>';
+      (o.can_cancel ? '<label class="af-f">ملاحظات (اختياري)<textarea rows="3" data-su-notes></textarea></label>' : '<p class="muted">يمكن لصاحب الخطوة أو المشرف أو المدير العام إلغاء التعليق.</p>') +
+      '<div class="af-err" data-su-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إغلاق</button>' +
+      (o.can_takeover ? '<button type="button" class="btn" data-su-take title="اكتب السبب في الملاحظات">أتولّى الموضوع</button>' : '') +
+      (o.can_cancel ? '<button type="button" class="btn primary" data-su-cancel>إلغاء التعليق</button>' : '') + '</div>';
     document.body.appendChild(d); d.showModal(); d.addEventListener("close", function () { d.remove(); });
-    var mode = opts.length ? opts[0][0] : "";
-    function sync() {
-      if (!opts.length) return;
-      d.querySelector("[data-su-lbl]").textContent = mode === "takeover" ? "سبب التولّي (إجباري)" : "ملاحظات (اختياري)";
+    function run(btn, mode, msg) {
+      var notes = d.querySelector("[data-su-notes]"), err = d.querySelector("[data-su-err]");
+      notes = notes ? notes.value.trim() : "";
+      if (mode === "takeover" && !notes) { err.textContent = "اكتب سبب التولّي في الملاحظات."; return; }
+      err.textContent = "";
+      var fd = new FormData(); fd.append("mode", mode); fd.append("notes", notes);
+      busy(btn, post("/subjects/" + id + "/action/", fd)).then(function (j) {
+        if (!j.ok) { err.textContent = j.error || "تعذّر التنفيذ"; return; }
+        d.close();
+        if (window.__slRefresh) window.__slRefresh().then(function () { if (window.toast) window.toast(msg, "success"); }).catch(back);
+        else back();
+      });
     }
-    sync();
     d.addEventListener("click", function (ev) {
-      var m = ev.target.closest("[data-su-o]");
-      if (m) { mode = m.dataset.suO; d.querySelectorAll("[data-su-o]").forEach(function (x) { x.classList.toggle("on", x === m); }); m.querySelector("input").checked = true; sync(); }
       if (ev.target.closest("[data-af-close]")) d.close();
-      if (ev.target.closest("[data-su-go]")) {
-        var notes = d.querySelector("[data-su-notes]").value.trim(), err = d.querySelector("[data-su-err]");
-        var fd = new FormData(); fd.append("mode", mode); fd.append("notes", notes);
-        if (mode === "takeover" && !notes) { err.textContent = "اكتب السبب."; return; }
-        post("/subjects/" + id + "/action/", fd).then(function (j) { if (j.ok) back(); else err.textContent = j.error || "تعذّر التنفيذ"; });
-      }
+      var c = ev.target.closest("[data-su-cancel]"); if (c) run(c, "unsuspend", "تم إلغاء التعليق");
+      var t = ev.target.closest("[data-su-take]"); if (t) run(t, "takeover", "تم تولّي الموضوع");
+    });
+  }
+
+  // لافتة التعليق داخل نافذة الإجراء العادية: معلومات + زر «إلغاء التعليق»، مع بقاء بقية الخيارات (مساهمة/تولٍّ/تنفيذ)
+  function susBanner(d, id, o) {
+    if (!(o.sus && o.sus.length && o.can_cancel)) return;
+    var i = o.sus[0], b = document.createElement("div"); b.className = "af-sus";
+    b.innerHTML = '<p class="muted">معلّق لاستيفاء: <b>' + esc(i.item) + '</b> · من: ' + esc(i.from) + ' · صاحب الخطوة: ' + esc(i.holder) + '</p><div class="af-err" data-sb-err></div><button type="button" class="btn sm" data-sb-cancel>إلغاء التعليق</button>';
+    var h = d.querySelector("h3"); h.parentNode.insertBefore(b, h.nextSibling);
+    b.querySelector("[data-sb-cancel]").addEventListener("click", function (ev) {
+      var fd = new FormData(); fd.append("mode", "unsuspend");
+      busy(ev.currentTarget, post("/subjects/" + id + "/action/", fd)).then(function (j) {
+        if (!j.ok) { b.querySelector("[data-sb-err]").textContent = j.error || "تعذّر التنفيذ"; return; }
+        d.close();
+        if (window.__slRefresh) window.__slRefresh().then(function () { if (window.toast) window.toast("تم إلغاء التعليق", "success"); }).catch(back); else back();
+      });
     });
   }
 
@@ -66,6 +82,7 @@
       '<label class="af-f" data-ch-fw>مرفقات (اختياري)<input type="file" multiple data-ch-files></label>' +
       '<div class="af-err" data-ch-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-ch-go>تسجيل</button></div>';
     document.body.appendChild(d); d.showModal(); d.addEventListener("close", function () { d.remove(); });
+    susBanner(d, id, o);
     var mode = "contribute";
     d.addEventListener("click", function (ev) {
       var m = ev.target.closest("[data-ch-o]");
@@ -81,7 +98,7 @@
         var fd = new FormData(); fd.append("mode", mode); fd.append("notes", notes);
         if (mode === "contribute") Array.prototype.forEach.call(d.querySelector("[data-ch-files]").files, function (f) { fd.append("files", f); });
         else if (!notes) { err.textContent = "اكتب السبب."; return; }
-        post("/subjects/" + id + "/action/", fd).then(function (j) { if (j.ok) back(); else err.textContent = j.error || "تعذّر التنفيذ"; });
+        busy(ev.target.closest("[data-ch-go]"), post("/subjects/" + id + "/action/", fd)).then(function (j) { if (j.ok) back(); else err.textContent = j.error || "تعذّر التنفيذ"; });
       }
     });
   }
@@ -109,6 +126,7 @@
       '<div class="af-err" data-af-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-done>تأكيد التنفيذ</button></div></div>';
     document.body.appendChild(d); d.showModal();
     d.addEventListener("close", function () { d.remove(); });
+    Promise.resolve(o).then(function (oo) { susBanner(d, id, oo); });
     var routeMode = "route", clsMode = "cls";
     var rb = d.querySelector("[data-af-route]"), db = d.querySelector("[data-af-do]"), sel = d.querySelector("[data-af-choice]");
     Promise.resolve(o).then(function (o) {
@@ -149,11 +167,11 @@
       if (ev.target.closest("[data-af-close]")) d.close();
       if (ev.target.closest("[data-cl-go]")) {
         var cf = new FormData(); cf.append("mode", clsMode === "rqc" ? "request_close" : "close"); cf.append("notes", d.querySelector("[data-cl-notes]").value); cf.append("outcome", d.querySelector("[data-cl-outcome]").value);
-        post("/subjects/" + id + "/action/", cf).then(function (j) { if (j.ok) back(); else d.querySelector("[data-cl-err]").textContent = j.error || "تعذّر التنفيذ"; });
+        busy(ev.target.closest("[data-cl-go]"), post("/subjects/" + id + "/action/", cf)).then(function (j) { if (j.ok) back(); else d.querySelector("[data-cl-err]").textContent = j.error || "تعذّر التنفيذ"; });
       }
       if (ev.target.closest("[data-su-done]")) {
         var sf = new FormData(); sf.append("mode", "suspend"); sf.append("item", d.querySelector("[data-su-item]").value); sf.append("from", d.querySelector("[data-su-from]").value); sf.append("follow_up", d.querySelector("[data-su-date]").value);
-        post("/subjects/" + id + "/action/", sf).then(function (j) { if (j.ok) back(); else d.querySelector("[data-su-err2]").textContent = j.error || "تعذّر التعليق"; });
+        busy(ev.target.closest("[data-su-done]"), post("/subjects/" + id + "/action/", sf)).then(function (j) { if (j.ok) back(); else d.querySelector("[data-su-err2]").textContent = j.error || "تعذّر التعليق"; });
       }
       if (ev.target.closest("[data-af-retdone]")) {
         var rn = d.querySelector("[data-af-rnotes]").value.trim();
@@ -318,6 +336,18 @@
         })
         .catch(function () { fails++; })
         .then(function () { busy = false; });
+    };
+    window.__slRefresh = function () {
+      return fetch(location.href, { credentials: "same-origin", cache: "no-store", headers: { "X-Requested-With": "live-refresh" } })
+        .then(function (r) { if (!r.ok || r.redirected && /login/.test(r.url)) throw 0; return r.text(); })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, "text/html"), nl = doc.querySelector("[data-subject-list]");
+          if (!nl) throw 0;
+          var swap = function (sel) { var o = list.querySelector(sel), n = nl.querySelector(sel); if (o && n) o.replaceWith(n); };
+          swap(".sl-wrap"); swap("[data-sl-foot]");
+          var op = list.querySelector(".pager"), np = nl.querySelector(".pager"); if (op && np) op.replaceWith(np);
+          last = sig(doc); window.__slInit();
+        });
     };
     setInterval(function () { if (fails < 5) tick(); }, 8000);
   })();
