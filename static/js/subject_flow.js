@@ -223,4 +223,47 @@
       box.innerHTML = '<h4>ملخص الإجراءات</h4>' + (j.events.length ? evTable(j.events) : '<p class="sl-none">لا توجد إجراءات بعد.</p>');
     });
   };
+
+  // تحديث حيّ بدون إعادة تحميل: نسأل الخادم كل بضع ثوانٍ بنفس الفلاتر والصفحة، ونستبدل الجدول والعدادات فقط عند التغيّر.
+  (function () {
+    var list = document.querySelector("[data-subject-list]"); if (!list) return;
+    var sig = function (root) {
+      var w = root.querySelector(".sl-wrap"); if (!w) return "";
+      var t = w.querySelector("tbody"), c = w.querySelector("[data-sl-cards]");
+      return (t ? t.innerHTML : "") + "|" + (c ? c.innerHTML : "");
+    };
+    var last = null, busy = false, fails = 0;
+    var idle = function () {
+      if (document.hidden) return false;
+      if (document.querySelector("dialog[open]")) return false;
+      if (tip && !tip.hidden) return false;
+      var side = list.querySelector("[data-sl-side]"); if (side && !side.hidden) return false;
+      if (list.querySelector(".row-chk:checked")) return false;
+      return true;
+    };
+    var tick = function () {
+      if (!window.__slInit || busy || !idle()) return;
+      busy = true;
+      if (last === null) last = sig(document);
+      fetch(location.href, { credentials: "same-origin", cache: "no-store", headers: { "X-Requested-With": "live-refresh" } })
+        .then(function (r) { if (!r.ok || r.redirected && /login/.test(r.url)) throw 0; return r.text(); })
+        .then(function (html) {
+          fails = 0;
+          var doc = new DOMParser().parseFromString(html, "text/html"), nl = doc.querySelector("[data-subject-list]");
+          if (!nl) return;
+          var ns = sig(doc);
+          if (ns !== last && idle()) {
+            var swap = function (sel) { var o = list.querySelector(sel), n = nl.querySelector(sel); if (o && n) o.replaceWith(n); };
+            swap(".sl-wrap"); swap("[data-sl-foot]");
+            var op = list.querySelector(".pager"), np = nl.querySelector(".pager"); if (op && np) op.replaceWith(np);
+            last = ns; window.__slInit();
+          }
+          var om = document.querySelector("nav.ox-menus"), nm = doc.querySelector("nav.ox-menus");
+          if (om && nm && !om.querySelector(".open,[aria-expanded=true]") && om.textContent.replace(/\s+/g, "") !== nm.textContent.replace(/\s+/g, "")) om.innerHTML = nm.innerHTML;
+        })
+        .catch(function () { fails++; })
+        .then(function () { busy = false; });
+    };
+    setInterval(function () { if (fails < 5) tick(); }, 8000);
+  })();
 })();
