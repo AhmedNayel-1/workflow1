@@ -83,3 +83,5 @@
 .evt td.dt{white-space:nowrap}
 .evt .none{color:var(--ox-muted)}
 .sl-tip .evt td:nth-child(3){min-width:var(--ox-px-130)}
+
+.sl-tip{pointer-events:none}
