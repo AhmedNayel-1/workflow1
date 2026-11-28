@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}مستند مطلوب{% endblock %}
+{% block content %}
+<section class="panel" style="max-width:36rem;margin:2rem auto;padding:1.5rem">
+  <h2>مستند مطلوب منك{% if number %} · {{ number }}{% endif %}</h2>
+  {% for s in items %}<p>المطلوب: <b>{{ s.required_item }}</b>{% if s.follow_up_date %} · موعد المتابعة: {{ s.follow_up_date|date:"Y-m-d" }}{% endif %}</p>{% endfor %}
+  <p class="muted">نفّذ المطلوب مع الجهة المعنية. إن رأيت أن التعليق لم يعد لازماً يمكنك إرسال طلب لصاحب الموضوع؛ الإلغاء يتم من صاحب الخطوة أو إدارته فقط.</p>
+  {% if sent %}<p class="muted"><b>تم إرسال طلب إلغاء التعليق لصاحب الخطوة.</b></p>
+  {% else %}<form method="post">{% csrf_token %}<button class="btn primary" type="submit">طلب إلغاء التعليق</button></form>{% endif %}
+</section>
+{% endblock %}
