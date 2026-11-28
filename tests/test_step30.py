@@ -90,3 +90,16 @@ class BootstrapTests(TestCase):
         n = User.objects.count()
         call_command("bootstrap_demo")
         self.assertEqual(n, User.objects.count())
+
+
+class PickTreeTests(TestCase):
+    def test_popup_recipients_are_a_tree(self):
+        call_command("seed_demo_data")
+        s = Subject.objects.exclude(status="CLOSED").first()
+        Subject.objects.filter(id=s.id).update(current_owner=User.objects.get(username="personnel_gm"))
+        c = Client(); c.force_login(User.objects.get(username="personnel_gm"))
+        h = c.get(f"/workflow/subjects/{s.id}/referrals/new/?partial=1").content.decode() if False else None
+        from django.urls import reverse
+        h = c.get(reverse("workflow:referral_create", args=[s.id]) + "?partial=1").content.decode()
+        self.assertIn("rf-node", h)
+        self.assertIn('name="target_user_ids"', h)
