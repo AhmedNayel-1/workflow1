@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.http import JsonResponse
+from django.views.decorators.cache import never_cache
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from accounts.models import User
@@ -39,6 +40,7 @@ from .guidance import build_subject_guidance
 from .services import OptimisticLockError, SubjectService
 
 
+@never_cache
 @login_required
 def subject_list(request):
     """قائمة الموضوعات المصفاة بصلاحية المستخدم ودرجة السرية مع دعم التصفح بالصفحات."""
