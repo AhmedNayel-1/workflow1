@@ -119,6 +119,8 @@ def take_over(user, subject, reason):
             r.save(update_fields=["is_withdrawn", "is_completed", "completed_at"])
     subject.current_owner = user
     subject.save(update_fields=["current_owner"])
+    from subjects.suspension import release_for_takeover
+    release_for_takeover(user, subject)
     SubjectAction.objects.create(subject=subject, user=user, choice=None, label=f"{LBL_TAKEOVER} {old_name}", notes=reason)
     AuditService.record_activity(subject=subject, action_type="SUBJECT_TAKEOVER", actor_user=user,
                                  description=f"{user} تولّى الموضوع بدلاً من {old_name} — {reason}", metadata={"reason": reason, "old": old_name})
