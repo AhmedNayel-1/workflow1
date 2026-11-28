@@ -1576,7 +1576,7 @@ def subject_action_options(request, subject_id: int):
     act = list(SU.active_for(subject))
     my_sus = [x for x in act if rec is not None and x.recipient_id == rec.id]
     can_cancel = bool(act) and SU.can_cancel(request.user, subject, chain)
-    sus_mode = bool(my_sus or (rec is None and can_cancel))
+    sus_mode = bool(my_sus)
     info = [{"item": x.required_item, "from": x.requested_label, "holder": x.holder.get_full_name() or x.holder.username,
              "follow_up": x.follow_up_date.isoformat() if x.follow_up_date else ""} for x in (my_sus or act)]
     from subjects import closing as CL
@@ -1660,6 +1660,8 @@ def subject_quick_action(request, subject_id: int):
             return JsonResponse({"ok": False, "error": "; ".join(getattr(exc, "messages", [str(exc)]))}, status=400)
         return JsonResponse({"ok": True})
     if pm == "unsuspend":
+        if not SU.active_for(subject).exists():
+            return JsonResponse({"ok": True, "note": "التعليق مُلغى بالفعل."})
         if not SU.can_cancel(request.user, subject, AA.chain_mode(request.user, subject)):
             return JsonResponse({"ok": False, "error": "غير مسموح لك بإلغاء التعليق."}, status=403)
         SU.cancel(request.user, subject)
