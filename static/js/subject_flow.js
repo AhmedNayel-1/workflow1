@@ -90,7 +90,7 @@
     var row = rowOf(id); if (!row) return;
     var d = document.createElement("dialog"); d.className = "af-dlg";
     d.innerHTML = '<h3>إجراء على: ' + esc(row.dataset.odTitle) + '</h3>' +
-      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked><i>↪</i><b>أوجّهه لشخص</b></label><label data-af-o="do"><input type="radio" name="af"><i>✓</i><b>أنفّذه بنفسي</b></label><label data-af-o="part" hidden><input type="radio" name="af"><i>＋</i><b>أضيف مشاركاً</b></label><label data-af-o="sus" hidden><input type="radio" name="af"><i>⏸</i><b>أحتاج استيفاء مستندات</b></label><label data-af-o="ret" hidden><input type="radio" name="af"><i>↩</i><b>ليس من اختصاصي، أرفضه</b></label></div>' +
+      '<div class="af-opts"><label class="on" data-af-o="route"><input type="radio" name="af" checked><i>↪</i><b>أوجّهه لشخص</b></label><label data-af-o="do"><input type="radio" name="af"><i>✓</i><b>أنفّذه بنفسي</b></label><label data-af-o="part" hidden><input type="radio" name="af"><i>＋</i><b>أضيف مشاركاً</b></label><label data-af-o="sus" hidden><input type="radio" name="af"><i>⏸</i><b>أحتاج استيفاء مستندات</b></label><label data-af-o="cls" hidden><input type="radio" name="af"><i>■</i><b>أغلق الموضوع</b></label><label data-af-o="rqc" hidden><input type="radio" name="af"><i>■</i><b>أطلب الإغلاق من مشرفي</b></label><label data-af-o="ret" hidden><input type="radio" name="af"><i>↩</i><b>ليس من اختصاصي، أرفضه</b></label></div>' +
       '<div class="muted af-why" data-af-why hidden></div>' +
       '<div data-af-ret hidden><label class="af-f">سبب الرفض / الإرجاع (إجباري)<textarea rows="3" data-af-rnotes></textarea></label>' +
       '<div class="af-err" data-af-rerr></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-retdone>إرجاع للمحيل</button></div></div>' +
@@ -99,6 +99,9 @@
       '<label class="af-f">تاريخ المتابعة (اختياري)<input type="date" data-su-date></label>' +
       '<p class="muted">تُعلَّق خطوتك فقط؛ يصل إشعار للمطلوب منه على الشاشة، وعند إلغاء التعليق تعود الخطوة بحالتها السابقة.</p>' +
       '<div class="af-err" data-su-err2></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-su-done>تعليق الخطوة</button></div></div>' +
+      '<div data-af-cls hidden><label class="af-f" data-cl-ow>النتيجة (اختياري)<input type="text" data-cl-outcome></label>' +
+      '<label class="af-f">ملاحظات<textarea rows="3" data-cl-notes></textarea></label>' +
+      '<p class="muted" data-cl-hint></p><div class="af-err" data-cl-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-cl-go>تأكيد</button></div></div>' +
       '<div data-af-route><p class="muted">جاري التحميل…</p></div>' +
       '<div data-af-do hidden><label class="af-f">ماذا نفّذت؟<select data-af-choice></select></label>' +
       '<label class="af-f">ملاحظات التنفيذ<textarea rows="3" data-af-notes></textarea></label>' +
@@ -106,12 +109,14 @@
       '<div class="af-err" data-af-err></div><div class="af-row"><button type="button" class="btn" data-af-close>إلغاء</button><button type="button" class="btn primary" data-af-done>تأكيد التنفيذ</button></div></div>';
     document.body.appendChild(d); d.showModal();
     d.addEventListener("close", function () { d.remove(); });
-    var routeMode = "route";
+    var routeMode = "route", clsMode = "cls";
     var rb = d.querySelector("[data-af-route]"), db = d.querySelector("[data-af-do]"), sel = d.querySelector("[data-af-choice]");
     Promise.resolve(o).then(function (o) {
       sel.innerHTML = o.choices.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join("");
       if (o.can_return) d.querySelector('[data-af-o="ret"]').hidden = false;
       if (o.can_participant) d.querySelector('[data-af-o="part"]').hidden = false;
+      if (o.can_close_now) d.querySelector('[data-af-o="cls"]').hidden = false;
+      if (o.can_req_close) d.querySelector('[data-af-o="rqc"]').hidden = false;
       if (o.can_suspend) {
         d.querySelector('[data-af-o="sus"]').hidden = false;
         d.querySelector("[data-su-from]").innerHTML = '<option value="">اختر…</option><optgroup label="أشخاص">' + o.people.map(function (p) { return '<option value="p:' + p.id + '">' + esc(p.name) + '</option>'; }).join("") + '</optgroup><optgroup label="وحدات">' + o.units.map(function (u) { return '<option value="u:' + u.id + '">' + esc(u.name) + '</option>'; }).join("") + '</optgroup>';
@@ -140,8 +145,12 @@
     }
     d.addEventListener("click", function (ev) {
       var o = ev.target.closest("[data-af-o]");
-      if (o) { var doit = o.dataset.afO === "do"; d.querySelectorAll("[data-af-o]").forEach(function (x) { x.classList.toggle("on", x === o); }); o.querySelector("input").checked = true; var k = o.dataset.afO; routeMode = k === "part" ? "addpart" : "route"; rb.hidden = k !== "route" && k !== "part"; db.hidden = k !== "do"; d.querySelector("[data-af-ret]").hidden = k !== "ret"; d.querySelector("[data-af-sus]").hidden = k !== "sus"; }
+      if (o) { var doit = o.dataset.afO === "do"; d.querySelectorAll("[data-af-o]").forEach(function (x) { x.classList.toggle("on", x === o); }); o.querySelector("input").checked = true; var k = o.dataset.afO; routeMode = k === "part" ? "addpart" : "route"; rb.hidden = k !== "route" && k !== "part"; db.hidden = k !== "do"; d.querySelector("[data-af-ret]").hidden = k !== "ret"; d.querySelector("[data-af-sus]").hidden = k !== "sus"; d.querySelector("[data-af-cls]").hidden = k !== "cls" && k !== "rqc"; d.querySelector("[data-cl-ow]").hidden = k === "rqc"; d.querySelector("[data-cl-hint]").textContent = k === "rqc" ? "يصل طلب الإغلاق لمشرفك وهو الذي يغلق الموضوع." : "يُغلق الموضوع ويُؤرشف ويصل إشعار لمن في السلسلة. لا يُغلق إن بقيت خطوة مفتوحة لدى غيرك أو تعليق قائم."; clsMode = k; }
       if (ev.target.closest("[data-af-close]")) d.close();
+      if (ev.target.closest("[data-cl-go]")) {
+        var cf = new FormData(); cf.append("mode", clsMode === "rqc" ? "request_close" : "close"); cf.append("notes", d.querySelector("[data-cl-notes]").value); cf.append("outcome", d.querySelector("[data-cl-outcome]").value);
+        post("/subjects/" + id + "/action/", cf).then(function (j) { if (j.ok) back(); else d.querySelector("[data-cl-err]").textContent = j.error || "تعذّر التنفيذ"; });
+      }
       if (ev.target.closest("[data-su-done]")) {
         var sf = new FormData(); sf.append("mode", "suspend"); sf.append("item", d.querySelector("[data-su-item]").value); sf.append("from", d.querySelector("[data-su-from]").value); sf.append("follow_up", d.querySelector("[data-su-date]").value);
         post("/subjects/" + id + "/action/", sf).then(function (j) { if (j.ok) back(); else d.querySelector("[data-su-err2]").textContent = j.error || "تعذّر التعليق"; });
