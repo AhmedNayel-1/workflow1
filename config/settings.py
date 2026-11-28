@@ -143,8 +143,12 @@ CSRF_TRUSTED_ORIGINS = [
     for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if o.strip()
 ]
-if not DEBUG and not CSRF_TRUSTED_ORIGINS:
+if not CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS = ["https://*.onrender.com"]
+
+# عند النشر خلف وسيط ينهي TLS (مثل Render): فعّل عبر DJANGO_BEHIND_TLS_PROXY=True
+if os.environ.get("DJANGO_BEHIND_TLS_PROXY", "False").lower() in ("1", "true", "yes"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
