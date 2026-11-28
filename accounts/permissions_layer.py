@@ -380,7 +380,7 @@ class CorrespondenceAccessPolicy:
         for delegation in cls.get_active_delegations(user):
             if delegation.delegator_id in visited:
                 continue
-            if "SUBJECT_VIEW" not in (delegation.allowed_actions or []):
+            if not delegation.allows("SUBJECT_VIEW"):
                 continue
             if subject.confidentiality.overrides_hierarchy and not delegation.allow_confidential:
                 continue
@@ -483,7 +483,7 @@ class CorrespondenceAccessPolicy:
         # 4. التفويضات الفعالة للمستخدم (سكرتارية / إنابة معتمدة)
         delegation_q = Q(pk__in=[])
         for delegation in cls.get_active_delegations(user):
-            if "SUBJECT_VIEW" not in (delegation.allowed_actions or []):
+            if not delegation.allows("SUBJECT_VIEW"):
                 continue
             del_user = delegation.delegator
             d_direct = (
@@ -553,7 +553,7 @@ class CorrespondenceAccessPolicy:
             chain_q = Q(confidentiality__overrides_hierarchy=False) & cls._chain_directed_q(chain_employee_ids)
 
         for delegation in cls.get_active_delegations(user):
-            if "SUBJECT_VIEW" not in (delegation.allowed_actions or []):
+            if not delegation.allows("SUBJECT_VIEW"):
                 continue
             d_ids = cls.get_delegated_chain_employee_ids(delegation)
             if d_ids:
