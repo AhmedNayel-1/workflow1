@@ -173,7 +173,7 @@ class PermissionService:
     def get_acting_delegation(cls, user: User, action_code: str, subject=None) -> Optional[Delegation]:
         """التحقق مما إذا كان المستخدم يعمل بتفويض ساري عن مسؤول آخر لتنفيذ إجراء محدد."""
         for delegation in cls.get_active_delegations_for_delegate(user):
-            if action_code in (delegation.allowed_actions or []):
+            if delegation.allows(action_code):
                 if subject is not None:
                     if subject.confidentiality.overrides_hierarchy and not delegation.allow_confidential:
                         continue
@@ -363,7 +363,7 @@ class PermissionService:
 
         # التحقق من السكرتارية المفوضة عن المالك الحالي (مع احترام scope_unit والسرية)
         for delegation in cls.get_active_delegations_for_delegate(user):
-            if "REFERRAL_CREATE" in (delegation.allowed_actions or []):
+            if delegation.allows("REFERRAL_CREATE"):
                 if subject.confidentiality.overrides_hierarchy and not delegation.allow_confidential:
                     continue
                 if delegation.scope_unit and subject.org_unit_id:
@@ -385,7 +385,7 @@ class PermissionService:
             return True
 
         for delegation in cls.get_active_delegations_for_delegate(user):
-            if "REFERRAL_CREATE" in (delegation.allowed_actions or []):
+            if delegation.allows("REFERRAL_CREATE"):
                 if subject.confidentiality.overrides_hierarchy and not delegation.allow_confidential:
                     continue
                 if delegation.scope_unit and subject.org_unit_id:
