@@ -11,6 +11,7 @@ from django.db import IntegrityError, connection
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
+from django.views.decorators.cache import never_cache
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -50,6 +51,7 @@ def apps_home(request):
     return render(request, "apps/home.html", {"apps": apps_list})
 
 
+@never_cache
 @login_required
 def dashboard(request):
     """صندوق البريد الإداري المطابق لـ Gmail مع التبويبات الـ 4 وتطبيق طبقة الصلاحيات المنطقية والأداء العالي."""
